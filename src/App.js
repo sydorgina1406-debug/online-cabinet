@@ -96,15 +96,33 @@ const loadDriveFolderFiles = async (folderId, apiKey) => {
   return data.files || [];
 };
 
-// Функция загрузки всех папок из корневой директории
-const loadBaseDecks = async () => {
+// ✅ УЛУЧШЕННО: Добавлен вывод конкретных ошибок с Диска
+const loadBaseDecks = async (notifyCb) => {
   try {
     const url = `https://www.googleapis.com/drive/v3/files?q='${ROOT_DRIVE_FOLDER_ID}'+in+parents+and+mimeType='application/vnd.google-apps.folder'&fields=files(id,name)&key=${DRIVE_API_KEY}&orderBy=name`;
     const res = await fetch(url);
-    if (!res.ok) return [];
+    
+    if (!res.ok) {
+      const errData = await res.json().catch(()=>({}));
+      console.error("Drive API Error:", errData);
+      if (res.status === 403) {
+        notifyCb("Ошибка 403: Google Drive API не включен для вашего ключа, либо закрыт доступ к папке.");
+      } else if (res.status === 400) {
+        notifyCb("Ошибка 400: Неверный API ключ или запрос.");
+      } else {
+        notifyCb(`Ошибка доступа к Google Диску: ${res.status}`);
+      }
+      return [];
+    }
+
     const data = await res.json();
     const folders = data.files || [];
     
+    if (folders.length === 0) {
+      notifyCb("В папке на Диске не найдено вложенных папок с колодами.");
+      return [];
+    }
+
     const loadedDecks = [];
     for (const folder of folders) {
       const files = await loadDriveFolderFiles(folder.id, DRIVE_API_KEY);
@@ -133,6 +151,7 @@ const loadBaseDecks = async () => {
     return loadedDecks;
   } catch (error) {
     console.error("Ошибка загрузки базовых колод:", error);
+    notifyCb("Системная ошибка при обращении к Google Диску.");
     return [];
   }
 };
@@ -249,7 +268,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('cloud');
   const [isDbConnected, setIsDbConnected] = useState(false);
 
-  const notify = (text) => { setNotification(text); setTimeout(() => setNotification(""), 3000); };
+  // Увеличили время показа уведомлений для ошибок
+  const notify = (text, time = 4000) => { setNotification(text); setTimeout(() => setNotification(""), time); };
 
   useEffect(() => {
     const init = async () => {
@@ -273,9 +293,12 @@ export default function App() {
   useEffect(() => {
     if (inRoom && !isClientMode) {
       setIsBaseDecksLoading(true);
-      loadBaseDecks().then(decks => {
+      loadBaseDecks((msg) => notify(msg, 6000)).then(decks => {
         setBaseDecks(decks);
         setIsBaseDecksLoading(false);
+        if (decks.length > 0) {
+            notify(`Успешно загружено базовых колод: ${decks.length}`);
+        }
       });
     }
   }, [inRoom, isClientMode]);
@@ -378,7 +401,7 @@ export default function App() {
         setRoomId(`session_${Math.random().toString(36).substr(2, 6)}`);
       }
       setIsClientMode(false); setIsAuthorized(true); setInRoom(true); setShowKeyPrompt(false);
-      notify(`Привет, ${name}!`);
+      notify(`Привет, ${name}! Базовые колоды загружаются...`);
     };
 
     if ((inputEmail === "yulia" || inputEmail === "юлия") && inputPwd === "owner777") {
@@ -631,13 +654,6 @@ export default function App() {
                 className="w-full font-black py-5 rounded-2xl text-xs uppercase tracking-widest shadow-lg flex flex-col items-center gap-2 transition-all hover:opacity-90"
               >
                 <Key size={24} /> ВОЙТИ КАК ПСИХОЛОГ
-              </button>
-              <button
-                onClick={() => notify("Пожалуйста, перейдите по специальной ссылке, которую вам отправил психолог.")}
-                style={{ backgroundColor: 'white', color: COLORS.ink, border: `2px solid ${COLORS.ink}20` }}
-                className="w-full font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest flex flex-col items-center gap-1 transition-all shadow-sm hover:opacity-70"
-              >
-                <UserCircle size={18} /> Я КЛИЕНТ
               </button>
             </div>
           ) : (
