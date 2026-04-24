@@ -89,17 +89,19 @@ const extractDriveFolderId = (url) => {
 };
 
 const loadDriveFolderFiles = async (folderId, apiKey) => {
-  const url = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+mimeType+contains+'image/'&fields=files(id,name,mimeType)&key=${apiKey}&orderBy=name`;
+  const q = `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`;
+  const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType)&key=${apiKey}&orderBy=name`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Drive API error: ${res.status}`);
   const data = await res.json();
   return data.files || [];
 };
 
-// ✅ УЛУЧШЕННО: Добавлен вывод конкретных ошибок с Диска
+// ✅ УЛУЧШЕННО: Обработка пустых папок и прямых картинок
 const loadBaseDecks = async (notifyCb) => {
   try {
-    const url = `https://www.googleapis.com/drive/v3/files?q='${ROOT_DRIVE_FOLDER_ID}'+in+parents+and+mimeType='application/vnd.google-apps.folder'&fields=files(id,name)&key=${DRIVE_API_KEY}&orderBy=name`;
+    const q = `'${ROOT_DRIVE_FOLDER_ID}' in parents and trashed = false`;
+    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType)&key=${DRIVE_API_KEY}&orderBy=name`;
     const res = await fetch(url);
     
     if (!res.ok) {
@@ -116,38 +118,66 @@ const loadBaseDecks = async (notifyCb) => {
     }
 
     const data = await res.json();
-    const folders = data.files || [];
+    const allItems = data.files || [];
     
-    if (folders.length === 0) {
-      notifyCb("В папке на Диске не найдено вложенных папок с колодами.");
-      return [];
-    }
+    const folders = allItems.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+    const images = allItems.filter(f => f.mimeType.includes('image/'));
 
     const loadedDecks = [];
-    for (const folder of folders) {
-      const files = await loadDriveFolderFiles(folder.id, DRIVE_API_KEY);
-      let backImage = null;
-      const cards = [];
-      
-      for (const file of files) {
-        const fileUrl = `https://drive.google.com/uc?export=view&id=${file.id}`;
-        if (file.name.toLowerCase().includes('рубашка')) {
-          backImage = fileUrl;
+
+    // 1. Если есть вложенные папки, загружаем каждую как отдельную колоду
+    if (folders.length > 0) {
+      for (const folder of folders) {
+        console.log(`📂 Обрабатываем папку (колоду): ${folder.name}`);
+        const files = await loadDriveFolderFiles(folder.id, DRIVE_API_KEY);
+        let backImage = null;
+        const cards = [];
+        
+        for (const file of files) {
+          const fileUrl = `https://drive.google.com/uc?export=view&id=${file.id}`;
+          if (file.name.toLowerCase().includes('рубашка')) {
+            console.log(`   👕 Найдена рубашка: ${file.name}`);
+            backImage = fileUrl;
+          } else {
+            cards.push(fileUrl);
+          }
+        }
+        
+        if (cards.length > 0) {
+          console.log(`   ✅ Колода "${folder.name}" собрана: ${cards.length} карт.`);
+          loadedDecks.push({
+            id: folder.id,
+            name: folder.name,
+            cards,
+            backImage,
+            isBaseDeck: true 
+          });
         } else {
-          cards.push(fileUrl);
+          console.log(`   ⚠️ В папке "${folder.name}" нет подходящих картинок.`);
         }
       }
-      
-      if (cards.length > 0) {
-        loadedDecks.push({
-          id: folder.id,
-          name: folder.name,
-          cards,
-          backImage,
-          isBaseDeck: true 
-        });
-      }
     }
+    // 2. Если вложенных папок нет, но есть просто картинки, загружаем корень как 1 колоду
+    else if (images.length > 0) {
+        let backImage = null;
+        const cards = [];
+        for (const file of images) {
+          const fileUrl = `https://drive.google.com/uc?export=view&id=${file.id}`;
+          if (file.name.toLowerCase().includes('рубашка')) {
+            backImage = fileUrl;
+          } else {
+            cards.push(fileUrl);
+          }
+        }
+        if (cards.length > 0) {
+          loadedDecks.push({ id: ROOT_DRIVE_FOLDER_ID, name: "Базовая колода", cards, backImage, isBaseDeck: true });
+        }
+    }
+    // 3. Совсем ничего не найдено
+    else {
+      notifyCb("В папке пусто, либо у вложенных папок нет доступа 'Все, у кого есть ссылка'.");
+    }
+
     return loadedDecks;
   } catch (error) {
     console.error("Ошибка загрузки базовых колод:", error);
