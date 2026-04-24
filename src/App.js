@@ -30,10 +30,11 @@ const firebaseConfig = {
 };
 
 const appId = "mak-space-yulia-sudorgina";
-
-// ⚠️ ВАЖНО: замените на настоящий опубликованный URL вашей Google Таблицы
-// Файл → Поделиться → Опубликовать в интернете → CSV → скопируйте ссылку
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/YOUR_SHEET_ID/pub?gid=0&single=true&output=csv";
+
+// ID Корневой папки с базовыми колодами
+const ROOT_DRIVE_FOLDER_ID = "19-ZI-4tzVgRntc34yJTPGAVzZpyKksHl";
+const DRIVE_API_KEY = "AIzaSyDXSTiw-Sd2jZve2Yv7bnbVRIAYcPre3N4";
 
 const COLORS = {
   plum: '#8B3252',
@@ -43,7 +44,6 @@ const COLORS = {
   haze: '#F2EFF5'
 };
 
-// Tailwind init
 if (typeof window !== 'undefined' && !document.getElementById('tailwind-script')) {
   const configScript = document.createElement('script');
   configScript.innerHTML = `window.tailwind = { theme: { extend: { colors: { plum: '${COLORS.plum}', forest: '${COLORS.forest}', terra: '${COLORS.terra}', haze: '${COLORS.haze}', ink: '${COLORS.ink}' }}}}`;
@@ -61,17 +61,12 @@ const storage = getStorage(app);
 const myCursorColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
 
 // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
-
-// ✅ ИСПРАВЛЕНИЕ: Поддержка всех форматов ссылок Google Диска
 const extractDriveFileId = (url) => {
   if (!url) return null;
-  // Формат: /file/d/FILE_ID/
   let m = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (m) return m[1];
-  // Формат: id=FILE_ID
   m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   if (m) return m[1];
-  // Формат: /d/FILE_ID
   m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
   if (m) return m[1];
   return null;
@@ -80,32 +75,66 @@ const extractDriveFileId = (url) => {
 const convertDriveLink = (url) => {
   if (!url || url.trim() === '') return null;
   url = url.trim();
-  // Уже прямая ссылка — не трогаем
   if (!url.includes('drive.google.com') && !url.includes('docs.google.com')) return url;
   const id = extractDriveFileId(url);
   if (!id) return url;
-  // Используем прямой экспорт через uc?export=view — работает без авторизации
   return `https://drive.google.com/uc?export=view&id=${id}`;
 };
 
-// ✅ Извлечь ID папки Google Диска
 const extractDriveFolderId = (url) => {
   if (!url) return null;
-  // https://drive.google.com/drive/folders/FOLDER_ID
   let m = url.match(/\/folders\/([a-zA-Z0-9_-]+)/);
   if (m) return m[1];
   return null;
 };
 
-// ✅ Загрузить все файлы из папки Google Диска через публичный RSS/JSON фид
-// Используем Google Drive API v3 с публичным ключом (папка должна быть открыта по ссылке)
 const loadDriveFolderFiles = async (folderId, apiKey) => {
-  // Запрашиваем список файлов в папке
   const url = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+mimeType+contains+'image/'&fields=files(id,name,mimeType)&key=${apiKey}&orderBy=name`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Drive API error: ${res.status}`);
   const data = await res.json();
   return data.files || [];
+};
+
+// Функция загрузки всех папок из корневой директории
+const loadBaseDecks = async () => {
+  try {
+    const url = `https://www.googleapis.com/drive/v3/files?q='${ROOT_DRIVE_FOLDER_ID}'+in+parents+and+mimeType='application/vnd.google-apps.folder'&fields=files(id,name)&key=${DRIVE_API_KEY}&orderBy=name`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const folders = data.files || [];
+    
+    const loadedDecks = [];
+    for (const folder of folders) {
+      const files = await loadDriveFolderFiles(folder.id, DRIVE_API_KEY);
+      let backImage = null;
+      const cards = [];
+      
+      for (const file of files) {
+        const fileUrl = `https://drive.google.com/uc?export=view&id=${file.id}`;
+        if (file.name.toLowerCase().includes('рубашка')) {
+          backImage = fileUrl;
+        } else {
+          cards.push(fileUrl);
+        }
+      }
+      
+      if (cards.length > 0) {
+        loadedDecks.push({
+          id: folder.id,
+          name: folder.name,
+          cards,
+          backImage,
+          isBaseDeck: true 
+        });
+      }
+    }
+    return loadedDecks;
+  } catch (error) {
+    console.error("Ошибка загрузки базовых колод:", error);
+    return [];
+  }
 };
 
 const playSound = (type, isMuted) => {
@@ -154,7 +183,6 @@ const compressImage = (base64Str, maxWidth = 800, maxHeight = 800) => {
   });
 };
 
-// ✅ ИСПРАВЛЕНИЕ: Загрузка изображений в Firebase Storage вместо base64 в Firestore
 const uploadImageToStorage = async (base64Str, path) => {
   if (base64Str.startsWith('http')) return base64Str;
   const imgRef = storageRef(storage, path);
@@ -162,12 +190,10 @@ const uploadImageToStorage = async (base64Str, path) => {
   return await getDownloadURL(imgRef);
 };
 
-// ✅ ИСПРАВЛЕНИЕ: Современный clipboard API
 const copyToClipboard = async (text) => {
   if (navigator.clipboard && window.isSecureContext) {
     await navigator.clipboard.writeText(text);
   } else {
-    // Fallback для HTTP
     const el = document.createElement('textarea');
     el.value = text;
     el.style.position = 'fixed';
@@ -198,6 +224,9 @@ export default function App() {
   const [cardsOnTable, setCardsOnTable] = useState([]);
   const [localDecks, setLocalDecks] = useState([]);
   const [cloudDecks, setCloudDecks] = useState([]);
+  const [baseDecks, setBaseDecks] = useState([]); 
+  const [isBaseDecksLoading, setIsBaseDecksLoading] = useState(false);
+
   const [selectedDeckId, setSelectedDeckId] = useState(null);
   const [activeDeckData, setActiveDeckData] = useState(null);
 
@@ -222,7 +251,6 @@ export default function App() {
 
   const notify = (text) => { setNotification(text); setTimeout(() => setNotification(""), 3000); };
 
-  // --- ЛОГИКА АВТОВХОДА КЛИЕНТА ПО ССЫЛКЕ ---
   useEffect(() => {
     const init = async () => {
       try { await signInAnonymously(auth); } catch (e) {}
@@ -241,7 +269,17 @@ export default function App() {
     init();
   }, []);
 
-  // --- СИНХРОНИЗАЦИЯ ОБЛАЧНЫХ КОЛОД ---
+  // Загрузка базовых колод при авторизации мастера
+  useEffect(() => {
+    if (inRoom && !isClientMode) {
+      setIsBaseDecksLoading(true);
+      loadBaseDecks().then(decks => {
+        setBaseDecks(decks);
+        setIsBaseDecksLoading(false);
+      });
+    }
+  }, [inRoom, isClientMode]);
+
   useEffect(() => {
     if (!user || !isDbConnected || isClientMode) return;
     const unsub = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_decks'), (s) => {
@@ -250,7 +288,6 @@ export default function App() {
     return () => unsub();
   }, [user, isDbConnected, isClientMode]);
 
-  // --- СИНХРОНИЗАЦИЯ СТОЛА ---
   useEffect(() => {
     if (!user || !isAuthorized || !roomId || !isDbConnected) return;
     const tUnsub = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`), (snap) => {
@@ -331,7 +368,6 @@ export default function App() {
     syncLibraryUI({ isFlipped: false });
   };
 
-  // ✅ ИСПРАВЛЕНИЕ: Авторизация с проверкой Google Sheets через CORS-proxy
   const handleLogin = async () => {
     if (!emailInput || !passwordInput) return notify("Введите Email и Пароль");
     const inputEmail = emailInput.trim().toLowerCase();
@@ -352,11 +388,9 @@ export default function App() {
 
     setIsCheckingKey(true);
     try {
-      // Используем прокси для обхода CORS или проверяем что таблица опубликована
       const response = await fetch(GOOGLE_SHEET_CSV_URL, { mode: 'cors' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const csvText = await response.text();
-      // Парсим CSV с учётом кавычек
       const rows = csvText.split('\n').map(row => {
         const result = [];
         let current = '';
@@ -408,7 +442,6 @@ export default function App() {
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, id), elem);
   };
 
-  // ✅ ИСПРАВЛЕНИЕ: Очистка стола — batch delete из Firestore
   const clearTable = async () => {
     if (!window.confirm("Очистить стол? Все карты будут удалены.")) return;
     try {
@@ -425,7 +458,6 @@ export default function App() {
     }
   };
 
-  // ✅ ИСПРАВЛЕНИЕ: Загрузка в Storage вместо base64 в Firestore
   const confirmUpload = async () => {
     if (pendingFiles.length === 0) return;
     setIsUploading(true);
@@ -450,7 +482,6 @@ export default function App() {
         const isBack = file.name.toLowerCase().includes("рубашка");
         const path = `decks/${user.uid}/${deckId}/${isBack ? 'back' : `card_${i}`}.jpg`;
 
-        // Сохраняем в Storage → получаем URL
         const url = await uploadImageToStorage(compressed, path);
 
         if (isBack) backImage = url;
@@ -480,10 +511,6 @@ export default function App() {
     }
   };
 
-  // Google Drive API key — нужен только для чтения публичных папок
-  // Создайте на https://console.cloud.google.com/ (Drive API, без ограничений домена)
-  const DRIVE_API_KEY = "AIzaSyDXSTiw-Sd2jZve2Yv7bnbVRIAYcPre3N4";
-
   const addDeckByLinks = async () => {
     const input = prompt("Вставьте ссылку на папку Google Диска (или несколько ссылок на файлы):");
     if (!input || !input.trim()) return;
@@ -491,7 +518,6 @@ export default function App() {
     const folderId = extractDriveFolderId(input.trim());
 
     if (folderId) {
-      // ✅ РЕЖИМ ПАПКИ: читаем все файлы из папки через Drive API
       const name = prompt("Имя колоды:");
       if (!name) return;
 
@@ -502,7 +528,6 @@ export default function App() {
           return notify("В папке нет изображений. Убедитесь что папка открыта по ссылке.");
         }
 
-        // Файл с 'рубашка' в имени — обложка, остальные — карты
         let backImage = null;
         const cards = [];
 
@@ -537,7 +562,6 @@ export default function App() {
       }
 
     } else {
-      // ✅ РЕЖИМ СПИСКА ССЫЛОК: разбиваем на отдельные файлы
       const name = prompt("Имя колоды:");
       if (!name) return;
 
@@ -573,7 +597,6 @@ export default function App() {
     if (dice.timestamp > 0) { playSound('dice', isMuted); }
   }, [dice.timestamp]);
 
-  // --- ЭКРАН ЗАГРУЗКИ ---
   if (appLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center text-white gap-4" style={{ backgroundColor: COLORS.ink }}>
       <Loader2 className="animate-spin" color={COLORS.plum} size={48} />
@@ -581,7 +604,6 @@ export default function App() {
     </div>
   );
 
-  // --- ЭКРАН ВХОДА ---
   if (!inRoom) return (
     <div className="min-h-screen flex items-center justify-center p-4 font-sans relative overflow-hidden" style={{ backgroundColor: COLORS.ink, color: COLORS.haze }}>
       <div className="absolute top-0 left-0 w-full h-full opacity-30 pointer-events-none">
@@ -646,13 +668,9 @@ export default function App() {
           )}
         </div>
       </div>
-      <div className="absolute bottom-6 left-0 w-full flex flex-col items-center justify-center z-20 pointer-events-auto text-[10px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.haze}66` }}>
-        Разработка платформы: <a href="https://vk.com/psycholog_ya" target="_blank" rel="noreferrer" className="hover:text-white transition-colors underline" style={{ color: `${COLORS.haze}B3` }}>Юлия Судоргина</a>
-      </div>
     </div>
   );
 
-  // --- ОСНОВНОЙ ИНТЕРФЕЙС ---
   return (
     <div className="flex flex-col h-screen overflow-hidden font-sans select-none relative" style={{ backgroundColor: COLORS.haze }} onMouseMove={handleMouseMove} onTouchMove={handleMouseMove}>
       {Object.entries(cursors).map(([id, cur]) => (
@@ -688,7 +706,6 @@ export default function App() {
           <button onClick={() => setIsMuted(!isMuted)} className="p-2.5 rounded-xl transition-colors hover:opacity-70" style={{ backgroundColor: COLORS.haze, color: COLORS.ink }}>
             {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
-          {/* ✅ ИСПРАВЛЕНИЕ: Современный clipboard API */}
           <button onClick={async () => {
             const url = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
             await copyToClipboard(url);
@@ -708,14 +725,12 @@ export default function App() {
                   const f = e.target.files[0];
                   const data = await new Promise(r => { const rd = new FileReader(); rd.onload = (ev) => r(ev.target.result); rd.readAsDataURL(f); });
                   const comp = await compressImage(data, 2000, 2000);
-                  // Поле загружаем в Storage
                   const path = `fields/${user.uid}/field_${Date.now()}.jpg`;
                   const url = await uploadImageToStorage(comp, path);
                   addElement('field', { img: url });
                 }} />
                 <ImageIcon size={18} />
               </label>
-              {/* ✅ ИСПРАВЛЕНИЕ: clearTable делает batch delete в Firestore */}
               <button onClick={clearTable} className="p-2.5 rounded-xl transition-colors hover:opacity-70" style={{ color: COLORS.terra }} title="Очистить стол">
                 <Trash2 size={18} />
               </button>
@@ -730,7 +745,6 @@ export default function App() {
       <main className="flex-1 relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: `radial-gradient(circle, ${COLORS.plum} 1px, transparent 1px)`, backgroundSize: '30px 30px' }}></div>
 
-        {/* Кубик и токены */}
         <div className="absolute top-24 right-4 md:right-10 z-40 flex flex-col items-center gap-3 bg-white/60 backdrop-blur-md p-4 rounded-[2.5rem] shadow-xl border border-white">
           <div className="flex gap-2 p-2 rounded-2xl border border-white" style={{ backgroundColor: `${COLORS.ink}10` }}>
             {['#8B3252', '#2D4A3E', '#C4714A', '#4A90E2', '#E2A94A'].map(color => (
@@ -751,7 +765,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Карточки на столе */}
         <div className="absolute inset-0 w-full h-full p-4 overflow-hidden">
           {cardsOnTable.map((elem) => (
             <DraggableElement
@@ -768,7 +781,6 @@ export default function App() {
           ))}
         </div>
 
-        {/* Библиотека */}
         <div className={`absolute bottom-0 left-0 right-0 z-40 transition-transform duration-700 ${isLibraryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-60px)]'}`}>
           <div className={`bg-white/95 backdrop-blur-xl rounded-t-[3rem] shadow-2xl border-t border-white flex flex-col transition-all duration-500 ${isLibraryFullscreen ? 'h-[90vh]' : 'h-80'}`}>
             <div className="relative w-full flex justify-center py-3" style={{ color: COLORS.plum }}>
@@ -800,23 +812,34 @@ export default function App() {
                       </button>
                     </div>
                   )}
-                  {(activeTab === 'local' ? localDecks : cloudDecks).map(item => (
+
+                  {activeTab === 'cloud' && isBaseDecksLoading && (
+                    <div className="flex justify-center py-4">
+                      <Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} />
+                    </div>
+                  )}
+
+                  {(activeTab === 'local' ? localDecks : [...baseDecks, ...cloudDecks]).map(item => (
                     <div key={item.id} className={`group flex items-center gap-3 p-3 rounded-2xl transition-all relative border ${selectedDeckId === item.id ? 'shadow-sm' : 'border-transparent'}`} style={{ backgroundColor: selectedDeckId === item.id ? `${COLORS.plum}10` : 'transparent', borderColor: selectedDeckId === item.id ? `${COLORS.plum}33` : 'transparent' }}>
                       <button onClick={() => selectDeck(item)} className="flex-1 flex items-center gap-3 text-left overflow-hidden hover:opacity-70">
                         <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden border" style={{ borderColor: `${COLORS.ink}10` }}>
                           {item.backImage ? <img src={item.backImage} className="w-full h-full object-contain" alt="" /> : <FolderOpen size={16} color={`${COLORS.ink}4D`} />}
                         </div>
-                        <span className="text-[10px] font-bold truncate uppercase" style={{ color: COLORS.ink }}>{item.name}</span>
+                        <span className="text-[10px] font-bold truncate uppercase" style={{ color: COLORS.ink }}>
+                          {item.name} {item.isBaseDeck && <span className="opacity-50">(База)</span>}
+                        </span>
                       </button>
-                      <button onClick={async () => {
-                        if (window.confirm("Удалить колоду?")) {
-                          if (activeTab === 'local') setLocalDecks(p => p.filter(d => d.id !== item.id));
-                          else await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_decks', item.id));
-                          notify("Удалено");
-                        }
-                      }} className="opacity-0 group-hover:opacity-100 p-2 rounded-xl transition-colors hover:opacity-70" style={{ color: COLORS.terra }}>
-                        <Trash2 size={16} />
-                      </button>
+                      {!item.isBaseDeck && (
+                        <button onClick={async () => {
+                          if (window.confirm("Удалить колоду?")) {
+                            if (activeTab === 'local') setLocalDecks(p => p.filter(d => d.id !== item.id));
+                            else await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_decks', item.id));
+                            notify("Удалено");
+                          }
+                        }} className="opacity-0 group-hover:opacity-100 p-2 rounded-xl transition-colors hover:opacity-70" style={{ color: COLORS.terra }}>
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -867,7 +890,6 @@ export default function App() {
         </div>
       </main>
 
-      {/* МОДАЛКА ИМЕНИ КОЛОДЫ */}
       {isNamingDeck && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center backdrop-blur-sm p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl border-4" style={{ borderColor: COLORS.haze }}>
@@ -881,7 +903,6 @@ export default function App() {
               className="w-full px-6 py-4 rounded-2xl border-2 mb-8 outline-none font-bold"
               style={{ borderColor: COLORS.haze, color: COLORS.ink }}
             />
-            {/* ✅ Прогресс загрузки */}
             {isUploading && (
               <div className="mb-6">
                 <div className="flex justify-between text-[10px] font-bold mb-2" style={{ color: `${COLORS.ink}66` }}>
@@ -903,7 +924,6 @@ export default function App() {
         </div>
       )}
 
-      {/* ПРЕВЬЮ КАРТЫ */}
       {previewCard && (
         <div
           className="fixed inset-0 z-[120] flex items-center justify-center backdrop-blur-md p-4"
@@ -913,7 +933,6 @@ export default function App() {
           <button className="absolute top-6 right-6 text-white p-2 rounded-full transition-all hover:opacity-70" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
             <X size={40} />
           </button>
-          {/* ✅ ИСПРАВЛЕНИЕ: убран несуществующий класс animate-in zoom-in-95 */}
           <img
             src={previewCard.img}
             className="max-h-full max-w-full rounded-2xl shadow-2xl object-contain"
