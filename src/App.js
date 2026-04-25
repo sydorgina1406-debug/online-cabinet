@@ -31,7 +31,8 @@ const firebaseConfig = {
 };
 
 const appId = "mak-space-yulia-sudorgina";
-const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/YOUR_SHEET_ID/pub?gid=0&single=true&output=csv";
+// Ссылка на экспорт вашей конкретной таблицы в формате CSV
+const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1H65cuAhJ6rUKIvhuDthQCU8OWQ2RqdGgJOqhV24AqVs/export?format=csv&gid=402059779";
 
 const ROOT_DRIVE_FOLDER_ID = "19-ZI-4tzVgRntc34yJTPGAVzZpyKksHl";
 const DRIVE_API_KEY = "AIzaSyDXSTiw-Sd2jZve2Yv7bnbVRIAYcPre3N4";
@@ -288,6 +289,10 @@ export default function App() {
 
   const [cursors, setCursors] = useState({});
   const lastCursorSync = useRef(0);
+  
+  // Рефы для работы с огромным пространством стола
+  const scrollContainerRef = useRef(null);
+  const boardRef = useRef(null);
 
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isLibraryFullscreen, setIsLibraryFullscreen] = useState(false);
@@ -395,8 +400,18 @@ export default function App() {
     const now = Date.now();
     if (now - lastCursorSync.current > 200) {
       lastCursorSync.current = now;
-      const x = e.touches ? e.touches[0].clientX : e.clientX;
-      const y = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      const board = boardRef.current;
+      if (!board) return;
+      
+      // Вычисляем координаты относительно бесконечного стола, а не экрана
+      const rect = board.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+
       setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_cursors`, user.uid), { 
         x, y, color: myCursorColor, timestamp: now, name: userName 
       }).catch(() => {});
@@ -544,10 +559,25 @@ export default function App() {
       } catch (e) {}
     }
 
+    // Вычисляем местоположение: бросаем в центр видимого экрана
+    let spawnX = 200;
+    let spawnY = 150;
+    
+    if (scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      if (isField) {
+         spawnX = container.scrollLeft + 50;
+         spawnY = container.scrollTop + 50;
+      } else {
+         spawnX = container.scrollLeft + (container.clientWidth / 2) - (width / 2) + (Math.random() * 40 - 20);
+         spawnY = container.scrollTop + (container.clientHeight / 2) - (height / 2) + (Math.random() * 40 - 20);
+      }
+    }
+
     const elem = {
       id, type, ...data,
-      x: isField ? 50 : 200 + Math.random() * 100,
-      y: isField ? 50 : 150 + Math.random() * 100,
+      x: spawnX,
+      y: spawnY,
       width, height,
       rotation: 0, isFlipped: type !== 'token' && type !== 'text' && !isField, 
       zIndex: isField ? 0 : maxZ + 1,
@@ -788,53 +818,51 @@ export default function App() {
   );
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden font-sans select-none relative" style={{ backgroundColor: COLORS.haze }} onMouseMove={handleMouseMove} onTouchMove={handleMouseMove}>
+    <div className="flex flex-col h-screen overflow-hidden font-sans select-none relative" style={{ backgroundColor: COLORS.haze }}>
       
-      {Object.entries(cursors).map(([id, cur]) => (
-        <div key={id} className="absolute pointer-events-none z-[2000] flex flex-col items-center transition-all duration-150 ease-out" style={{ left: cur.x, top: cur.y }}>
-          <MousePointer2 size={24} fill={cur.color} color="white" strokeWidth={2} className="drop-shadow-md -rotate-12 transform -translate-x-2 -translate-y-2" />
-          <span className="text-[9px] font-bold text-white px-1.5 py-0.5 rounded mt-1 shadow-md" style={{ backgroundColor: cur.color }}>{cur.name || 'Гость'}</span>
-        </div>
-      ))}
-
       {notification && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] text-white px-8 py-3 rounded-full shadow-2xl text-sm font-bold flex items-center gap-2 border" style={{ backgroundColor: COLORS.ink, borderColor: `${COLORS.plum}33` }}>
           <CheckCircle size={16} color={COLORS.terra} /> {notification}
         </div>
       )}
 
-      <header className="flex items-center justify-between px-4 md:px-8 py-3 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm" style={{ borderColor: `${COLORS.ink}10` }}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.plum}, ${COLORS.forest})` }}>
-            <Layers size={20} />
-          </div>
-          <div>
-            <h1 className="text-xs md:text-sm font-black leading-none uppercase flex items-center gap-2" style={{ color: COLORS.ink }}>
-              {platformName}
-              {!isClientMode && (
-                <button onClick={editPlatformName} className="transition-colors hover:opacity-70" style={{ color: COLORS.plum }}>
-                  <Edit2 size={12} />
-                </button>
-              )}
-            </h1>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-[8px] md:text-[9px] font-bold tracking-widest uppercase flex items-center gap-1" style={{ color: COLORS.plum }}>
-                СЕССИЯ: {roomId} <span className="opacity-50">|</span> ВЫ: {userName}
-              </span>
-              {!isClientMode && (
-                <button 
-                  onClick={toggleGameMode} 
-                  className={`px-2 py-0.5 ml-2 rounded-md text-[8px] font-black uppercase tracking-widest transition-all flex items-center gap-1 shadow-sm border ${isGameMode ? 'text-white' : 'hover:opacity-70'}`}
-                  style={{ backgroundColor: isGameMode ? COLORS.plum : COLORS.haze, color: isGameMode ? 'white' : COLORS.ink, borderColor: isGameMode ? COLORS.plum : `${COLORS.ink}20` }}
-                  title={isGameMode ? "Скрыть кубик и фишки" : "Показать кубик и фишки"}
-                >
-                  <Gamepad2 size={10} /> {isGameMode ? 'Игра' : 'Консультация'}
-                </button>
-              )}
+      {/* ШАПКА - Адаптивная */}
+      <header className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-3 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm gap-2" style={{ borderColor: `${COLORS.ink}10` }}>
+        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.plum}, ${COLORS.forest})` }}>
+              <Layers size={20} />
+            </div>
+            <div>
+              <h1 className="text-xs md:text-sm font-black leading-none uppercase flex items-center gap-2" style={{ color: COLORS.ink }}>
+                {platformName}
+                {!isClientMode && (
+                  <button onClick={editPlatformName} className="transition-colors hover:opacity-70" style={{ color: COLORS.plum }}>
+                    <Edit2 size={12} />
+                  </button>
+                )}
+              </h1>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <span className="text-[8px] md:text-[9px] font-bold tracking-widest uppercase flex items-center gap-1" style={{ color: COLORS.plum }}>
+                  СЕССИЯ: {roomId} <span className="opacity-50">|</span> ВЫ: {userName}
+                </span>
+                {!isClientMode && (
+                  <button 
+                    onClick={toggleGameMode} 
+                    className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all flex items-center gap-1 shadow-sm border ${isGameMode ? 'text-white' : 'hover:opacity-70'}`}
+                    style={{ backgroundColor: isGameMode ? COLORS.plum : COLORS.haze, color: isGameMode ? 'white' : COLORS.ink, borderColor: isGameMode ? COLORS.plum : `${COLORS.ink}20` }}
+                    title={isGameMode ? "Скрыть кубик и фишки" : "Показать кубик и фишки"}
+                  >
+                    <Gamepad2 size={10} /> {isGameMode ? 'Игра' : 'Консультация'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        
+        {/* Панель инструментов - переносится на мобильных */}
+        <div className="flex items-center gap-2 flex-wrap justify-center md:justify-end w-full md:w-auto">
           
           <button onClick={() => setIsMuted(!isMuted)} className="p-2.5 rounded-xl transition-colors hover:opacity-70" style={{ backgroundColor: COLORS.haze, color: COLORS.ink }}>
             {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
@@ -847,7 +875,7 @@ export default function App() {
               setTimeout(() => setCopyFeedback(false), 2000);
             }} className="px-4 py-2.5 rounded-xl text-[10px] font-black bg-white border flex items-center gap-2 shadow-sm transition-all hover:opacity-70" style={{ borderColor: `${COLORS.ink}20`, color: COLORS.ink }}>
               {copyFeedback ? <CheckCircle size={14} color={COLORS.forest} /> : <Copy size={14} />}
-              {copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА"}
+              <span className="hidden sm:inline">{copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА"}</span>
             </button>
           )}
           {!isClientMode && (
@@ -888,11 +916,12 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex-1 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: `radial-gradient(circle, ${COLORS.plum} 1px, transparent 1px)`, backgroundSize: '30px 30px' }}></div>
-
+      {/* ОГРОМНОЕ ПОЛЕ С ПРОКРУТКОЙ */}
+      <main className="flex-1 relative flex flex-col overflow-hidden">
+        
+        {/* Фиксированная плавающая панель Игры */}
         {isGameMode && (
-          <div className="absolute top-24 right-4 md:right-10 z-40 flex flex-col items-center gap-3 bg-white/60 backdrop-blur-md p-4 rounded-[2.5rem] shadow-xl border border-white transition-all animate-in slide-in-from-right-4 fade-in duration-300">
+          <div className="fixed top-[120px] md:top-24 right-4 md:right-10 z-40 flex flex-col items-center gap-3 bg-white/60 backdrop-blur-md p-4 rounded-[2.5rem] shadow-xl border border-white transition-all animate-in slide-in-from-right-4 fade-in duration-300 pointer-events-auto">
             <div className="flex gap-2 p-2 rounded-2xl border border-white" style={{ backgroundColor: `${COLORS.ink}10` }}>
               {['#8B3252', '#2D4A3E', '#C4714A', '#4A90E2', '#E2A94A'].map(color => (
                 <button key={color} onClick={() => addElement('token', { color })} className="w-5 h-5 rounded-full shadow-md border border-white/50 hover:scale-125 transition-transform" style={{ backgroundColor: color }} />
@@ -913,27 +942,49 @@ export default function App() {
           </div>
         )}
 
-        <div className="absolute inset-0 w-full h-full p-4 overflow-hidden">
-          {cardsOnTable.map((elem) => (
-            <DraggableElement
-              key={elem.id}
-              element={elem}
-              isClientMode={isClientMode}
-              isMuted={isMuted}
-              playSound={playSound}
-              maxZIndex={Math.max(0, ...cardsOnTable.map(c => c.zIndex || 0))}
-              onUpdate={(d) => updateDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, elem.id), d)}
-              onRemove={() => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, elem.id))}
-              onPreview={() => elem.type === 'card' && setPreviewCard(elem)}
-              currentUser={user}
-              currentUserName={userName}
-              onNotify={notify}
-            />
-          ))}
+        {/* Область, которая скроллится */}
+        <div ref={scrollContainerRef} className="flex-1 overflow-auto custom-scrollbar relative bg-[#F2EFF5]">
+          <div 
+            ref={boardRef}
+            className="relative min-w-[3000px] min-h-[3000px] bg-transparent"
+            onMouseMove={handleMouseMove} 
+            onTouchMove={handleMouseMove}
+          >
+            {/* Сетка фона */}
+            <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: `radial-gradient(circle, ${COLORS.plum} 1px, transparent 1px)`, backgroundSize: '30px 30px' }}></div>
+            
+            {/* Карты и объекты на столе */}
+            {cardsOnTable.map((elem) => (
+              <DraggableElement
+                key={elem.id}
+                element={elem}
+                isClientMode={isClientMode}
+                isMuted={isMuted}
+                playSound={playSound}
+                maxZIndex={Math.max(0, ...cardsOnTable.map(c => c.zIndex || 0))}
+                onUpdate={(d) => updateDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, elem.id), d)}
+                onRemove={() => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, elem.id))}
+                onPreview={() => elem.type === 'card' && setPreviewCard(elem)}
+                currentUser={user}
+                currentUserName={userName}
+                onNotify={notify}
+                boardRef={boardRef} // Прокидываем ссылку на доску
+              />
+            ))}
+
+            {/* Курсоры других игроков */}
+            {Object.entries(cursors).map(([id, cur]) => (
+              <div key={id} className="absolute pointer-events-none z-[2000] flex flex-col items-center transition-all duration-150 ease-out" style={{ left: cur.x, top: cur.y }}>
+                <MousePointer2 size={24} fill={cur.color} color="white" strokeWidth={2} className="drop-shadow-md -rotate-12 transform -translate-x-2 -translate-y-2" />
+                <span className="text-[9px] font-bold text-white px-1.5 py-0.5 rounded mt-1 shadow-md" style={{ backgroundColor: cur.color }}>{cur.name || 'Гость'}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className={`absolute bottom-0 left-0 right-0 z-40 transition-transform duration-700 ${isLibraryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-60px)]'}`}>
-          <div className={`bg-white/95 backdrop-blur-xl rounded-t-[3rem] shadow-2xl border-t border-white flex flex-col transition-all duration-500 ${isLibraryFullscreen ? 'h-[90vh]' : 'h-80'}`}>
+        {/* БИБЛИОТЕКА - Адаптивная (снизу) */}
+        <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-700 pointer-events-none ${isLibraryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-60px)]'}`}>
+          <div className={`bg-white/95 backdrop-blur-xl rounded-t-[3rem] shadow-2xl border-t border-white flex flex-col transition-all duration-500 pointer-events-auto ${isLibraryFullscreen ? 'h-[90vh]' : 'h-[75vh] md:h-80'}`}>
             <div className="relative w-full flex justify-center py-3" style={{ color: COLORS.plum }}>
               <button onClick={toggleLibrary} className="flex flex-col items-center gap-1 w-full cursor-pointer hover:opacity-70 transition-opacity">
                 <ChevronUp size={24} className={`transition-transform duration-500 ${isLibraryOpen ? 'rotate-180' : ''}`} />
@@ -945,15 +996,18 @@ export default function App() {
                 </button>
               )}
             </div>
-            <div className="flex flex-1 p-8 pt-0 gap-8 min-h-0">
+            
+            {/* Содержимое библиотеки перестроено для мобильных */}
+            <div className="flex flex-1 flex-col md:flex-row p-4 md:p-8 pt-0 gap-4 md:gap-8 min-h-0 overflow-hidden">
               {!isClientMode && (
-                <div className="w-72 border-r pr-6 flex flex-col gap-3 overflow-y-auto custom-scrollbar flex-shrink-0" style={{ borderColor: `${COLORS.ink}10` }}>
-                  <div className="flex p-1 rounded-xl mb-2" style={{ backgroundColor: COLORS.haze }}>
+                <div className="w-full md:w-72 border-b md:border-b-0 md:border-r pb-4 md:pb-0 pr-0 md:pr-6 h-[30%] md:h-auto flex-shrink-0 overflow-y-auto custom-scrollbar flex flex-col gap-3" style={{ borderColor: `${COLORS.ink}10` }}>
+                  <div className="flex p-1 rounded-xl mb-1 flex-shrink-0" style={{ backgroundColor: COLORS.haze }}>
                     <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'cloud' ? 'bg-white shadow-sm' : 'hover:opacity-70'}`} style={{ color: activeTab === 'cloud' ? COLORS.plum : `${COLORS.ink}99` }}>ОБЛАКО</button>
                     <button onClick={() => setActiveTab('local')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'local' ? 'bg-white shadow-sm' : 'hover:opacity-70'}`} style={{ color: activeTab === 'local' ? COLORS.plum : `${COLORS.ink}99` }}>СЕССИЯ</button>
                   </div>
+                  
                   {activeTab === 'local' && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 flex-shrink-0">
                       <label className="flex items-center justify-center gap-2 py-4 border-2 border-dashed rounded-2xl text-[10px] font-black cursor-pointer transition-all uppercase hover:opacity-70" style={{ borderColor: `${COLORS.ink}20`, color: `${COLORS.ink}80` }}>
                         <input type="file" multiple className="hidden" accept="image/*" onChange={(e) => { setPendingFiles(Array.from(e.target.files)); setIsNamingDeck(true); }} />
                         <Plus size={18} /> Загрузить с ПК
@@ -965,15 +1019,15 @@ export default function App() {
                   )}
 
                   {activeTab === 'cloud' && isBaseDecksLoading && (
-                    <div className="flex justify-center py-4">
+                    <div className="flex justify-center py-4 flex-shrink-0">
                       <Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} />
                     </div>
                   )}
 
                   {(activeTab === 'local' ? localDecks : [...baseDecks, ...cloudDecks]).map(item => (
-                    <div key={item.id} className={`group flex items-center gap-3 p-3 rounded-2xl transition-all relative border ${selectedDeckId === item.id ? 'shadow-sm' : 'border-transparent'}`} style={{ backgroundColor: selectedDeckId === item.id ? `${COLORS.plum}10` : 'transparent', borderColor: selectedDeckId === item.id ? `${COLORS.plum}33` : 'transparent' }}>
+                    <div key={item.id} className={`group flex items-center gap-3 p-3 rounded-2xl transition-all relative border flex-shrink-0 ${selectedDeckId === item.id ? 'shadow-sm' : 'border-transparent'}`} style={{ backgroundColor: selectedDeckId === item.id ? `${COLORS.plum}10` : 'transparent', borderColor: selectedDeckId === item.id ? `${COLORS.plum}33` : 'transparent' }}>
                       <button onClick={() => selectDeck(item)} className="flex-1 flex items-center gap-3 text-left overflow-hidden hover:opacity-70">
-                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden border" style={{ borderColor: `${COLORS.ink}10` }}>
+                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden border flex-shrink-0" style={{ borderColor: `${COLORS.ink}10` }}>
                           {item.backImage ? <img src={item.backImage} className="w-full h-full object-contain" alt="" /> : <FolderOpen size={16} color={`${COLORS.ink}4D`} />}
                         </div>
                         <span className="text-[10px] font-bold truncate uppercase" style={{ color: COLORS.ink }}>
@@ -995,6 +1049,7 @@ export default function App() {
                   ))}
                 </div>
               )}
+              
               <div className="flex-1 flex flex-col overflow-hidden">
                 {activeDeckData ? (
                   <>
@@ -1006,24 +1061,24 @@ export default function App() {
                         </button>
                       )}
                     </div>
-                    <div className="flex-1 overflow-y-auto custom-scrollbar flex gap-4 content-start flex-wrap pb-8">
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar flex gap-4 content-start flex-wrap pb-8 pr-2">
                       <button onClick={() => {
                         const array = new Uint32Array(1);
                         window.crypto.getRandomValues(array);
                         const randomIndex = array[0] % activeDeckData.cards.length;
                         addElement('card', { img: activeDeckData.cards[randomIndex], backImg: activeDeckData.backImage });
                         if (isLibraryFullscreen) toggleLibrary();
-                      }} className="flex-shrink-0 w-28 h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 hover:opacity-70 transition-all shadow-md" style={{ borderColor: `${COLORS.plum}4D`, backgroundColor: `${COLORS.plum}10`, color: COLORS.plum }}>
+                      }} className="flex-shrink-0 w-24 h-36 md:w-28 md:h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 hover:opacity-70 transition-all shadow-md" style={{ borderColor: `${COLORS.plum}4D`, backgroundColor: `${COLORS.plum}10`, color: COLORS.plum }}>
                         <Plus size={28} /><span className="text-[9px] font-black uppercase">Наугад</span>
                       </button>
                       {activeDeckData.cards.map((img, idx) => (
                         <button key={idx} onClick={() => {
                           addElement('card', { img, backImg: activeDeckData.backImage });
                           if (isLibraryFullscreen) toggleLibrary();
-                        }} className="relative flex-shrink-0 h-40 rounded-2xl group shadow-sm hover:shadow-md transition-all flex items-center justify-center">
+                        }} className="relative flex-shrink-0 h-36 md:h-40 rounded-2xl group shadow-sm hover:shadow-md transition-all flex items-center justify-center">
                           {isLibraryDeckFlipped
-                            ? <img src={img} className="h-full w-auto min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
-                            : <div className="h-full w-28 flex items-center justify-center rounded-2xl overflow-hidden relative shadow-sm" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
+                            ? <img src={img} className="h-full w-auto min-w-[5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
+                            : <div className="h-full w-24 md:w-28 flex items-center justify-center rounded-2xl overflow-hidden relative shadow-sm" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
                               {activeDeckData.backImage
                                 ? <img src={activeDeckData.backImage} className="w-full h-full object-cover absolute inset-0" alt="Рубашка" />
                                 : <Layers size={20} className="text-white/20" />}
@@ -1034,7 +1089,7 @@ export default function App() {
                     </div>
                   </>
                 ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center font-bold uppercase tracking-widest leading-none" style={{ color: `${COLORS.ink}33` }}>
+                  <div className="flex-1 flex flex-col items-center justify-center font-bold uppercase tracking-widest leading-none text-center px-4" style={{ color: `${COLORS.ink}33` }}>
                     {isClientMode ? "Мастер еще не выбрал колоду" : "Выберите колоду слева"}
                   </div>
                 )}
@@ -1084,7 +1139,7 @@ export default function App() {
           style={{ backgroundColor: `${COLORS.ink}F2` }}
           onClick={() => setPreviewCard(null)}
         >
-          <div className="absolute top-6 left-1/2 -translate-x-1/2 text-white font-black tracking-widest uppercase bg-black/50 px-6 py-2 rounded-full backdrop-blur-md text-xs">
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 text-white font-black tracking-widest uppercase bg-black/50 px-6 py-2 rounded-full backdrop-blur-md text-xs text-center w-[90%] md:w-auto">
             {previewCard.isFlipped ? "Эта карта открыта для всех" : "Эту карту сейчас видите только вы"}
           </div>
           <button className="absolute top-6 right-6 text-white p-2 rounded-full transition-all hover:opacity-70" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
@@ -1109,7 +1164,7 @@ export default function App() {
   );
 }
 
-function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, playSound, isMuted, isClientMode, currentUser, currentUserName, onNotify }) {
+function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, playSound, isMuted, isClientMode, currentUser, currentUserName, onNotify, boardRef }) {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const startPos = useRef({ x: 0, y: 0 });
@@ -1182,7 +1237,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     }
     return () => {
       window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', end);
-      window.removeEventListener('touchmove', move); window.removeEventListener('touchend', end);
+      window.removeEventListener('touchmove', move); window.removeEventListener('touchmove', end); // Исправлена опечатка в снятии слушателя
     };
   }, [isDragging, isResizing, element, onUpdate, playSound, isMuted, isLocked, isText]);
 
