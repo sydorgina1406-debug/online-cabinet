@@ -450,7 +450,7 @@ export default function App() {
   }, [user, isDbConnected, isClientMode]);
 
   useEffect(() => {
-    if (!user || !isAuthorized || !roomId || !isDbConnected) return;
+    if (!user || !isAuthorized || !roomId) return;
     const tUnsub = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`), (snap) => {
       const cards = [];
       snap.docs.forEach(d => {
@@ -476,7 +476,7 @@ export default function App() {
       setCursors(cur);
     });
     return () => { tUnsub(); cUnsub(); };
-  }, [user, isAuthorized, roomId, isDbConnected]);
+  }, [user, isAuthorized, roomId, isDbConnected, isClientMode]);
 
   const handleMouseMove = (e) => {
     if (!isAuthorized || !isDbConnected || !user || !roomId) return;
