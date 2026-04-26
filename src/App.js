@@ -743,7 +743,6 @@ export default function App() {
   const takeScreenshot = async () => {
     notify("Создаю скриншот стола...", 3000);
     try {
-      // Динамически загружаем html2canvas
       if (!window.html2canvas) {
         await new Promise((resolve, reject) => {
           const script = document.createElement('script');
@@ -756,11 +755,7 @@ export default function App() {
       const board = boardRef.current;
       if (!board) return;
 
-      // Находим границы всех элементов на столе
-      const cards = cardsOnTable.filter(c => c.type !== 'field');
-      const fields = cardsOnTable.filter(c => c.type === 'field');
-      const allElems = [...fields, ...cards];
-
+      const allElems = cardsOnTable;
       if (allElems.length === 0) {
         notify("На столе нет карт для скриншота");
         return;
@@ -772,6 +767,31 @@ export default function App() {
       const maxX = Math.max(...allElems.map(c => c.x + (c.width || 160))) + padding;
       const maxY = Math.max(...allElems.map(c => c.y + (c.height || 240))) + padding;
 
+      // Временно убираем 3D-перевороты — html2canvas их не рендерит
+      const flipped3d = board.querySelectorAll('[style*="rotateY(180deg)"]');
+      const flippedStyles = [];
+      flipped3d.forEach(el => {
+        flippedStyles.push({ el, style: el.getAttribute('style') });
+        el.style.transform = 'rotateY(0deg)';
+      });
+
+      // Показываем лицевую сторону перевёрнутых карт
+      const backFaces = board.querySelectorAll('[style*="backface-visibility: hidden"]');
+      const backFaceStyles = [];
+      backFaces.forEach(el => {
+        const t = el.style.transform;
+        backFaceStyles.push({ el, transform: t, visibility: el.style.visibility });
+        if (t && t.includes('rotateY(180deg)')) {
+          // Это рубашка — скрываем
+          el.style.visibility = 'hidden';
+        } else {
+          // Это лицо — показываем
+          el.style.visibility = 'visible';
+        }
+      });
+
+      await new Promise(r => setTimeout(r, 100)); // ждём перерисовки
+
       const canvas = await window.html2canvas(board, {
         x: Math.max(0, minX),
         y: Math.max(0, minY),
@@ -782,6 +802,13 @@ export default function App() {
         allowTaint: true,
         backgroundColor: '#F2EFF5',
         logging: false,
+      });
+
+      // Возвращаем всё обратно
+      flippedStyles.forEach(({ el, style }) => el.setAttribute('style', style));
+      backFaceStyles.forEach(({ el, transform, visibility }) => {
+        el.style.transform = transform;
+        el.style.visibility = visibility || '';
       });
 
       const link = document.createElement('a');
