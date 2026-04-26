@@ -460,9 +460,17 @@ export default function App() {
           if (d.data().isGameMode !== undefined) setIsGameMode(d.data().isGameMode);
         }
         else if (d.id === '_library_state') {
-          setIsLibraryOpen(d.data().isOpen);
-          setIsLibraryFullscreen(d.data().isFullscreen);
-          setIsLibraryDeckFlipped(d.data().isFlipped);
+          // Клиент не синхронизирует открытие/закрытие библиотеки — только перелистывание
+          const libraryData = d.data();
+          if (libraryData.isOpen !== undefined && !window._isClientMode) {
+            setIsLibraryOpen(libraryData.isOpen);
+          }
+          if (libraryData.isFullscreen !== undefined && !window._isClientMode) {
+            setIsLibraryFullscreen(libraryData.isFullscreen);
+          }
+          if (libraryData.isFlipped !== undefined) {
+            setIsLibraryDeckFlipped(libraryData.isFlipped);
+          }
         }
         else if (d.id === '_active_deck') { setActiveDeckData(d.data()); }
         else if (d.id === '_timer_state') { setSessionTimer(d.data()); }
@@ -626,6 +634,7 @@ export default function App() {
     setUserName(clientNameInput.trim());
     setIsAuthorized(true);
     setInRoom(true);
+    window._isClientMode = true;
   };
 
   const addElement = async (type, data) => {
