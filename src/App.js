@@ -43,13 +43,18 @@ const loadPlatformDecks = async () => {
     const res = await fetch(PLATFORM_DECKS_URL + '?t=' + Date.now());
     if (!res.ok) return [];
     const decksConfig = await res.json();
-    return decksConfig.map(deck => ({
-      id: `platform_${deck.id}`,
-      name: deck.name,
-      isPlatformDeck: true,
-      backImage: `${PLATFORM_BASE_URL}/${deck.folder}/${deck.back}`,
-      cards: deck.cards.map(card => `${PLATFORM_BASE_URL}/${deck.folder}/${encodeURIComponent(card)}`)
-    }));
+    return decksConfig.map(deck => {
+      const base = deck.folder
+        ? `${PLATFORM_BASE_URL}/${deck.folder}`
+        : PLATFORM_BASE_URL;
+      return {
+        id: `platform_${deck.id}`,
+        name: deck.name,
+        isPlatformDeck: true,
+        backImage: `${base}/${deck.back}`,
+        cards: deck.cards.map(card => `${base}/${encodeURIComponent(card)}`)
+      };
+    });
   } catch (e) {
     console.error('Ошибка загрузки колод платформы:', e);
     return [];
