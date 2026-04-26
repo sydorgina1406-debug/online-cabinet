@@ -16,7 +16,7 @@ import {
   Users, LogOut, AlertCircle, ExternalLink, Image as ImageIcon,
   Volume2, VolumeX, ArrowUp, Save, MousePointer2, UserCircle,
   Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
-  Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, Download
+  Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -740,87 +740,6 @@ export default function App() {
     notify("Восстановлено ✓");
   };
 
-  const takeScreenshot = async () => {
-    notify("Создаю скриншот стола...", 3000);
-    try {
-      if (!window.html2canvas) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
-      const board = boardRef.current;
-      if (!board) return;
-
-      const allElems = cardsOnTable;
-      if (allElems.length === 0) {
-        notify("На столе нет карт для скриншота");
-        return;
-      }
-
-      const padding = 60;
-      const minX = Math.min(...allElems.map(c => c.x)) - padding;
-      const minY = Math.min(...allElems.map(c => c.y)) - padding;
-      const maxX = Math.max(...allElems.map(c => c.x + (c.width || 160))) + padding;
-      const maxY = Math.max(...allElems.map(c => c.y + (c.height || 240))) + padding;
-
-      // Временно убираем 3D-перевороты — html2canvas их не рендерит
-      const flipped3d = board.querySelectorAll('[style*="rotateY(180deg)"]');
-      const flippedStyles = [];
-      flipped3d.forEach(el => {
-        flippedStyles.push({ el, style: el.getAttribute('style') });
-        el.style.transform = 'rotateY(0deg)';
-      });
-
-      // Показываем лицевую сторону перевёрнутых карт
-      const backFaces = board.querySelectorAll('[style*="backface-visibility: hidden"]');
-      const backFaceStyles = [];
-      backFaces.forEach(el => {
-        const t = el.style.transform;
-        backFaceStyles.push({ el, transform: t, visibility: el.style.visibility });
-        if (t && t.includes('rotateY(180deg)')) {
-          // Это рубашка — скрываем
-          el.style.visibility = 'hidden';
-        } else {
-          // Это лицо — показываем
-          el.style.visibility = 'visible';
-        }
-      });
-
-      await new Promise(r => setTimeout(r, 100)); // ждём перерисовки
-
-      const canvas = await window.html2canvas(board, {
-        x: Math.max(0, minX),
-        y: Math.max(0, minY),
-        width: maxX - minX,
-        height: maxY - minY,
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#F2EFF5',
-        logging: false,
-      });
-
-      // Возвращаем всё обратно
-      flippedStyles.forEach(({ el, style }) => el.setAttribute('style', style));
-      backFaceStyles.forEach(({ el, transform, visibility }) => {
-        el.style.transform = transform;
-        el.style.visibility = visibility || '';
-      });
-
-      const link = document.createElement('a');
-      link.download = `mak-session-${new Date().toLocaleDateString('ru')}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      notify("Скриншот сохранён ✓");
-    } catch (e) {
-      console.error(e);
-      notify("Ошибка скриншота: " + e.message);
-    }
-  };
 
   const confirmUpload = async () => {
     if (pendingFiles.length === 0) return;
@@ -1139,10 +1058,6 @@ export default function App() {
                 }} />
                 <ImageIcon size={18} />
               </label>
-
-              <button onClick={takeScreenshot} className="p-2.5 rounded-xl transition-colors hover:opacity-70 border" style={{ backgroundColor: COLORS.haze, color: COLORS.forest, borderColor: `${COLORS.forest}20` }} title="Скачать расстановку как PNG">
-                <Download size={18} />
-              </button>
 
               <button onClick={clearTable} className="p-2.5 rounded-xl transition-colors hover:opacity-70" style={{ color: COLORS.terra }} title="Очистить стол">
                 <Trash2 size={18} />
