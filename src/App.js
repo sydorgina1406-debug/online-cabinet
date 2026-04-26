@@ -35,7 +35,7 @@ const ROOT_DRIVE_FOLDER_ID = "19-ZI-4tzVgRntc34yJTPGAVzZpyKksHl";
 const DRIVE_API_KEY = "AIzaSyDXSTiw-Sd2jZve2Yv7bnbVRIAYcPre3N4";
 
 // URL платформы — колоды хранятся прямо на сайте
-const PLATFORM_BASE_URL = "https://sydorgina1406-debug.github.io/online-cabinet";
+const PLATFORM_BASE_URL = "https://online-cabinet.vercel.app";
 const PLATFORM_DECKS_URL = `${PLATFORM_BASE_URL}/decks.json`;
 
 const loadPlatformDecks = async () => {
