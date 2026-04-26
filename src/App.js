@@ -269,6 +269,7 @@ function UndoTimer({ expiresAt }) {
 export default function App() {
   const [user, setUser] = useState(null);
   const [roomId, setRoomId] = useState('');
+  const roomIdRef = useRef('');
   const [inRoom, setInRoom] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isClientMode, setIsClientMode] = useState(false);
@@ -416,6 +417,7 @@ export default function App() {
       const roomParam = params.get('room');
       if (roomParam) {
         setRoomId(roomParam);
+        roomIdRef.current = roomParam;
         setIsClientMode(true);
       }
     };
@@ -539,10 +541,23 @@ export default function App() {
     if (isClientMode) return;
     setSelectedDeckId(deck.id);
     setActiveDeckData(deck);
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_active_deck'), {
-      id: deck.id, name: deck.name, cards: deck.cards, backImage: deck.backImage
-    });
-    syncLibraryUI({ isFlipped: false });
+    const currentRoomId = roomIdRef.current || roomId;
+    if (!currentRoomId) {
+      notify("Ошибка: сессия не найдена. Перезайдите.");
+      return;
+    }
+    try {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${currentRoomId}`, '_active_deck'), {
+        id: deck.id,
+        name: deck.name,
+        cards: deck.cards || [],
+        backImage: deck.backImage || null
+      });
+      syncLibraryUI({ isFlipped: false });
+      notify(`Колода "${deck.name}" активирована ✓`);
+    } catch(e) {
+      notify("Ошибка синхронизации: " + e.message);
+    }
   };
 
   const handleLogin = async () => {
@@ -551,7 +566,13 @@ export default function App() {
     const inputPwd = passwordInput.trim();
 
     const enterRoomAsPsy = (name) => {
-      if (!roomId) setRoomId(`session_${Math.random().toString(36).substr(2, 6)}`);
+      if (!roomId) {
+        const newRoomId = `session_${Math.random().toString(36).substr(2, 6)}`;
+        setRoomId(newRoomId);
+        roomIdRef.current = newRoomId;
+      } else {
+        roomIdRef.current = roomId;
+      }
       setUserName(name + " (Мастер)");
       setIsClientMode(false); setIsAuthorized(true); setInRoom(true); setShowKeyPrompt(false);
       notify(`Привет, ${name}! Базовые колоды загружаются...`);
@@ -1126,21 +1147,32 @@ export default function App() {
             <div className="flex flex-1 flex-col md:flex-row p-4 md:p-8 pt-0 gap-4 md:gap-8 min-h-0 overflow-hidden">
               {!isClientMode && (
                 <div className="w-full md:w-72 border-b md:border-b-0 md:border-r pb-4 md:pb-0 pr-0 md:pr-6 h-[30%] md:h-auto flex-shrink-0 overflow-y-auto custom-scrollbar flex flex-col gap-3" style={{ borderColor: `${COLORS.ink}10` }}>
-                  {/* ВКЛАДКИ: Платформа / Облако / Сессия */}
+                  {/* ВКЛАДКИ: Платформа / Облако / Мои */}
                   <div className="flex p-1 rounded-xl mb-1 flex-shrink-0" style={{ backgroundColor: COLORS.haze }}>
                     <button onClick={() => setActiveTab('platform')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'platform' ? 'bg-white shadow-sm' : 'hover:opacity-70'}`} style={{ color: activeTab === 'platform' ? COLORS.plum : `${COLORS.ink}99` }}>БАЗА</button>
                     <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'cloud' ? 'bg-white shadow-sm' : 'hover:opacity-70'}`} style={{ color: activeTab === 'cloud' ? COLORS.plum : `${COLORS.ink}99` }}>ОБЛАКО</button>
-                    <button onClick={() => setActiveTab('local')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'local' ? 'bg-white shadow-sm' : 'hover:opacity-70'}`} style={{ color: activeTab === 'local' ? COLORS.plum : `${COLORS.ink}99` }}>СЕССИЯ</button>
+                    <button onClick={() => setActiveTab('local')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'local' ? 'bg-white shadow-sm' : 'hover:opacity-70'}`} style={{ color: activeTab === 'local' ? COLORS.plum : `${COLORS.ink}99` }}>МОИ</button>
                   </div>
 
                   {activeTab === 'local' && (
-                    <div className="space-y-2 flex-shrink-0">
-                      <label className="flex items-center justify-center gap-2 py-4 border-2 border-dashed rounded-2xl text-[10px] font-black cursor-pointer transition-all uppercase hover:opacity-70" style={{ borderColor: `${COLORS.ink}20`, color: `${COLORS.ink}80` }}>
-                        <input type="file" multiple className="hidden" accept="image/*" onChange={(e) => { setPendingFiles(Array.from(e.target.files)); setIsNamingDeck(true); }} />
-                        <Plus size={18} /> Загрузить с ПК
-                      </label>
-                      <button onClick={addDeckByLinks} className="w-full flex items-center justify-center gap-2 py-3 border-2 rounded-2xl text-[9px] font-black transition-all uppercase hover:opacity-70" style={{ borderColor: `${COLORS.ink}10`, color: `${COLORS.ink}80` }}>
-                        <FileJson size={16} /> Ссылки (Диск)
+                    <div className="flex flex-col gap-3 flex-shrink-0">
+                      <div className="rounded-2xl p-3 text-[9px] leading-relaxed" style={{ backgroundColor: `${COLORS.forest}12`, color: COLORS.forest, border: `1px solid ${COLORS.forest}25` }}>
+                        <div className="font-black uppercase tracking-widest mb-2 flex items-center gap-1">
+                          <FolderOpen size={11} /> Как добавить колоду с Google Диска:
+                        </div>
+                        <div className="space-y-1 font-medium" style={{ color: `${COLORS.ink}99` }}>
+                          <div>1. Откройте папку с картами на Google Диске</div>
+                          <div>2. Правая кнопка → <b>"Открыть доступ"</b></div>
+                          <div>3. Нажмите <b>"Все у кого есть ссылка"</b></div>
+                          <div>4. Скопируйте ссылку и вставьте ниже ↓</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={addDeckByLinks}
+                        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black transition-all uppercase hover:opacity-80 shadow-sm"
+                        style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }}
+                      >
+                        <LinkIcon size={16} /> Вставить ссылку на папку
                       </button>
                     </div>
                   )}
