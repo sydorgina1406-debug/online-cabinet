@@ -16,7 +16,7 @@ import {
   Users, LogOut, AlertCircle, ExternalLink, Image as ImageIcon,
   Volume2, VolumeX, ArrowUp, Save, MousePointer2, UserCircle,
   Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
-  Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2
+  Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, Download
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -300,6 +300,11 @@ export default function App() {
   const [visualDice, setVisualDice] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
   const prevDiceTime = useRef(0);
+  const [diceType, setDiceType] = useState(6); // 6 или 10
+  const [diceD10, setDiceD10] = useState({ value: 1, timestamp: 0 });
+  const [visualDiceD10, setVisualDiceD10] = useState(1);
+  const [isAnimatingD10, setIsAnimatingD10] = useState(false);
+  const prevDiceTimeD10 = useRef(0);
 
   const [cursors, setCursors] = useState({});
   const lastCursorSync = useRef(0);
@@ -406,6 +411,26 @@ export default function App() {
   }, [dice.timestamp, dice.value, isMuted]);
 
   useEffect(() => {
+    if (diceD10.timestamp > prevDiceTimeD10.current) {
+      if (prevDiceTimeD10.current !== 0) {
+        playSound('dice', isMuted);
+        setIsAnimatingD10(true);
+        const interval = setInterval(() => setVisualDiceD10(Math.floor(Math.random() * 10) + 1), 80);
+        const timeout = setTimeout(() => {
+          clearInterval(interval);
+          setVisualDiceD10(diceD10.value);
+          setIsAnimatingD10(false);
+        }, 600);
+        prevDiceTimeD10.current = diceD10.timestamp;
+        return () => { clearInterval(interval); clearTimeout(timeout); };
+      } else {
+        setVisualDiceD10(diceD10.value);
+        prevDiceTimeD10.current = diceD10.timestamp;
+      }
+    }
+  }, [diceD10.timestamp, diceD10.value, isMuted]);
+
+  useEffect(() => {
     const init = async () => {
       try { await signInAnonymously(auth); } catch (e) {}
       onAuthStateChanged(auth, (u) => {
@@ -455,6 +480,8 @@ export default function App() {
       const cards = [];
       snap.docs.forEach(d => {
         if (d.id === '_dice_state') setDice({ value: d.data().value, timestamp: d.data().timestamp });
+        else if (d.id === '_dice_d10_state') setDiceD10({ value: d.data().value, timestamp: d.data().timestamp });
+        else if (d.id === '_dice_type') setDiceType(d.data().type || 6);
         else if (d.id === '_settings') {
           if (d.data().platformName) setPlatformName(d.data().platformName);
           if (d.data().isGameMode !== undefined) setIsGameMode(d.data().isGameMode);
@@ -711,6 +738,61 @@ export default function App() {
     clearTimeout(undoStack.timeoutId);
     setUndoStack(null);
     notify("Восстановлено ✓");
+  };
+
+  const takeScreenshot = async () => {
+    notify("Создаю скриншот стола...", 3000);
+    try {
+      // Динамически загружаем html2canvas
+      if (!window.html2canvas) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+      const board = boardRef.current;
+      if (!board) return;
+
+      // Находим границы всех элементов на столе
+      const cards = cardsOnTable.filter(c => c.type !== 'field');
+      const fields = cardsOnTable.filter(c => c.type === 'field');
+      const allElems = [...fields, ...cards];
+
+      if (allElems.length === 0) {
+        notify("На столе нет карт для скриншота");
+        return;
+      }
+
+      const padding = 60;
+      const minX = Math.min(...allElems.map(c => c.x)) - padding;
+      const minY = Math.min(...allElems.map(c => c.y)) - padding;
+      const maxX = Math.max(...allElems.map(c => c.x + (c.width || 160))) + padding;
+      const maxY = Math.max(...allElems.map(c => c.y + (c.height || 240))) + padding;
+
+      const canvas = await window.html2canvas(board, {
+        x: Math.max(0, minX),
+        y: Math.max(0, minY),
+        width: maxX - minX,
+        height: maxY - minY,
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#F2EFF5',
+        logging: false,
+      });
+
+      const link = document.createElement('a');
+      link.download = `mak-session-${new Date().toLocaleDateString('ru')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      notify("Скриншот сохранён ✓");
+    } catch (e) {
+      console.error(e);
+      notify("Ошибка скриншота: " + e.message);
+    }
   };
 
   const confirmUpload = async () => {
@@ -1031,6 +1113,10 @@ export default function App() {
                 <ImageIcon size={18} />
               </label>
 
+              <button onClick={takeScreenshot} className="p-2.5 rounded-xl transition-colors hover:opacity-70 border" style={{ backgroundColor: COLORS.haze, color: COLORS.forest, borderColor: `${COLORS.forest}20` }} title="Скачать расстановку как PNG">
+                <Download size={18} />
+              </button>
+
               <button onClick={clearTable} className="p-2.5 rounded-xl transition-colors hover:opacity-70" style={{ color: COLORS.terra }} title="Очистить стол">
                 <Trash2 size={18} />
               </button>
@@ -1054,16 +1140,53 @@ export default function App() {
                 <button key={color} onClick={() => addElement('token', { color })} className="w-5 h-5 rounded-full shadow-md border border-white/50 hover:scale-125 transition-transform" style={{ backgroundColor: color }} />
               ))}
             </div>
-            <div className={`w-14 h-14 bg-white rounded-2xl shadow-lg flex items-center justify-center border-2 transition-all ${isAnimating ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.plum}20` }}>
-              {renderDiceFace(visualDice, COLORS.plum)}
+            {/* Переключатель типа кубика */}
+            <div className="flex p-0.5 rounded-xl" style={{ backgroundColor: `${COLORS.ink}15` }}>
+              {[6, 10].map(type => (
+                <button
+                  key={type}
+                  onClick={async () => {
+                    setDiceType(type);
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_type'), { type }, { merge: true });
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-[10px] font-black transition-all"
+                  style={{
+                    backgroundColor: diceType === type ? 'white' : 'transparent',
+                    color: diceType === type ? COLORS.plum : `${COLORS.ink}60`,
+                    boxShadow: diceType === type ? '0 1px 4px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >
+                  d{type}
+                </button>
+              ))}
             </div>
+
+            {/* Кубик */}
+            {diceType === 6 ? (
+              <div className={`w-14 h-14 bg-white rounded-2xl shadow-lg flex items-center justify-center border-2 transition-all ${isAnimating ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.plum}20` }}>
+                {renderDiceFace(visualDice, COLORS.plum)}
+              </div>
+            ) : (
+              <div className={`w-14 h-14 bg-white rounded-2xl shadow-lg flex items-center justify-center border-2 transition-all ${isAnimatingD10 ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.forest}30` }}>
+                <span className="font-black text-2xl" style={{ color: COLORS.forest }}>{visualDiceD10}</span>
+              </div>
+            )}
+
             <button onClick={async () => {
-              if (isAnimating) return;
-              const array = new Uint32Array(1);
-              window.crypto.getRandomValues(array);
-              const v = (array[0] % 6) + 1;
-              await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_state'), { value: v, timestamp: Date.now() });
-            }} disabled={isAnimating} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="px-5 py-2 rounded-xl text-[10px] font-black uppercase shadow-md hover:opacity-90 transition-colors disabled:opacity-50">
+              if (diceType === 6) {
+                if (isAnimating) return;
+                const array = new Uint32Array(1);
+                window.crypto.getRandomValues(array);
+                const v = (array[0] % 6) + 1;
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_state'), { value: v, timestamp: Date.now() });
+              } else {
+                if (isAnimatingD10) return;
+                const array = new Uint32Array(1);
+                window.crypto.getRandomValues(array);
+                const v = (array[0] % 10) + 1;
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_d10_state'), { value: v, timestamp: Date.now() });
+              }
+            }} disabled={diceType === 6 ? isAnimating : isAnimatingD10} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="px-5 py-2 rounded-xl text-[10px] font-black uppercase shadow-md hover:opacity-90 transition-colors disabled:opacity-50">
               Бросить
             </button>
           </div>
