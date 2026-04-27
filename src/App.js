@@ -840,8 +840,8 @@ export default function App() {
               </div>
             ) : (
               <div className="space-y-3">
-                <input type="text" value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Email" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
-                <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Пароль" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
+                <input type="text" value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Email" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
+                <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Пароль" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
                 <div className="flex gap-2 pt-1">
                   <button onClick={() => setShowKeyPrompt(false)} className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}80` }}>Назад</button>
                   <button onClick={handleLogin} disabled={isCheckingKey} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="flex-[2] font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest shadow-md disabled:opacity-50">
@@ -853,7 +853,7 @@ export default function App() {
           ) : (
             <div className="space-y-3">
               <p className="font-bold text-[10px] uppercase text-center mb-4" style={{ color: COLORS.ink }}>Представьтесь, чтобы зайти за стол:</p>
-              <input type="text" value={clientNameInput} onChange={e => setClientNameInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleClientLogin()} placeholder="Ваше Имя" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center" style={{ borderColor: COLORS.forest, color: COLORS.forest, backgroundColor: `${COLORS.forest}10` }} />
+              <input type="text" value={clientNameInput} onChange={e => setClientNameInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleClientLogin()} placeholder="Ваше Имя" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.forest, color: COLORS.forest, backgroundColor: `${COLORS.forest}10` }} />
               <button onClick={handleClientLogin} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="w-full font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:opacity-90 mt-2">Войти в кабинет</button>
             </div>
           )}
@@ -1196,7 +1196,7 @@ export default function App() {
           <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl border-4" style={{ borderColor: COLORS.haze }}>
             <h3 className="text-xl font-black mb-2 uppercase italic" style={{ color: COLORS.ink }}>ИМЯ КОЛОДЫ</h3>
             <p className="text-[10px] mb-6 font-medium" style={{ color: `${COLORS.ink}66` }}>Выбрано файлов: {pendingFiles.length}. Файл с "рубашка" в названии станет обложкой.</p>
-            <input autoFocus value={tempDeckName} onChange={e => setTempDeckName(e.target.value)} onKeyDown={e => e.key === 'Enter' && confirmUpload()} placeholder="Напр: Эмоции" className="w-full px-6 py-4 rounded-2xl border-2 mb-8 outline-none font-bold" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
+            <input autoFocus value={tempDeckName} onChange={e => setTempDeckName(e.target.value)} onKeyDown={e => e.key === 'Enter' && confirmUpload()} placeholder="Напр: Эмоции" className="w-full px-6 py-4 rounded-2xl border-2 mb-8 outline-none font-bold text-base" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
             {isUploading && (
               <div className="mb-6">
                 <div className="flex justify-between text-[10px] font-bold mb-2" style={{ color: `${COLORS.ink}66` }}>
@@ -1312,9 +1312,12 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     };
   }, [isDragging, isResizing, element, onUpdate, playSound, isMuted, isLocked, isText]);
 
+  // Снимаем блокировку прокрутки экрана (touch-none) для закрепленных элементов или поля у клиента
+  const canDrag = !isLocked && !(isField && isClientMode);
+
   return (
     <div
-      className={`absolute group touch-none ${isDragging ? 'z-[1000]' : ''}`}
+      className={`absolute group ${canDrag ? 'touch-none' : ''} ${isDragging ? 'z-[1000]' : ''}`}
       style={{
         left: element.x, top: element.y,
         width: element.width, height: element.height,
@@ -1396,10 +1399,10 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       )}
 
       <div
-        className={`w-full h-full relative ${isLocked ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} transition-transform ${isDragging ? 'scale-105 shadow-2xl' : isField ? '' : 'shadow-lg'} ${isText ? 'rounded-lg bg-[#FFF9C4] border-2 border-[#FDE047] flex flex-col overflow-hidden' : 'rounded-2xl'}`}
+        className={`w-full h-full relative ${isLocked ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} transition-transform ${isDragging ? 'scale-105 shadow-2xl' : isField ? '' : 'shadow-lg'} ${isText ? 'rounded-lg bg-[#FFF9C4] border-2 border-[#FDE047] flex flex-col overflow-hidden' : isField ? '' : 'rounded-2xl'}`}
         onMouseDown={handleDragStart}
         onTouchStart={handleDragStart}
-        style={{ perspective: '1000px' }}
+        style={{ perspective: isField ? 'none' : '1000px' }}
       >
         {isText ? (
           <>
@@ -1415,16 +1418,20 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         ) : element.type === 'token' ? (
           <div className="w-full h-full rounded-full shadow-inner border-2 border-white" style={{ backgroundColor: element.color }} />
         ) : (
-          <div className="relative w-full h-full" style={{ transformStyle: 'preserve-3d', transition: 'transform 0.6s ease', transform: element.isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
-            <div className="absolute inset-0 rounded-2xl overflow-hidden flex items-center justify-center bg-white" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-              <img src={element.img} className="w-full h-full object-contain pointer-events-none" alt="Карта" />
-            </div>
-            {!isField && (
-              <div className="absolute inset-0 rounded-2xl overflow-hidden flex items-center justify-center" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
-                {element.backImg
-                  ? <img src={element.backImg} className="w-full h-full object-contain pointer-events-none" alt="Рубашка" />
-                  : <div className="flex flex-col items-center justify-center gap-1 opacity-20"><Layers size={32} className="text-white" /><span className="text-[8px] text-white font-black uppercase tracking-tighter leading-none">MAK SPACE</span></div>}
-              </div>
+          <div className="relative w-full h-full" style={isField ? {} : { transformStyle: 'preserve-3d', transition: 'transform 0.6s ease', transform: element.isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
+            {isField ? (
+              <img src={element.img} className="w-full h-full object-contain pointer-events-none" alt="Игровое поле" />
+            ) : (
+              <>
+                <div className="absolute inset-0 rounded-2xl overflow-hidden flex items-center justify-center bg-white" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+                  <img src={element.img} className="w-full h-full object-contain pointer-events-none" alt="Карта" />
+                </div>
+                <div className="absolute inset-0 rounded-2xl overflow-hidden flex items-center justify-center" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
+                  {element.backImg
+                    ? <img src={element.backImg} className="w-full h-full object-contain pointer-events-none" alt="Рубашка" />
+                    : <div className="flex flex-col items-center justify-center gap-1 opacity-20"><Layers size={32} className="text-white" /><span className="text-[8px] text-white font-black uppercase tracking-tighter leading-none">MAK SPACE</span></div>}
+                </div>
+              </>
             )}
           </div>
         )}
