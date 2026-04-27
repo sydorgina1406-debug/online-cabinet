@@ -525,7 +525,8 @@ export default function App() {
   };
 
   const toggleGameMode = async () => {
-    if (isClientMode || !isDbConnected || !roomId) return;
+    // Убрали ограничение if (isClientMode)
+    if (!isDbConnected || !roomId) return;
     const newMode = !isGameMode;
     setIsGameMode(newMode);
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isGameMode: newMode }, { merge: true });
@@ -890,11 +891,9 @@ export default function App() {
                 <span className="text-[8px] md:text-[9px] font-bold tracking-widest uppercase flex items-center gap-1" style={{ color: COLORS.plum }}>
                   СЕССИЯ: {roomId} <span className="opacity-50">|</span> ВЫ: {userName}
                 </span>
-                {!isClientMode && (
-                  <button onClick={toggleGameMode} className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all flex items-center gap-1 shadow-sm border ${isGameMode ? 'text-white' : 'hover:opacity-70'}`} style={{ backgroundColor: isGameMode ? COLORS.plum : COLORS.haze, color: isGameMode ? 'white' : COLORS.ink, borderColor: isGameMode ? COLORS.plum : `${COLORS.ink}20` }}>
-                    <Gamepad2 size={10} /> {isGameMode ? 'Игра' : 'Консультация'}
-                  </button>
-                )}
+                <button onClick={toggleGameMode} className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all flex items-center gap-1 shadow-sm border ${isGameMode ? 'text-white' : 'hover:opacity-70'}`} style={{ backgroundColor: isGameMode ? COLORS.plum : COLORS.haze, color: isGameMode ? 'white' : COLORS.ink, borderColor: isGameMode ? COLORS.plum : `${COLORS.ink}20` }}>
+                  <Gamepad2 size={10} /> {isGameMode ? 'Игра' : 'Консультация'}
+                </button>
               </div>
             </div>
           </div>
@@ -1326,7 +1325,6 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         transition: (isDragging || isResizing) ? 'none' : 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
       }}
     >
-      {/* Верхняя панель: для поля — БЕЗ замка, для остальных — с замком */}
       <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all bg-white/95 backdrop-blur-sm rounded-xl px-1.5 py-1 shadow-xl z-20 border" style={{ borderColor: `${COLORS.ink}10` }}>
         {!isField && <button onClick={(e) => { e.stopPropagation(); onUpdate({ zIndex: maxZIndex + 1 }); }} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: `${COLORS.ink}80`, backgroundColor: COLORS.haze }} title="На передний план"><ArrowUp size={14} /></button>}
 
@@ -1368,7 +1366,6 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
           <button onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (element.rotation + 90) % 360 }); }} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: `${COLORS.ink}80`, backgroundColor: COLORS.haze }} title="Повернуть"><RotateCw size={14} /></button>
         )}
 
-        {/* Замок только для НЕ-полей */}
         {!isClientMode && !isField && (
           <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: isLocked ? COLORS.terra : `${COLORS.ink}80`, backgroundColor: COLORS.haze }} title={isLocked ? "Открепить" : "Закрепить"}>
             {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
@@ -1380,7 +1377,6 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         )}
       </div>
 
-      {/* Замок для поля — СНАРУЖИ справа от поля */}
       {!isClientMode && isField && (
         <div className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all z-20" style={{ left: 'calc(100% + 12px)' }}>
           <button
