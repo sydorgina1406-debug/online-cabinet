@@ -14,9 +14,9 @@ import {
   Plus, Layers, RotateCw, Trash2, Maximize2, Minimize2, X, ChevronUp,
   FolderOpen, LayoutGrid, Move, Cloud, Copy, CheckCircle,
   Users, LogOut, AlertCircle, ExternalLink, Image as ImageIcon,
-  Volume2, VolumeX, ArrowUp, Save, MousePointer2, UserCircle,
+  Volume2, VolumeX, ArrowUp, Save, MousePointer2, UserCircle, UserPlus,
   Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
-  Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2
+  Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, Image
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -65,6 +65,59 @@ const COLORS = {
   ink: '#1C1020',
   haze: '#F2EFF5'
 };
+
+const TABLE_BACKGROUNDS = [
+  {
+    id: 'linen',
+    name: 'Льняная скатерть',
+    type: 'css',
+    value: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.55  0 0 0 0 0.45  0 0 0 0 0.32  0 0 0 0.18 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"), repeating-linear-gradient(90deg, rgba(180,150,110,0.06) 0px, transparent 1px, transparent 3px, rgba(180,150,110,0.06) 4px), repeating-linear-gradient(0deg, rgba(180,150,110,0.05) 0px, transparent 1px, transparent 3px, rgba(180,150,110,0.05) 4px)`,
+    bgSize: '120px 120px, auto, auto',
+    bgColor: '#E8DFD0',
+    opacity: 1,
+    repeat: 'repeat'
+  },
+  {
+    id: 'terracotta',
+    name: 'Тёплая глина',
+    type: 'css',
+    value: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.4  0 0 0 0 0.2  0 0 0 0 0.1  0 0 0 0.22 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"), radial-gradient(ellipse at 30% 20%, rgba(255,200,170,0.25), transparent 60%), radial-gradient(ellipse at 70% 80%, rgba(160,90,60,0.2), transparent 60%)`,
+    bgSize: '200px 200px, auto, auto',
+    bgColor: '#C9967A',
+    opacity: 1,
+    repeat: 'repeat'
+  },
+  {
+    id: 'velvet',
+    name: 'Бархат полуночный',
+    type: 'css',
+    value: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.6  0 0 0 0 0.55  0 0 0 0 0.75  0 0 0 0.12 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"), radial-gradient(ellipse at 50% 50%, rgba(80,70,120,0.35), transparent 70%)`,
+    bgSize: '150px 150px, auto',
+    bgColor: '#2A2440',
+    opacity: 1,
+    repeat: 'repeat'
+  },
+  {
+    id: 'sage',
+    name: 'Шалфейный туман',
+    type: 'css',
+    value: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.5  0 0 0 0 0.6  0 0 0 0 0.5  0 0 0 0.15 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"), linear-gradient(135deg, rgba(168,181,160,0.3) 0%, rgba(190,200,180,0.15) 100%)`,
+    bgSize: '180px 180px, auto',
+    bgColor: '#A8B5A0',
+    opacity: 1,
+    repeat: 'repeat'
+  },
+  {
+    id: 'watercolor',
+    name: 'Акварельная бумага',
+    type: 'css',
+    value: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.65  0 0 0 0 0.55  0 0 0 0 0.4  0 0 0 0.16 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"), radial-gradient(ellipse at 20% 30%, rgba(220,200,170,0.2), transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(200,180,150,0.15), transparent 50%)`,
+    bgSize: '160px 160px, auto, auto',
+    bgColor: '#F5EDE0',
+    opacity: 1,
+    repeat: 'repeat'
+  }
+];
 
 if (typeof window !== 'undefined' && !document.getElementById('tailwind-script')) {
   const configScript = document.createElement('script');
@@ -310,6 +363,9 @@ export default function App() {
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isLibraryFullscreen, setIsLibraryFullscreen] = useState(false);
   const [isLibraryDeckFlipped, setIsLibraryDeckFlipped] = useState(false);
+  const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
+  const [isUploadingBg, setIsUploadingBg] = useState(false);
+  const [tableBg, setTableBg] = useState(TABLE_BACKGROUNDS[0]);
 
   const [previewCard, setPreviewCard] = useState(null);
   const [notification, setNotification] = useState("");
@@ -474,6 +530,7 @@ export default function App() {
         else if (d.id === '_settings') {
           if (d.data().platformName) setPlatformName(d.data().platformName);
           if (d.data().isGameMode !== undefined) setIsGameMode(d.data().isGameMode);
+          if (d.data().tableBg) setTableBg(d.data().tableBg);
         }
         else if (d.id === '_library_state') {
           const libraryData = d.data();
@@ -525,7 +582,6 @@ export default function App() {
   };
 
   const toggleGameMode = async () => {
-    // Убрали ограничение if (isClientMode)
     if (!isDbConnected || !roomId) return;
     const newMode = !isGameMode;
     setIsGameMode(newMode);
@@ -872,79 +928,71 @@ export default function App() {
         </div>
       )}
 
-      <header className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-3 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm gap-2" style={{ borderColor: `${COLORS.ink}10` }}>
-        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.plum}, ${COLORS.forest})` }}>
-              <Layers size={20} />
-            </div>
-            <div>
-              <h1 className="text-xs md:text-sm font-black leading-none uppercase flex items-center gap-2" style={{ color: COLORS.ink }}>
-                {platformName}
-                {!isClientMode && (
-                  <button onClick={editPlatformName} className="transition-colors hover:opacity-70" style={{ color: COLORS.plum }}>
-                    <Edit2 size={12} />
-                  </button>
-                )}
-              </h1>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="text-[8px] md:text-[9px] font-bold tracking-widest uppercase flex items-center gap-1" style={{ color: COLORS.plum }}>
-                  СЕССИЯ: {roomId} <span className="opacity-50">|</span> ВЫ: {userName}
-                </span>
-                <button onClick={toggleGameMode} className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all flex items-center gap-1 shadow-sm border ${isGameMode ? 'text-white' : 'hover:opacity-70'}`} style={{ backgroundColor: isGameMode ? COLORS.plum : COLORS.haze, color: isGameMode ? 'white' : COLORS.ink, borderColor: isGameMode ? COLORS.plum : `${COLORS.ink}20` }}>
-                  <Gamepad2 size={10} /> {isGameMode ? 'Игра' : 'Консультация'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap justify-center md:justify-end w-full md:w-auto">
-          {timerDisplay ? (
-            <div className="flex items-center gap-1.5">
-              <div className="px-4 py-2 rounded-xl font-black text-sm tabular-nums tracking-widest flex items-center gap-2 border transition-all" style={{ backgroundColor: timerIsWarning ? '#FEE2E2' : `${COLORS.plum}12`, color: timerIsWarning ? '#DC2626' : COLORS.plum, borderColor: timerIsWarning ? '#FCA5A5' : `${COLORS.plum}30` }}>
-                <Timer size={14} />{timerDisplay}
-              </div>
-              {!isClientMode && (
-                <button onClick={stopTimer} className="p-2 rounded-xl hover:opacity-70 transition-colors" style={{ color: COLORS.terra, backgroundColor: `${COLORS.terra}15` }} title="Остановить таймер">
-                  <TimerOff size={15} />
-                </button>
-              )}
-            </div>
-          ) : (
-            !isClientMode && (
-              <button onClick={() => startTimer(90)} className="px-3 py-2 rounded-xl text-[10px] font-black border flex items-center gap-1.5 shadow-sm hover:opacity-80 transition-all" style={{ borderColor: `${COLORS.plum}30`, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} title="Запустить таймер на 90 минут">
-                <Timer size={14} /> 90 МИН
-              </button>
-            )
-          )}
-
-          <button onClick={() => setIsMuted(!isMuted)} className="p-2.5 rounded-xl transition-colors hover:opacity-70" style={{ backgroundColor: COLORS.haze, color: COLORS.ink }}>
-            {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-          </button>
-
-          {!isClientMode && (
-            <button onClick={async () => {
-              const url = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
-              await copyToClipboard(url);
-              setCopyFeedback(true);
-              setTimeout(() => setCopyFeedback(false), 2000);
-            }} className="px-4 py-2.5 rounded-xl text-[10px] font-black bg-white border flex items-center gap-2 shadow-sm transition-all hover:opacity-70" style={{ borderColor: `${COLORS.ink}20`, color: COLORS.ink }}>
-              {copyFeedback ? <CheckCircle size={14} color={COLORS.forest} /> : <Copy size={14} />}
-              <span className="hidden sm:inline">{copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА"}</span>
+      {/* MODAL: ТАБЛИЦА / ОФОРМЛЕНИЕ СТОЛА */}
+      {isFieldModalOpen && !isClientMode && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
+          <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-2xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <button onClick={() => setIsFieldModalOpen(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
+              <X size={24} style={{ color: COLORS.ink }} />
             </button>
-          )}
+            <h2 className="text-xl md:text-2xl font-black uppercase mb-6" style={{ color: COLORS.ink }}>Оформление стола</h2>
 
-          {!isClientMode && (
-            <>
-              <button onClick={() => addElement('text', { text: "" })} className="p-2.5 rounded-xl transition-all hover:opacity-80 border" style={{ backgroundColor: '#FFF9C4', color: COLORS.terra, borderColor: '#FDE047' }} title="Добавить заметку">
-                <Type size={18} />
-              </button>
+            <div className="mb-8">
+              <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3 opacity-50 flex items-center gap-2">
+                <LayoutGrid size={14} /> Фон всего пространства (Нейро-дизайн)
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+                {TABLE_BACKGROUNDS.map(bg => (
+                  <button key={bg.id} onClick={async () => {
+                    setTableBg(bg);
+                    if (isDbConnected && roomId) {
+                      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { tableBg: bg }, { merge: true });
+                    }
+                  }} className={`relative h-20 md:h-24 rounded-2xl overflow-hidden border-4 transition-all hover:scale-105 ${tableBg?.id === bg.id ? 'shadow-lg' : 'border-transparent shadow-sm'}`} style={{ backgroundColor: bg.bgColor, borderColor: tableBg?.id === bg.id ? COLORS.plum : 'transparent' }}>
+                    <div className="absolute inset-0 pointer-events-none" style={{
+                      backgroundImage: bg.value === 'none' ? 'none' : (bg.type === 'css' ? bg.value : `url('${bg.value}')`),
+                      backgroundSize: bg.bgSize, backgroundPosition: 'center', opacity: bg.opacity, backgroundRepeat: bg.repeat || 'repeat'
+                    }}></div>
+                    <div className="absolute inset-0 flex items-end p-2 md:p-3 bg-gradient-to-t from-black/50 to-transparent">
+                      <span className="text-white text-[9px] md:text-[10px] font-bold leading-tight drop-shadow-md">{bg.name}</span>
+                    </div>
+                  </button>
+                ))}
 
-              <label className="p-2.5 rounded-xl cursor-pointer border transition-all hover:opacity-80" style={{ backgroundColor: COLORS.haze, color: COLORS.forest, borderColor: `${COLORS.forest}20` }} title="Загрузить игровое поле">
+                <label className="relative h-20 md:h-24 rounded-2xl overflow-hidden border-2 border-dashed flex flex-col items-center justify-center gap-1 cursor-pointer transition-all hover:bg-black/5" style={{ borderColor: `${COLORS.plum}4D`, color: COLORS.plum }}>
+                  <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                    const f = e.target.files[0]; if (!f) return;
+                    setIsUploadingBg(true);
+                    notify("Загружаю фон...", 4000);
+                    try {
+                      const data = await new Promise(r => { const rd = new FileReader(); rd.onload = ev => r(ev.target.result); rd.readAsDataURL(f); });
+                      let comp = await compressImage(data, 1920, 1920);
+                      const url = await uploadImageToStorage(comp, `backgrounds/${user.uid}/${Date.now()}.jpg`);
+                      const customBg = { id: 'custom', name: 'Свой фон', type: 'image', value: url, bgSize: 'cover', bgColor: COLORS.haze, opacity: 1, repeat: 'no-repeat' };
+                      setTableBg(customBg);
+                      if (isDbConnected && roomId) {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { tableBg: customBg }, { merge: true });
+                      }
+                      notify("Фон установлен! ✓");
+                    } catch(err) { notify("Ошибка: " + err.message); }
+                    finally { setIsUploadingBg(false); e.target.value = ''; }
+                  }} />
+                  {isUploadingBg ? <Loader2 size={20} className="animate-spin" /> : <ImageIcon size={20} />}
+                  <span className="text-[9px] md:text-[10px] font-black uppercase text-center leading-tight">Свой<br/>Фон</span>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3 opacity-50 flex items-center gap-2">
+                <ImageIcon size={14} /> Отдельное игровое поле (Как объект)
+              </h3>
+              <p className="text-[10px] font-medium mb-4 leading-relaxed" style={{ color: COLORS.ink }}>Используйте это, если нужно загрузить конкретную карту игры как перемещаемый объект на столе (она сохранит свои пропорции и на нее можно будет класть карты).</p>
+              <label className="w-full py-4 rounded-2xl cursor-pointer transition-all hover:opacity-80 flex flex-col items-center justify-center gap-2 shadow-md" style={{ backgroundColor: COLORS.forest, color: 'white' }}>
                 <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                   const f = e.target.files[0];
                   if (!f) return;
+                  setIsFieldModalOpen(false);
                   notify("Сжимаю изображение...", 5000);
                   try {
                     const data = await new Promise(r => {
@@ -968,8 +1016,93 @@ export default function App() {
                     e.target.value = '';
                   }
                 }} />
-                <ImageIcon size={18} />
+                <ImageIcon size={24} />
+                <span className="text-[10px] font-black uppercase tracking-widest">Загрузить поле для игры</span>
               </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <header className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-3 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm gap-2" style={{ borderColor: `${COLORS.ink}10` }}>
+        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.plum}, ${COLORS.forest})` }}>
+              <Layers size={20} />
+            </div>
+            <div>
+              <h1 className="text-xs md:text-sm font-black leading-none uppercase flex items-center gap-2" style={{ color: COLORS.ink }}>
+                {platformName}
+                {!isClientMode && (
+                  <button onClick={editPlatformName} className="transition-colors hover:opacity-70" style={{ color: COLORS.plum }}>
+                    <Edit2 size={12} />
+                  </button>
+                )}
+              </h1>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <span className="text-[8px] md:text-[9px] font-bold tracking-widest uppercase flex items-center gap-1" style={{ color: COLORS.plum }}>
+                  СЕССИЯ: {roomId} <span className="opacity-50">|</span> ВЫ: {userName}
+                </span>
+                <div className="flex bg-black/5 p-0.5 rounded-lg border shadow-inner" style={{ borderColor: `${COLORS.ink}10` }}>
+                  <button onClick={() => isGameMode && toggleGameMode()} className={`px-2 md:px-3 py-1 rounded-md text-[8px] md:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all ${!isGameMode ? 'bg-white shadow-sm' : 'hover:bg-black/5 opacity-60'}`} style={{ color: !isGameMode ? COLORS.plum : COLORS.ink }}>
+                    <Users size={12} /> Консультация
+                  </button>
+                  <button onClick={() => !isGameMode && toggleGameMode()} className={`px-2 md:px-3 py-1 rounded-md text-[8px] md:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all ${isGameMode ? 'shadow-sm' : 'hover:bg-black/5 opacity-60'}`} style={{ backgroundColor: isGameMode ? COLORS.plum : 'transparent', color: isGameMode ? 'white' : COLORS.ink }}>
+                    <Gamepad2 size={12} /> Т-Игра
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap justify-center md:justify-end w-full md:w-auto">
+          {timerDisplay ? (
+            <div className="flex items-center gap-1.5">
+              <div className="px-4 py-2 rounded-xl font-black text-sm tabular-nums tracking-widest flex items-center gap-2 border transition-all" style={{ backgroundColor: timerIsWarning ? '#FEE2E2' : `${COLORS.plum}12`, color: timerIsWarning ? '#DC2626' : COLORS.plum, borderColor: timerIsWarning ? '#FCA5A5' : `${COLORS.plum}30` }}>
+                <Timer size={14} />{timerDisplay}
+              </div>
+              {!isClientMode && (
+                <button onClick={stopTimer} className="p-2 rounded-xl hover:opacity-70 transition-colors" style={{ color: COLORS.terra, backgroundColor: `${COLORS.terra}15` }} title="Остановить таймер">
+                  <TimerOff size={15} />
+                </button>
+              )}
+            </div>
+          ) : (
+            !isClientMode && (
+              <div className="flex items-center gap-1 bg-white/50 p-1 rounded-xl border shadow-sm" style={{ borderColor: `${COLORS.plum}30`, backgroundColor: `${COLORS.plum}10` }}>
+                <Timer size={14} className="ml-1" style={{ color: COLORS.plum }} />
+                <button onClick={() => startTimer(60)} className="px-2 py-1 rounded-lg text-[10px] font-black hover:opacity-70 transition-all" style={{ color: COLORS.plum, backgroundColor: 'white' }} title="Таймер 60 мин">60</button>
+                <button onClick={() => startTimer(90)} className="px-2 py-1 rounded-lg text-[10px] font-black hover:opacity-70 transition-all" style={{ color: COLORS.plum, backgroundColor: 'white' }} title="Таймер 90 мин">90</button>
+              </div>
+            )
+          )}
+
+          <button onClick={() => setIsMuted(!isMuted)} className="p-2.5 rounded-xl transition-colors hover:opacity-70" style={{ backgroundColor: COLORS.haze, color: COLORS.ink }}>
+            {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </button>
+
+          {!isClientMode && (
+            <button onClick={async () => {
+              const url = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
+              await copyToClipboard(url);
+              setCopyFeedback(true);
+              setTimeout(() => setCopyFeedback(false), 2000);
+            }} className="px-4 py-2.5 rounded-xl text-[10px] font-black border flex items-center gap-2 shadow-sm transition-all hover:opacity-70" style={{ backgroundColor: copyFeedback ? `${COLORS.forest}10` : `${COLORS.plum}10`, borderColor: copyFeedback ? `${COLORS.forest}30` : `${COLORS.plum}30`, color: copyFeedback ? COLORS.forest : COLORS.plum }}>
+              {copyFeedback ? <CheckCircle size={14} /> : <UserPlus size={14} />}
+              <span className="hidden sm:inline">{copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА ДЛЯ КЛИЕНТА"}</span>
+            </button>
+          )}
+
+          {!isClientMode && (
+            <>
+              <button onClick={() => addElement('text', { text: "" })} className="p-2.5 rounded-xl transition-all hover:opacity-80 border" style={{ backgroundColor: '#FFF9C4', color: COLORS.terra, borderColor: '#FDE047' }} title="Добавить заметку">
+                <Type size={18} />
+              </button>
+
+              <button onClick={() => setIsFieldModalOpen(true)} className="px-3 py-2.5 rounded-xl border transition-all hover:opacity-80 flex items-center gap-2" style={{ backgroundColor: COLORS.haze, color: COLORS.forest, borderColor: `${COLORS.forest}20` }} title="Настройки стола и поля">
+                <LayoutGrid size={14} />
+                <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest">СТОЛ / ПОЛЕ</span>
+              </button>
 
               <button onClick={clearTable} className="p-2.5 rounded-xl transition-colors hover:opacity-70" style={{ color: COLORS.terra }} title="Очистить стол">
                 <Trash2 size={18} />
@@ -1030,9 +1163,15 @@ export default function App() {
           </div>
         )}
 
-        <div ref={scrollContainerRef} className="flex-1 overflow-auto custom-scrollbar relative bg-[#F2EFF5]">
+        <div ref={scrollContainerRef} className="flex-1 overflow-auto custom-scrollbar relative transition-colors duration-500" style={{ backgroundColor: tableBg.bgColor }}>
           <div ref={boardRef} className="relative min-w-[3000px] min-h-[3000px] bg-transparent" onMouseMove={handleMouseMove} onTouchMove={handleMouseMove}>
-            <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: `radial-gradient(circle, ${COLORS.plum} 1px, transparent 1px)`, backgroundSize: '30px 30px' }}></div>
+            <div className="absolute inset-0 pointer-events-none transition-opacity duration-500" style={{ 
+              backgroundImage: tableBg.value === 'none' ? 'none' : (tableBg.type === 'css' ? tableBg.value : `url('${tableBg.value}')`), 
+              backgroundSize: tableBg.bgSize, 
+              backgroundPosition: 'center', 
+              backgroundRepeat: tableBg.repeat || 'repeat',
+              opacity: tableBg.opacity 
+            }}></div>
 
             {cardsOnTable
               .filter(elem => !undoStack?.cards.some(c => c.id === elem.id))
@@ -1311,7 +1450,6 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     };
   }, [isDragging, isResizing, element, onUpdate, playSound, isMuted, isLocked, isText]);
 
-  // Снимаем блокировку прокрутки экрана (touch-none) для закрепленных элементов или поля у клиента
   const canDrag = !isLocked && !(isField && isClientMode);
 
   return (
