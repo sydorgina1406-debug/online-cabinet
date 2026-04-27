@@ -1323,7 +1323,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         transition: (isDragging || isResizing) ? 'none' : 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
       }}
     >
-      {/* Панель кнопок сверху — для всех элементов */}
+      {/* Верхняя панель: для поля — БЕЗ замка, для остальных — с замком */}
       <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all bg-white/95 backdrop-blur-sm rounded-xl px-1.5 py-1 shadow-xl z-20 border" style={{ borderColor: `${COLORS.ink}10` }}>
         {!isField && <button onClick={(e) => { e.stopPropagation(); onUpdate({ zIndex: maxZIndex + 1 }); }} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: `${COLORS.ink}80`, backgroundColor: COLORS.haze }} title="На передний план"><ArrowUp size={14} /></button>}
 
@@ -1365,7 +1365,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
           <button onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (element.rotation + 90) % 360 }); }} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: `${COLORS.ink}80`, backgroundColor: COLORS.haze }} title="Повернуть"><RotateCw size={14} /></button>
         )}
 
-        {/* Замок для карт и текста — сверху */}
+        {/* Замок только для НЕ-полей */}
         {!isClientMode && !isField && (
           <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: isLocked ? COLORS.terra : `${COLORS.ink}80`, backgroundColor: COLORS.haze }} title={isLocked ? "Открепить" : "Закрепить"}>
             {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
@@ -1377,12 +1377,12 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         )}
       </div>
 
-      {/* Замок для поля — внутри поля, левый верхний угол */}
+      {/* Замок для поля — СНАРУЖИ справа от поля */}
       {!isClientMode && isField && (
-        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-all z-20">
+        <div className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all z-20" style={{ left: 'calc(100% + 12px)' }}>
           <button
             onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }}
-            className="p-2 rounded-xl transition-colors hover:opacity-80 shadow-xl border flex items-center gap-1.5"
+            className="p-2 rounded-xl transition-colors hover:opacity-80 shadow-xl border"
             style={{
               backgroundColor: isLocked ? COLORS.terra : 'white',
               color: isLocked ? 'white' : `${COLORS.ink}80`,
@@ -1390,10 +1390,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
             }}
             title={isLocked ? "Открепить поле" : "Закрепить поле"}
           >
-            {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
-            <span style={{ fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1 }}>
-              {isLocked ? 'Закреплено' : 'Закрепить'}
-            </span>
+            {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
           </button>
         </div>
       )}
