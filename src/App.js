@@ -23,7 +23,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyBUPWtHxkVVoXZK5V_WeCEAQjBaYjf9uwY",
   authDomain: "mak-space-yulia.firebaseapp.com",
   projectId: "mak-space-yulia",
-  storageBucket: "mak-space-yulia.firebasestorage.app",
+  storageBucket: "mak-space-yulia.appspot.com",
   messagingSenderId: "324239633120",
   appId: "1:324239633120:web:b581fdd4a1ff79f92ffe85",
   measurementId: "G-ZGQQFDQL3G"
@@ -34,7 +34,6 @@ const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1H65cuAhJ6r
 const ROOT_DRIVE_FOLDER_ID = "19-ZI-4tzVgRntc34yJTPGAVzZpyKksHl";
 const DRIVE_API_KEY = "AIzaSyDXSTiw-Sd2jZve2Yv7bnbVRIAYcPre3N4";
 
-// URL платформы — колоды хранятся прямо на сайте
 const PLATFORM_BASE_URL = "https://online-cabinet.vercel.app";
 const PLATFORM_DECKS_URL = `${PLATFORM_BASE_URL}/decks.json`;
 
@@ -85,7 +84,6 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const myCursorColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
 
-// --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
 const extractDriveFileId = (url) => {
   if (!url) return null;
   let m = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
@@ -253,7 +251,6 @@ const renderDiceFace = (value, dotColor) => {
   );
 };
 
-// Компонент отсчёта секунд для тоста undo
 function UndoTimer({ expiresAt }) {
   const [sec, setSec] = useState(10);
   useEffect(() => {
@@ -300,7 +297,7 @@ export default function App() {
   const [visualDice, setVisualDice] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
   const prevDiceTime = useRef(0);
-  const [diceType, setDiceType] = useState(6); // 6 или 10
+  const [diceType, setDiceType] = useState(6);
   const [diceD10, setDiceD10] = useState({ value: 1, timestamp: 0 });
   const [visualDiceD10, setVisualDiceD10] = useState(1);
   const [isAnimatingD10, setIsAnimatingD10] = useState(false);
@@ -327,14 +324,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('platform');
   const [isDbConnected, setIsDbConnected] = useState(false);
 
-  // --- ТАЙМЕР ---
-  const [sessionTimer, setSessionTimer] = useState(null); // { startedAt, duration, running }
+  const [sessionTimer, setSessionTimer] = useState(null);
   const [timerDisplay, setTimerDisplay] = useState('');
   const [timerIsWarning, setTimerIsWarning] = useState(false);
   const timerIntervalRef = useRef(null);
 
-  // --- UNDO ---
-  const [undoStack, setUndoStack] = useState(null); // { cards, expiresAt, timeoutId }
+  const [undoStack, setUndoStack] = useState(null);
 
   const notifyTimeoutRef = useRef(null);
   const notify = (text, time = 4000) => {
@@ -343,7 +338,6 @@ export default function App() {
     notifyTimeoutRef.current = setTimeout(() => setNotification(""), time);
   };
 
-  // --- ТИК ТАЙМЕРА ---
   useEffect(() => {
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     if (!sessionTimer?.running) {
@@ -370,7 +364,6 @@ export default function App() {
     return () => clearInterval(timerIntervalRef.current);
   }, [sessionTimer]);
 
-  // --- УПРАВЛЕНИЕ ТАЙМЕРОМ ---
   const startTimer = async (minutes = 90) => {
     const data = { startedAt: Date.now(), duration: minutes * 60 * 1000, running: true };
     setSessionTimer(data);
@@ -451,13 +444,11 @@ export default function App() {
 
   useEffect(() => {
     if (inRoom && !isClientMode) {
-      // Загружаем колоды платформы (мгновенно, с сайта)
       setIsPlatformDecksLoading(true);
       loadPlatformDecks().then(decks => {
         setPlatformDecks(decks);
         setIsPlatformDecksLoading(false);
       });
-      // Загружаем колоды с Google Drive (могут быть медленнее)
       setIsBaseDecksLoading(true);
       loadBaseDecks((msg) => notify(msg, 6000)).then(decks => {
         setBaseDecks(decks);
@@ -487,7 +478,6 @@ export default function App() {
           if (d.data().isGameMode !== undefined) setIsGameMode(d.data().isGameMode);
         }
         else if (d.id === '_library_state') {
-          // Клиент не синхронизирует открытие/закрытие библиотеки — только перелистывание
           const libraryData = d.data();
           if (libraryData.isOpen !== undefined && !window._isClientMode) {
             setIsLibraryOpen(libraryData.isOpen);
@@ -711,12 +701,10 @@ export default function App() {
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, id), elem);
   };
 
-  // --- ОЧИСТКА СТОЛА С UNDO ---
   const clearTable = async () => {
     const unlocked = cardsOnTable.filter(c => !c.isLocked);
     if (unlocked.length === 0) return notify("Нет незакреплённых объектов на столе");
 
-    // Сбрасываем предыдущий undo если был
     if (undoStack?.timeoutId) clearTimeout(undoStack.timeoutId);
 
     const timeoutId = setTimeout(async () => {
@@ -739,7 +727,6 @@ export default function App() {
     setUndoStack(null);
     notify("Восстановлено ✓");
   };
-
 
   const confirmUpload = async () => {
     if (pendingFiles.length === 0) return;
@@ -940,7 +927,6 @@ export default function App() {
         </div>
       )}
 
-      {/* ШАПКА */}
       <header className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-3 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm gap-2" style={{ borderColor: `${COLORS.ink}10` }}>
         <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
           <div className="flex items-center gap-3">
@@ -974,10 +960,8 @@ export default function App() {
           </div>
         </div>
 
-        {/* Панель инструментов */}
         <div className="flex items-center gap-2 flex-wrap justify-center md:justify-end w-full md:w-auto">
 
-          {/* ТАЙМЕР */}
           {timerDisplay ? (
             <div className="flex items-center gap-1.5">
               <div
@@ -1038,17 +1022,22 @@ export default function App() {
                 <Type size={18} />
               </button>
 
+              {/* ↓↓↓ ИСПРАВЛЕННАЯ КНОПКА ЗАГРУЗКИ ПОЛЯ ↓↓↓ */}
               <label className="p-2.5 rounded-xl cursor-pointer border transition-all hover:opacity-80" style={{ backgroundColor: COLORS.haze, color: COLORS.forest, borderColor: `${COLORS.forest}20` }} title="Загрузить игровое поле">
                 <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                   const f = e.target.files[0];
                   if (!f) return;
                   notify("Загрузка поля, подождите...", 5000);
                   try {
-                    const data = await new Promise(r => { const rd = new FileReader(); rd.onload = (ev) => r(ev.target.result); rd.readAsDataURL(f); });
-                    const comp = await compressImage(data, 2000, 2000);
-                    const path = `fields/${user.uid}/field_${Date.now()}.jpg`;
-                    const url = await uploadImageToStorage(comp, path);
-                    await addElement('field', { img: url });
+                    const data = await new Promise(r => {
+                      const rd = new FileReader();
+                      rd.onload = (ev) => r(ev.target.result);
+                      rd.readAsDataURL(f);
+                    });
+                    // Сжимаем с качеством 0.5 чтобы уложиться в лимит Firestore (~900KB)
+                    const comp = await compressImage(data, 1500, 1500);
+                    // Сохраняем base64 напрямую в Firestore — без Firebase Storage
+                    await addElement('field', { img: comp });
                     notify("Игровое поле успешно загружено! ✓");
                   } catch (err) {
                     notify("Ошибка загрузки: " + err.message);
@@ -1058,6 +1047,7 @@ export default function App() {
                 }} />
                 <ImageIcon size={18} />
               </label>
+              {/* ↑↑↑ КОНЕЦ ИСПРАВЛЕНИЯ ↑↑↑ */}
 
               <button onClick={clearTable} className="p-2.5 rounded-xl transition-colors hover:opacity-70" style={{ color: COLORS.terra }} title="Очистить стол">
                 <Trash2 size={18} />
@@ -1071,10 +1061,8 @@ export default function App() {
         </div>
       </header>
 
-      {/* ОСНОВНАЯ ОБЛАСТЬ */}
       <main className="flex-1 relative flex flex-col overflow-hidden">
 
-        {/* Панель игрового режима */}
         {isGameMode && (
           <div className="fixed top-[120px] md:top-24 right-4 md:right-10 z-40 flex flex-col items-center gap-3 bg-white/60 backdrop-blur-md p-4 rounded-[2.5rem] shadow-xl border border-white transition-all animate-in slide-in-from-right-4 fade-in duration-300 pointer-events-auto">
             <div className="flex gap-2 p-2 rounded-2xl border border-white" style={{ backgroundColor: `${COLORS.ink}10` }}>
@@ -1082,7 +1070,6 @@ export default function App() {
                 <button key={color} onClick={() => addElement('token', { color })} className="w-5 h-5 rounded-full shadow-md border border-white/50 hover:scale-125 transition-transform" style={{ backgroundColor: color }} />
               ))}
             </div>
-            {/* Переключатель типа кубика */}
             <div className="flex p-0.5 rounded-xl" style={{ backgroundColor: `${COLORS.ink}15` }}>
               {[6, 10].map(type => (
                 <button
@@ -1103,7 +1090,6 @@ export default function App() {
               ))}
             </div>
 
-            {/* Кубик */}
             {diceType === 6 ? (
               <div className={`w-14 h-14 bg-white rounded-2xl shadow-lg flex items-center justify-center border-2 transition-all ${isAnimating ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.plum}20` }}>
                 {renderDiceFace(visualDice, COLORS.plum)}
@@ -1134,7 +1120,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Прокручиваемое поле */}
         <div ref={scrollContainerRef} className="flex-1 overflow-auto custom-scrollbar relative bg-[#F2EFF5]">
           <div
             ref={boardRef}
@@ -1144,7 +1129,6 @@ export default function App() {
           >
             <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: `radial-gradient(circle, ${COLORS.plum} 1px, transparent 1px)`, backgroundSize: '30px 30px' }}></div>
 
-            {/* Карты на столе — скрываем те, что в undo */}
             {cardsOnTable
               .filter(elem => !undoStack?.cards.some(c => c.id === elem.id))
               .map((elem) => (
@@ -1165,7 +1149,6 @@ export default function App() {
                 />
               ))}
 
-            {/* Курсоры */}
             {Object.entries(cursors).map(([id, cur]) => (
               <div key={id} className="absolute pointer-events-none z-[2000] flex flex-col items-center transition-all duration-150 ease-out" style={{ left: cur.x, top: cur.y }}>
                 <MousePointer2 size={24} fill={cur.color} color="white" strokeWidth={2} className="drop-shadow-md -rotate-12 transform -translate-x-2 -translate-y-2" />
@@ -1175,7 +1158,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* ТОСТ ОТМЕНЫ */}
         {undoStack && (
           <div
             className="fixed z-[110] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border"
@@ -1203,7 +1185,6 @@ export default function App() {
           </div>
         )}
 
-        {/* БИБЛИОТЕКА */}
         <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-700 pointer-events-none ${isLibraryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-60px)]'}`}>
           <div className={`bg-white/95 backdrop-blur-xl rounded-t-[3rem] shadow-2xl border-t border-white flex flex-col transition-all duration-500 pointer-events-auto ${isLibraryFullscreen ? 'h-[90vh]' : 'h-[75vh] md:h-80'}`}>
             <div className="relative w-full flex justify-center py-3" style={{ color: COLORS.plum }}>
@@ -1221,7 +1202,6 @@ export default function App() {
             <div className="flex flex-1 flex-col md:flex-row p-4 md:p-8 pt-0 gap-4 md:gap-8 min-h-0 overflow-hidden">
               {!isClientMode && (
                 <div className="w-full md:w-72 border-b md:border-b-0 md:border-r pb-4 md:pb-0 pr-0 md:pr-6 h-[30%] md:h-auto flex-shrink-0 overflow-y-auto custom-scrollbar flex flex-col gap-3" style={{ borderColor: `${COLORS.ink}10` }}>
-                  {/* ВКЛАДКИ: Платформа / Облако / Мои */}
                   <div className="flex p-1 rounded-xl mb-1 flex-shrink-0" style={{ backgroundColor: COLORS.haze }}>
                     <button onClick={() => setActiveTab('platform')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'platform' ? 'bg-white shadow-sm' : 'hover:opacity-70'}`} style={{ color: activeTab === 'platform' ? COLORS.plum : `${COLORS.ink}99` }}>БАЗА</button>
                     <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'cloud' ? 'bg-white shadow-sm' : 'hover:opacity-70'}`} style={{ color: activeTab === 'cloud' ? COLORS.plum : `${COLORS.ink}99` }}>ОБЛАКО</button>
@@ -1251,7 +1231,6 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Спиннер загрузки */}
                   {activeTab === 'platform' && isPlatformDecksLoading && (
                     <div className="flex justify-center py-4 flex-shrink-0">
                       <Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} />
@@ -1263,7 +1242,6 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Список колод по вкладке */}
                   {(activeTab === 'platform' ? platformDecks
                     : activeTab === 'local' ? localDecks
                     : [...baseDecks, ...cloudDecks]
@@ -1344,7 +1322,6 @@ export default function App() {
         </div>
       </main>
 
-      {/* МОДАЛ ЗАГРУЗКИ КОЛОДЫ */}
       {isNamingDeck && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center backdrop-blur-sm p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl border-4" style={{ borderColor: COLORS.haze }}>
@@ -1379,7 +1356,6 @@ export default function App() {
         </div>
       )}
 
-      {/* ПРЕВЬЮ КАРТЫ */}
       {previewCard && (
         <div
           className="fixed inset-0 z-[120] flex items-center justify-center backdrop-blur-md p-4"
