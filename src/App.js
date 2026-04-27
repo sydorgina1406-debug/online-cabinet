@@ -241,7 +241,7 @@ const renderDiceFace = (value, dotColor) => {
     6: ['col-start-1 row-start-1', 'col-start-3 row-start-1', 'col-start-1 row-start-2', 'col-start-3 row-start-2', 'col-start-1 row-start-3', 'col-start-3 row-start-3']
   };
   return (
-    <div className="grid grid-cols-3 grid-rows-3 gap-1 w-8 h-8">
+    <div className="grid grid-cols-3 grid-rows-3 gap-0.5 md:gap-1 w-6 h-6 md:w-8 md:h-8">
       {dots[value]?.map((pos, i) => (
         <div key={i} className={`rounded-full shadow-sm w-full h-full ${pos}`} style={{ backgroundColor: dotColor }}></div>
       ))}
@@ -985,29 +985,29 @@ export default function App() {
 
       <main className="flex-1 relative flex flex-col overflow-hidden">
         {isGameMode && (
-          <div className="fixed top-[120px] md:top-24 right-4 md:right-10 z-40 flex flex-col items-center gap-3 bg-white/60 backdrop-blur-md p-4 rounded-[2.5rem] shadow-xl border border-white transition-all pointer-events-auto">
-            <div className="flex gap-2 p-2 rounded-2xl border border-white" style={{ backgroundColor: `${COLORS.ink}10` }}>
+          <div className="fixed top-[120px] md:top-24 right-2 md:right-10 z-40 flex flex-col items-center gap-2 md:gap-3 bg-white/60 backdrop-blur-md p-2 md:p-4 rounded-[1.5rem] md:rounded-[2.5rem] shadow-xl border border-white transition-all pointer-events-auto">
+            <div className="flex gap-1.5 md:gap-2 p-1.5 md:p-2 rounded-[1rem] md:rounded-2xl border border-white" style={{ backgroundColor: `${COLORS.ink}10` }}>
               {['#8B3252', '#2D4A3E', '#C4714A', '#4A90E2', '#E2A94A'].map(color => (
-                <button key={color} onClick={() => addElement('token', { color })} className="w-5 h-5 rounded-full shadow-md border border-white/50 hover:scale-125 transition-transform" style={{ backgroundColor: color }} />
+                <button key={color} onClick={() => addElement('token', { color })} className="w-4 h-4 md:w-5 md:h-5 rounded-full shadow-md border border-white/50 hover:scale-125 transition-transform" style={{ backgroundColor: color }} />
               ))}
             </div>
-            <div className="flex p-0.5 rounded-xl" style={{ backgroundColor: `${COLORS.ink}15` }}>
+            <div className="flex p-0.5 rounded-lg md:rounded-xl" style={{ backgroundColor: `${COLORS.ink}15` }}>
               {[6, 10].map(type => (
                 <button key={type} onClick={async () => {
                   setDiceType(type);
                   await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_type'), { type }, { merge: true });
-                }} className="px-3 py-1.5 rounded-lg text-[10px] font-black transition-all" style={{ backgroundColor: diceType === type ? 'white' : 'transparent', color: diceType === type ? COLORS.plum : `${COLORS.ink}60`, boxShadow: diceType === type ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>
+                }} className="px-2 py-1 md:px-3 md:py-1.5 rounded-md md:rounded-lg text-[9px] md:text-[10px] font-black transition-all" style={{ backgroundColor: diceType === type ? 'white' : 'transparent', color: diceType === type ? COLORS.plum : `${COLORS.ink}60`, boxShadow: diceType === type ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>
                   d{type}
                 </button>
               ))}
             </div>
             {diceType === 6 ? (
-              <div className={`w-14 h-14 bg-white rounded-2xl shadow-lg flex items-center justify-center border-2 transition-all ${isAnimating ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.plum}20` }}>
+              <div className={`w-10 h-10 md:w-14 md:h-14 bg-white rounded-xl md:rounded-2xl shadow-lg flex items-center justify-center border-2 transition-all ${isAnimating ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.plum}20` }}>
                 {renderDiceFace(visualDice, COLORS.plum)}
               </div>
             ) : (
-              <div className={`w-14 h-14 bg-white rounded-2xl shadow-lg flex items-center justify-center border-2 transition-all ${isAnimatingD10 ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.forest}30` }}>
-                <span className="font-black text-2xl" style={{ color: COLORS.forest }}>{visualDiceD10}</span>
+              <div className={`w-10 h-10 md:w-14 md:h-14 bg-white rounded-xl md:rounded-2xl shadow-lg flex items-center justify-center border-2 transition-all ${isAnimatingD10 ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.forest}30` }}>
+                <span className="font-black text-xl md:text-2xl" style={{ color: COLORS.forest }}>{visualDiceD10}</span>
               </div>
             )}
             <button onClick={async () => {
@@ -1024,7 +1024,7 @@ export default function App() {
                 const v = (array[0] % 10) + 1;
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_d10_state'), { value: v, timestamp: Date.now() });
               }
-            }} disabled={diceType === 6 ? isAnimating : isAnimatingD10} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="px-5 py-2 rounded-xl text-[10px] font-black uppercase shadow-md hover:opacity-90 transition-colors disabled:opacity-50">
+            }} disabled={diceType === 6 ? isAnimating : isAnimatingD10} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="px-3 py-1.5 md:px-5 md:py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-md hover:opacity-90 transition-colors disabled:opacity-50">
               Бросить
             </button>
           </div>
