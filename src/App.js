@@ -1,3 +1,6 @@
+Вот полный код:
+
+```jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import {
@@ -43,9 +46,7 @@ const loadPlatformDecks = async () => {
     if (!res.ok) return [];
     const decksConfig = await res.json();
     return decksConfig.map(deck => {
-      const base = deck.folder
-        ? `${PLATFORM_BASE_URL}/${deck.folder}`
-        : PLATFORM_BASE_URL;
+      const base = deck.folder ? `${PLATFORM_BASE_URL}/${deck.folder}` : PLATFORM_BASE_URL;
       return {
         id: `platform_${deck.id}`,
         name: deck.name,
@@ -479,15 +480,9 @@ export default function App() {
         }
         else if (d.id === '_library_state') {
           const libraryData = d.data();
-          if (libraryData.isOpen !== undefined && !window._isClientMode) {
-            setIsLibraryOpen(libraryData.isOpen);
-          }
-          if (libraryData.isFullscreen !== undefined && !window._isClientMode) {
-            setIsLibraryFullscreen(libraryData.isFullscreen);
-          }
-          if (libraryData.isFlipped !== undefined) {
-            setIsLibraryDeckFlipped(libraryData.isFlipped);
-          }
+          if (libraryData.isOpen !== undefined && !window._isClientMode) setIsLibraryOpen(libraryData.isOpen);
+          if (libraryData.isFullscreen !== undefined && !window._isClientMode) setIsLibraryFullscreen(libraryData.isFullscreen);
+          if (libraryData.isFlipped !== undefined) setIsLibraryDeckFlipped(libraryData.isFlipped);
         }
         else if (d.id === '_active_deck') { setActiveDeckData(d.data()); }
         else if (d.id === '_timer_state') { setSessionTimer(d.data()); }
@@ -573,10 +568,7 @@ export default function App() {
     }
     try {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${currentRoomId}`, '_active_deck'), {
-        id: deck.id,
-        name: deck.name,
-        cards: deck.cards || [],
-        backImage: deck.backImage || null
+        id: deck.id, name: deck.name, cards: deck.cards || [], backImage: deck.backImage || null
       });
       syncLibraryUI({ isFlipped: false });
       notify(`Колода "${deck.name}" активирована ✓`);
@@ -704,9 +696,7 @@ export default function App() {
   const clearTable = async () => {
     const unlocked = cardsOnTable.filter(c => !c.isLocked);
     if (unlocked.length === 0) return notify("Нет незакреплённых объектов на столе");
-
     if (undoStack?.timeoutId) clearTimeout(undoStack.timeoutId);
-
     const timeoutId = setTimeout(async () => {
       try {
         const batch = writeBatch(db);
@@ -717,7 +707,6 @@ export default function App() {
       } catch (e) {}
       setUndoStack(null);
     }, 10000);
-
     setUndoStack({ cards: unlocked, expiresAt: Date.now() + 10000, timeoutId });
   };
 
@@ -737,7 +726,6 @@ export default function App() {
       const cards = [];
       let backImage = null;
       const total = pendingFiles.length;
-
       for (let i = 0; i < pendingFiles.length; i++) {
         const file = pendingFiles[i];
         setUploadProgress(Math.round((i / total) * 100));
@@ -753,10 +741,8 @@ export default function App() {
         if (isBack) backImage = url;
         else cards.push(url);
       }
-
       setUploadProgress(100);
       const newDeck = { name: tempDeckName || "Колода", cards, backImage, createdAt: Date.now() };
-
       if (isDbConnected && user && !isClientMode) {
         await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_decks'), newDeck);
         notify("Колода сохранена в Облако ✓");
@@ -779,16 +765,14 @@ export default function App() {
   const addDeckByLinks = async () => {
     const input = prompt("Вставьте ссылку на папку Google Диска (или несколько ссылок на файлы):");
     if (!input || !input.trim()) return;
-
     const folderId = extractDriveFolderId(input.trim());
-
     if (folderId) {
       const name = prompt("Имя колоды:");
       if (!name) return;
       notify("Загружаю список файлов из папки...");
       try {
         const files = await loadDriveFolderFiles(folderId, DRIVE_API_KEY);
-        if (files.length === 0) return notify("В папке нет изображений. Убедитесь что папка открыта по ссылке.");
+        if (files.length === 0) return notify("В папке нет изображений.");
         let backImage = null;
         const cards = [];
         for (const file of files) {
@@ -796,31 +780,22 @@ export default function App() {
           if (file.name.toLowerCase().includes('рубашка')) backImage = url;
           else cards.push(url);
         }
-        if (cards.length === 0) return notify("Карты не найдены (все файлы — рубашка?)");
+        if (cards.length === 0) return notify("Карты не найдены.");
         const newDeck = { name, cards, backImage: backImage || null, createdAt: Date.now() };
         if (isDbConnected && user && !isClientMode) {
           await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_decks'), newDeck);
-          notify(`Колода "${name}": ${cards.length} карт${backImage ? ' + рубашка' : ''} ✓`);
+          notify(`Колода "${name}": ${cards.length} карт ✓`);
           setActiveTab('cloud');
         } else {
           setLocalDecks(p => [...p, { ...newDeck, id: Date.now().toString() }]);
         }
       } catch (e) {
-        if (e.message.includes('403') || e.message.includes('400')) {
-          notify("Ошибка доступа. Убедитесь: 1) папка открыта по ссылке, 2) Drive API подключён.");
-        } else {
-          notify("Ошибка загрузки папки: " + e.message);
-        }
+        notify("Ошибка загрузки папки: " + e.message);
       }
     } else {
       const name = prompt("Имя колоды:");
       if (!name) return;
-      const linkArray = input
-        .split(/[\n\r,\s]+/)
-        .map(l => l.trim())
-        .filter(l => l.length > 10)
-        .map(l => convertDriveLink(l))
-        .filter(Boolean);
+      const linkArray = input.split(/[\n\r,\s]+/).map(l => l.trim()).filter(l => l.length > 10).map(l => convertDriveLink(l)).filter(Boolean);
       if (linkArray.length === 0) return notify("Не найдено ни одной ссылки");
       const newDeck = { name, cards: linkArray, backImage: null, createdAt: Date.now() };
       if (isDbConnected && user && !isClientMode) {
@@ -829,7 +804,6 @@ export default function App() {
         setActiveTab('cloud');
       } else {
         setLocalDecks(p => [...p, { ...newDeck, id: Date.now().toString() }]);
-        notify(`Колода "${name}" добавлена: ${linkArray.length} карт`);
       }
     }
   };
@@ -863,34 +837,16 @@ export default function App() {
           {!isClientMode ? (
             !showKeyPrompt ? (
               <div className="flex flex-col gap-4">
-                <button
-                  onClick={() => setShowKeyPrompt(true)}
-                  style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }}
-                  className="w-full font-black py-5 rounded-2xl text-xs uppercase tracking-widest shadow-lg flex flex-col items-center gap-2 transition-all hover:opacity-90"
-                >
+                <button onClick={() => setShowKeyPrompt(true)} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="w-full font-black py-5 rounded-2xl text-xs uppercase tracking-widest shadow-lg flex flex-col items-center gap-2 transition-all hover:opacity-90">
                   <Key size={24} /> ВОЙТИ КАК ПСИХОЛОГ
                 </button>
               </div>
             ) : (
               <div className="space-y-3">
-                <input
-                  type="text" value={emailInput}
-                  onChange={e => setEmailInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                  placeholder="Email"
-                  className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center"
-                  style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }}
-                />
-                <input
-                  type="password" value={passwordInput}
-                  onChange={e => setPasswordInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                  placeholder="Пароль"
-                  className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center"
-                  style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }}
-                />
+                <input type="text" value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Email" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
+                <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Пароль" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
                 <div className="flex gap-2 pt-1">
-                  <button onClick={() => setShowKeyPrompt(false)} className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors" style={{ color: `${COLORS.ink}80` }}>Назад</button>
+                  <button onClick={() => setShowKeyPrompt(false)} className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}80` }}>Назад</button>
                   <button onClick={handleLogin} disabled={isCheckingKey} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="flex-[2] font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest shadow-md disabled:opacity-50">
                     {isCheckingKey ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" /> Проверка...</span> : "Войти"}
                   </button>
@@ -900,17 +856,8 @@ export default function App() {
           ) : (
             <div className="space-y-3">
               <p className="font-bold text-[10px] uppercase text-center mb-4" style={{ color: COLORS.ink }}>Представьтесь, чтобы зайти за стол:</p>
-              <input
-                type="text" value={clientNameInput}
-                onChange={e => setClientNameInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleClientLogin()}
-                placeholder="Ваше Имя"
-                className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center"
-                style={{ borderColor: COLORS.forest, color: COLORS.forest, backgroundColor: `${COLORS.forest}10` }}
-              />
-              <button onClick={handleClientLogin} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="w-full font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:opacity-90 mt-2">
-                Войти в кабинет
-              </button>
+              <input type="text" value={clientNameInput} onChange={e => setClientNameInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleClientLogin()} placeholder="Ваше Имя" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center" style={{ borderColor: COLORS.forest, color: COLORS.forest, backgroundColor: `${COLORS.forest}10` }} />
+              <button onClick={handleClientLogin} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="w-full font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:opacity-90 mt-2">Войти в кабинет</button>
             </div>
           )}
         </div>
@@ -947,11 +894,7 @@ export default function App() {
                   СЕССИЯ: {roomId} <span className="opacity-50">|</span> ВЫ: {userName}
                 </span>
                 {!isClientMode && (
-                  <button
-                    onClick={toggleGameMode}
-                    className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all flex items-center gap-1 shadow-sm border ${isGameMode ? 'text-white' : 'hover:opacity-70'}`}
-                    style={{ backgroundColor: isGameMode ? COLORS.plum : COLORS.haze, color: isGameMode ? 'white' : COLORS.ink, borderColor: isGameMode ? COLORS.plum : `${COLORS.ink}20` }}
-                  >
+                  <button onClick={toggleGameMode} className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all flex items-center gap-1 shadow-sm border ${isGameMode ? 'text-white' : 'hover:opacity-70'}`} style={{ backgroundColor: isGameMode ? COLORS.plum : COLORS.haze, color: isGameMode ? 'white' : COLORS.ink, borderColor: isGameMode ? COLORS.plum : `${COLORS.ink}20` }}>
                     <Gamepad2 size={10} /> {isGameMode ? 'Игра' : 'Консультация'}
                   </button>
                 )}
@@ -961,40 +904,20 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap justify-center md:justify-end w-full md:w-auto">
-
           {timerDisplay ? (
             <div className="flex items-center gap-1.5">
-              <div
-                className="px-4 py-2 rounded-xl font-black text-sm tabular-nums tracking-widest flex items-center gap-2 border transition-all"
-                style={{
-                  backgroundColor: timerIsWarning ? '#FEE2E2' : `${COLORS.plum}12`,
-                  color: timerIsWarning ? '#DC2626' : COLORS.plum,
-                  borderColor: timerIsWarning ? '#FCA5A5' : `${COLORS.plum}30`,
-                  animation: timerDisplay <= '01:00' ? 'timerPulse 1s ease-in-out infinite' : 'none'
-                }}
-              >
-                <Timer size={14} />
-                {timerDisplay}
+              <div className="px-4 py-2 rounded-xl font-black text-sm tabular-nums tracking-widest flex items-center gap-2 border transition-all" style={{ backgroundColor: timerIsWarning ? '#FEE2E2' : `${COLORS.plum}12`, color: timerIsWarning ? '#DC2626' : COLORS.plum, borderColor: timerIsWarning ? '#FCA5A5' : `${COLORS.plum}30` }}>
+                <Timer size={14} />{timerDisplay}
               </div>
               {!isClientMode && (
-                <button
-                  onClick={stopTimer}
-                  className="p-2 rounded-xl hover:opacity-70 transition-colors"
-                  style={{ color: COLORS.terra, backgroundColor: `${COLORS.terra}15` }}
-                  title="Остановить таймер"
-                >
+                <button onClick={stopTimer} className="p-2 rounded-xl hover:opacity-70 transition-colors" style={{ color: COLORS.terra, backgroundColor: `${COLORS.terra}15` }} title="Остановить таймер">
                   <TimerOff size={15} />
                 </button>
               )}
             </div>
           ) : (
             !isClientMode && (
-              <button
-                onClick={() => startTimer(90)}
-                className="px-3 py-2 rounded-xl text-[10px] font-black border flex items-center gap-1.5 shadow-sm hover:opacity-80 transition-all"
-                style={{ borderColor: `${COLORS.plum}30`, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }}
-                title="Запустить таймер на 90 минут"
-              >
+              <button onClick={() => startTimer(90)} className="px-3 py-2 rounded-xl text-[10px] font-black border flex items-center gap-1.5 shadow-sm hover:opacity-80 transition-all" style={{ borderColor: `${COLORS.plum}30`, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} title="Запустить таймер на 90 минут">
                 <Timer size={14} /> 90 МИН
               </button>
             )
@@ -1022,7 +945,6 @@ export default function App() {
                 <Type size={18} />
               </button>
 
-              {/* ↓↓↓ ИСПРАВЛЕННАЯ КНОПКА ЗАГРУЗКИ ПОЛЯ ↓↓↓ */}
               <label className="p-2.5 rounded-xl cursor-pointer border transition-all hover:opacity-80" style={{ backgroundColor: COLORS.haze, color: COLORS.forest, borderColor: `${COLORS.forest}20` }} title="Загрузить игровое поле">
                 <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                   const f = e.target.files[0];
@@ -1034,20 +956,16 @@ export default function App() {
                       rd.onload = (ev) => r(ev.target.result);
                       rd.readAsDataURL(f);
                     });
-
-                    // Агрессивное сжатие — пробуем разные размеры пока не уложимся в 900KB
                     let comp = await compressImage(data, 1200, 1200);
                     if (comp.length > 900000) comp = await compressImage(data, 900, 900);
                     if (comp.length > 900000) comp = await compressImage(data, 700, 700);
-
                     const sizeKB = Math.round(comp.length / 1024);
                     if (comp.length > 900000) {
-                      return notify(`Файл слишком большой даже после сжатия (${sizeKB}KB). Попробуйте другое изображение.`);
+                      return notify(`Файл слишком большой (${sizeKB}KB). Попробуйте другое изображение.`);
                     }
-
                     notify(`Размещаю поле на столе (${sizeKB}KB)...`, 4000);
                     await addElement('field', { img: comp });
-                    notify("Игровое поле появилось на столе! Прокрутите стол чтобы найти его ✓");
+                    notify("Игровое поле появилось на столе! ✓");
                   } catch (err) {
                     notify("Ошибка: " + err.message);
                   } finally {
@@ -1056,7 +974,6 @@ export default function App() {
                 }} />
                 <ImageIcon size={18} />
               </label>
-              {/* ↑↑↑ КОНЕЦ ИСПРАВЛЕНИЯ ↑↑↑ */}
 
               <button onClick={clearTable} className="p-2.5 rounded-xl transition-colors hover:opacity-70" style={{ color: COLORS.terra }} title="Очистить стол">
                 <Trash2 size={18} />
@@ -1073,7 +990,7 @@ export default function App() {
       <main className="flex-1 relative flex flex-col overflow-hidden">
 
         {isGameMode && (
-          <div className="fixed top-[120px] md:top-24 right-4 md:right-10 z-40 flex flex-col items-center gap-3 bg-white/60 backdrop-blur-md p-4 rounded-[2.5rem] shadow-xl border border-white transition-all animate-in slide-in-from-right-4 fade-in duration-300 pointer-events-auto">
+          <div className="fixed top-[120px] md:top-24 right-4 md:right-10 z-40 flex flex-col items-center gap-3 bg-white/60 backdrop-blur-md p-4 rounded-[2.5rem] shadow-xl border border-white transition-all pointer-events-auto">
             <div className="flex gap-2 p-2 rounded-2xl border border-white" style={{ backgroundColor: `${COLORS.ink}10` }}>
               {['#8B3252', '#2D4A3E', '#C4714A', '#4A90E2', '#E2A94A'].map(color => (
                 <button key={color} onClick={() => addElement('token', { color })} className="w-5 h-5 rounded-full shadow-md border border-white/50 hover:scale-125 transition-transform" style={{ backgroundColor: color }} />
@@ -1081,24 +998,14 @@ export default function App() {
             </div>
             <div className="flex p-0.5 rounded-xl" style={{ backgroundColor: `${COLORS.ink}15` }}>
               {[6, 10].map(type => (
-                <button
-                  key={type}
-                  onClick={async () => {
-                    setDiceType(type);
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_type'), { type }, { merge: true });
-                  }}
-                  className="px-3 py-1.5 rounded-lg text-[10px] font-black transition-all"
-                  style={{
-                    backgroundColor: diceType === type ? 'white' : 'transparent',
-                    color: diceType === type ? COLORS.plum : `${COLORS.ink}60`,
-                    boxShadow: diceType === type ? '0 1px 4px rgba(0,0,0,0.1)' : 'none'
-                  }}
-                >
+                <button key={type} onClick={async () => {
+                  setDiceType(type);
+                  await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_type'), { type }, { merge: true });
+                }} className="px-3 py-1.5 rounded-lg text-[10px] font-black transition-all" style={{ backgroundColor: diceType === type ? 'white' : 'transparent', color: diceType === type ? COLORS.plum : `${COLORS.ink}60`, boxShadow: diceType === type ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>
                   d{type}
                 </button>
               ))}
             </div>
-
             {diceType === 6 ? (
               <div className={`w-14 h-14 bg-white rounded-2xl shadow-lg flex items-center justify-center border-2 transition-all ${isAnimating ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.plum}20` }}>
                 {renderDiceFace(visualDice, COLORS.plum)}
@@ -1108,7 +1015,6 @@ export default function App() {
                 <span className="font-black text-2xl" style={{ color: COLORS.forest }}>{visualDiceD10}</span>
               </div>
             )}
-
             <button onClick={async () => {
               if (diceType === 6) {
                 if (isAnimating) return;
@@ -1130,12 +1036,7 @@ export default function App() {
         )}
 
         <div ref={scrollContainerRef} className="flex-1 overflow-auto custom-scrollbar relative bg-[#F2EFF5]">
-          <div
-            ref={boardRef}
-            className="relative min-w-[3000px] min-h-[3000px] bg-transparent"
-            onMouseMove={handleMouseMove}
-            onTouchMove={handleMouseMove}
-          >
+          <div ref={boardRef} className="relative min-w-[3000px] min-h-[3000px] bg-transparent" onMouseMove={handleMouseMove} onTouchMove={handleMouseMove}>
             <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: `radial-gradient(circle, ${COLORS.plum} 1px, transparent 1px)`, backgroundSize: '30px 30px' }}></div>
 
             {cardsOnTable
@@ -1168,28 +1069,10 @@ export default function App() {
         </div>
 
         {undoStack && (
-          <div
-            className="fixed z-[110] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border"
-            style={{
-              bottom: isLibraryOpen ? '320px' : '80px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              backgroundColor: COLORS.ink,
-              borderColor: `${COLORS.terra}40`,
-              transition: 'bottom 0.4s ease'
-            }}
-          >
+          <div className="fixed z-[110] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border" style={{ bottom: isLibraryOpen ? '320px' : '80px', left: '50%', transform: 'translateX(-50%)', backgroundColor: COLORS.ink, borderColor: `${COLORS.terra}40`, transition: 'bottom 0.4s ease' }}>
             <Undo2 size={16} color={COLORS.terra} />
-            <span className="text-white text-sm font-bold whitespace-nowrap">
-              {undoStack.cards.length} {undoStack.cards.length === 1 ? 'объект' : 'объектов'} удалено
-            </span>
-            <button
-              onClick={undoClear}
-              className="px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:opacity-80 transition-all"
-              style={{ backgroundColor: COLORS.plum, color: 'white' }}
-            >
-              ОТМЕНА
-            </button>
+            <span className="text-white text-sm font-bold whitespace-nowrap">{undoStack.cards.length} {undoStack.cards.length === 1 ? 'объект' : 'объектов'} удалено</span>
+            <button onClick={undoClear} className="px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:opacity-80 transition-all" style={{ backgroundColor: COLORS.plum, color: 'white' }}>ОТМЕНА</button>
             <UndoTimer expiresAt={undoStack.expiresAt} />
           </div>
         )}
@@ -1220,9 +1103,7 @@ export default function App() {
                   {activeTab === 'local' && (
                     <div className="flex flex-col gap-3 flex-shrink-0">
                       <div className="rounded-2xl p-3 text-[9px] leading-relaxed" style={{ backgroundColor: `${COLORS.forest}12`, color: COLORS.forest, border: `1px solid ${COLORS.forest}25` }}>
-                        <div className="font-black uppercase tracking-widest mb-2 flex items-center gap-1">
-                          <FolderOpen size={11} /> Как добавить колоду с Google Диска:
-                        </div>
+                        <div className="font-black uppercase tracking-widest mb-2 flex items-center gap-1"><FolderOpen size={11} /> Как добавить колоду с Google Диска:</div>
                         <div className="space-y-1 font-medium" style={{ color: `${COLORS.ink}99` }}>
                           <div>1. Откройте папку с картами на Google Диске</div>
                           <div>2. Правая кнопка → <b>"Открыть доступ"</b></div>
@@ -1230,31 +1111,16 @@ export default function App() {
                           <div>4. Скопируйте ссылку и вставьте ниже ↓</div>
                         </div>
                       </div>
-                      <button
-                        onClick={addDeckByLinks}
-                        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black transition-all uppercase hover:opacity-80 shadow-sm"
-                        style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }}
-                      >
+                      <button onClick={addDeckByLinks} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black transition-all uppercase hover:opacity-80 shadow-sm" style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }}>
                         <LinkIcon size={16} /> Вставить ссылку на папку
                       </button>
                     </div>
                   )}
 
-                  {activeTab === 'platform' && isPlatformDecksLoading && (
-                    <div className="flex justify-center py-4 flex-shrink-0">
-                      <Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} />
-                    </div>
-                  )}
-                  {activeTab === 'cloud' && isBaseDecksLoading && (
-                    <div className="flex justify-center py-4 flex-shrink-0">
-                      <Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} />
-                    </div>
-                  )}
+                  {activeTab === 'platform' && isPlatformDecksLoading && <div className="flex justify-center py-4 flex-shrink-0"><Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} /></div>}
+                  {activeTab === 'cloud' && isBaseDecksLoading && <div className="flex justify-center py-4 flex-shrink-0"><Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} /></div>}
 
-                  {(activeTab === 'platform' ? platformDecks
-                    : activeTab === 'local' ? localDecks
-                    : [...baseDecks, ...cloudDecks]
-                  ).map(item => (
+                  {(activeTab === 'platform' ? platformDecks : activeTab === 'local' ? localDecks : [...baseDecks, ...cloudDecks]).map(item => (
                     <div key={item.id} className={`group flex items-center gap-3 p-3 rounded-2xl transition-all relative border flex-shrink-0 ${selectedDeckId === item.id ? 'shadow-sm' : 'border-transparent'}`} style={{ backgroundColor: selectedDeckId === item.id ? `${COLORS.plum}10` : 'transparent', borderColor: selectedDeckId === item.id ? `${COLORS.plum}33` : 'transparent' }}>
                       <button onClick={() => selectDeck(item)} className="flex-1 flex items-center gap-3 text-left overflow-hidden hover:opacity-70">
                         <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden border flex-shrink-0" style={{ borderColor: `${COLORS.ink}10` }}>
@@ -1311,9 +1177,7 @@ export default function App() {
                           {isLibraryDeckFlipped
                             ? <img src={img} className="h-full w-auto min-w-[5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
                             : <div className="h-full w-24 md:w-28 flex items-center justify-center rounded-2xl overflow-hidden relative shadow-sm" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
-                              {activeDeckData.backImage
-                                ? <img src={activeDeckData.backImage} className="w-full h-full object-cover absolute inset-0" alt="Рубашка" />
-                                : <Layers size={20} className="text-white/20" />}
+                              {activeDeckData.backImage ? <img src={activeDeckData.backImage} className="w-full h-full object-cover absolute inset-0" alt="Рубашка" /> : <Layers size={20} className="text-white/20" />}
                             </div>}
                           <div className="absolute top-2 left-2 text-white text-[10px] font-black px-2 py-0.5 rounded z-10 pointer-events-none" style={{ backgroundColor: `${COLORS.ink}99` }}>{idx + 1}</div>
                         </button>
@@ -1336,19 +1200,11 @@ export default function App() {
           <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl border-4" style={{ borderColor: COLORS.haze }}>
             <h3 className="text-xl font-black mb-2 uppercase italic" style={{ color: COLORS.ink }}>ИМЯ КОЛОДЫ</h3>
             <p className="text-[10px] mb-6 font-medium" style={{ color: `${COLORS.ink}66` }}>Выбрано файлов: {pendingFiles.length}. Файл с "рубашка" в названии станет обложкой.</p>
-            <input
-              autoFocus value={tempDeckName}
-              onChange={e => setTempDeckName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && confirmUpload()}
-              placeholder="Напр: Эмоции"
-              className="w-full px-6 py-4 rounded-2xl border-2 mb-8 outline-none font-bold"
-              style={{ borderColor: COLORS.haze, color: COLORS.ink }}
-            />
+            <input autoFocus value={tempDeckName} onChange={e => setTempDeckName(e.target.value)} onKeyDown={e => e.key === 'Enter' && confirmUpload()} placeholder="Напр: Эмоции" className="w-full px-6 py-4 rounded-2xl border-2 mb-8 outline-none font-bold" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
             {isUploading && (
               <div className="mb-6">
                 <div className="flex justify-between text-[10px] font-bold mb-2" style={{ color: `${COLORS.ink}66` }}>
-                  <span>Загрузка в облако...</span>
-                  <span>{uploadProgress}%</span>
+                  <span>Загрузка в облако...</span><span>{uploadProgress}%</span>
                 </div>
                 <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${COLORS.ink}10` }}>
                   <div className="h-full rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%`, backgroundColor: COLORS.plum }} />
@@ -1366,23 +1222,14 @@ export default function App() {
       )}
 
       {previewCard && (
-        <div
-          className="fixed inset-0 z-[120] flex items-center justify-center backdrop-blur-md p-4"
-          style={{ backgroundColor: `${COLORS.ink}F2` }}
-          onClick={() => setPreviewCard(null)}
-        >
+        <div className="fixed inset-0 z-[120] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}F2` }} onClick={() => setPreviewCard(null)}>
           <div className="absolute top-6 left-1/2 -translate-x-1/2 text-white font-black tracking-widest uppercase bg-black/50 px-6 py-2 rounded-full backdrop-blur-md text-xs text-center w-[90%] md:w-auto">
             {previewCard.isFlipped ? "Эта карта открыта для всех" : "Эту карту сейчас видите только вы"}
           </div>
           <button className="absolute top-6 right-6 text-white p-2 rounded-full transition-all hover:opacity-70" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
             <X size={40} />
           </button>
-          <img
-            src={previewCard.img}
-            className="max-h-[85vh] max-w-[90vw] h-auto w-auto rounded-2xl shadow-2xl bg-white object-contain"
-            style={{ animation: 'scaleIn 0.2s ease-out' }}
-            alt="Карта"
-          />
+          <img src={previewCard.img} className="max-h-[85vh] max-w-[90vw] h-auto w-auto rounded-2xl shadow-2xl bg-white object-contain" style={{ animation: 'scaleIn 0.2s ease-out' }} alt="Карта" />
         </div>
       )}
 
@@ -1417,7 +1264,6 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     if (isLocked) return;
     if (isField && isClientMode) return;
     if (isText && e.target.tagName.toLowerCase() === 'textarea') return;
-
     const cx = e.touches ? e.touches[0].clientX : e.clientX;
     const cy = e.touches ? e.touches[0].clientY : e.clientY;
     setIsDragging(true); hasMoved.current = false; clickTimestamp.current = Date.now();
@@ -1481,7 +1327,8 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         transition: (isDragging || isResizing) ? 'none' : 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
       }}
     >
-      <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all bg-white/95 backdrop-blur-sm rounded-xl px-1.5 py-1 shadow-xl z-20 border" style={{ borderColor: `${COLORS.ink}10` }}>
+      {/* Панель кнопок — для поля сбоку справа, для карт сверху */}
+      <div className={`absolute flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all bg-white/95 backdrop-blur-sm rounded-xl px-1.5 py-1 shadow-xl z-20 border ${isField ? '-right-14 top-1/2 -translate-y-1/2 flex-col' : '-top-12 left-1/2 -translate-x-1/2'}`} style={{ borderColor: `${COLORS.ink}10` }}>
         {!isField && <button onClick={(e) => { e.stopPropagation(); onUpdate({ zIndex: maxZIndex + 1 }); }} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: `${COLORS.ink}80`, backgroundColor: COLORS.haze }} title="На передний план"><ArrowUp size={14} /></button>}
 
         {element.type === 'card' && !element.isFlipped && (
@@ -1528,7 +1375,9 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
           </button>
         )}
 
-        {!isClientMode && <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: COLORS.terra }} title="Удалить"><Trash2 size={14} /></button>}
+        {!isClientMode && (
+          <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: COLORS.terra }} title="Удалить"><Trash2 size={14} /></button>
+        )}
       </div>
 
       <div
@@ -1546,12 +1395,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
                 <div className="w-1 h-1 rounded-full bg-black" />
               </div>
             </div>
-            <textarea
-              className="flex-1 w-full p-2.5 bg-transparent resize-none outline-none text-[13px] font-bold text-gray-800 custom-scrollbar"
-              value={element.text || ''}
-              onChange={(e) => onUpdate({ text: e.target.value })}
-              placeholder="Заметка..."
-            />
+            <textarea className="flex-1 w-full p-2.5 bg-transparent resize-none outline-none text-[13px] font-bold text-gray-800 custom-scrollbar" value={element.text || ''} onChange={(e) => onUpdate({ text: e.target.value })} placeholder="Заметка..." />
           </>
         ) : element.type === 'token' ? (
           <div className="w-full h-full rounded-full shadow-inner border-2 border-white" style={{ backgroundColor: element.color }} />
@@ -1572,12 +1416,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       </div>
 
       {(!isLocked && (!isClientMode || !isField)) && (
-        <div
-          onMouseDown={handleResizeStart}
-          onTouchStart={handleResizeStart}
-          className="absolute -bottom-2 -right-2 w-8 h-8 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center z-30 drop-shadow-md bg-white/80 backdrop-blur-sm rounded-full scale-75 hover:scale-100 shadow-lg"
-          style={{ color: COLORS.plum }}
-        >
+        <div onMouseDown={handleResizeStart} onTouchStart={handleResizeStart} className="absolute -bottom-2 -right-2 w-8 h-8 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center z-30 drop-shadow-md bg-white/80 backdrop-blur-sm rounded-full scale-75 hover:scale-100 shadow-lg" style={{ color: COLORS.plum }}>
           <Move size={14} />
         </div>
       )}
@@ -1590,3 +1429,4 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     </div>
   );
 }
+```
