@@ -1027,20 +1027,29 @@ export default function App() {
                 <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                   const f = e.target.files[0];
                   if (!f) return;
-                  notify("Загрузка поля, подождите...", 5000);
+                  notify("Сжимаю изображение...", 5000);
                   try {
                     const data = await new Promise(r => {
                       const rd = new FileReader();
                       rd.onload = (ev) => r(ev.target.result);
                       rd.readAsDataURL(f);
                     });
-                    // Сжимаем с качеством 0.5 чтобы уложиться в лимит Firestore (~900KB)
-                    const comp = await compressImage(data, 1500, 1500);
-                    // Сохраняем base64 напрямую в Firestore — без Firebase Storage
+
+                    // Агрессивное сжатие — пробуем разные размеры пока не уложимся в 900KB
+                    let comp = await compressImage(data, 1200, 1200);
+                    if (comp.length > 900000) comp = await compressImage(data, 900, 900);
+                    if (comp.length > 900000) comp = await compressImage(data, 700, 700);
+
+                    const sizeKB = Math.round(comp.length / 1024);
+                    if (comp.length > 900000) {
+                      return notify(`Файл слишком большой даже после сжатия (${sizeKB}KB). Попробуйте другое изображение.`);
+                    }
+
+                    notify(`Размещаю поле на столе (${sizeKB}KB)...`, 4000);
                     await addElement('field', { img: comp });
-                    notify("Игровое поле успешно загружено! ✓");
+                    notify("Игровое поле появилось на столе! Прокрутите стол чтобы найти его ✓");
                   } catch (err) {
-                    notify("Ошибка загрузки: " + err.message);
+                    notify("Ошибка: " + err.message);
                   } finally {
                     e.target.value = '';
                   }
