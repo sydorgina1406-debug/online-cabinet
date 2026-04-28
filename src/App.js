@@ -67,36 +67,11 @@ const COLORS = {
 };
 
 const TABLE_BACKGROUNDS = [
-  {
-    id: 'off-white',
-    name: 'Молочный',
-    type: 'css',
-    value: 'none',
-    bgSize: 'auto',
-    bgColor: '#F7F4EE',
-    opacity: 1,
-    repeat: 'no-repeat'
-  },
-  {
-    id: 'wood-table',
-    name: 'Деревянный стол',
-    type: 'image',
-    value: 'https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=2400&q=80',
-    bgSize: 'cover',
-    bgColor: '#A0724A',
-    opacity: 1,
-    repeat: 'no-repeat'
-  },
-  {
-    id: 'stone-table',
-    name: 'Каменный стол',
-    type: 'image',
-    value: 'https://images.unsplash.com/photo-1615873968403-89e068629265?auto=format&fit=crop&w=2400&q=80',
-    bgSize: 'cover',
-    bgColor: '#8B8680',
-    opacity: 1,
-    repeat: 'no-repeat'
-  }
+  { id: 'milky', name: 'Молочный', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#FDFAF6', opacity: 1, repeat: 'repeat' },
+  { id: 'bg1', name: 'Текстура 1', type: 'image', value: 'https://i.postimg.cc/sDNKJxG0/a85b84b3-a69d-4d8d-bca4-a8fa16a64d92.png', bgSize: 'cover', bgColor: '#EBE5DC', opacity: 1, repeat: 'no-repeat' },
+  { id: 'bg2', name: 'Текстура 2', type: 'image', value: 'https://i.postimg.cc/W350bYMC/c67e9c05-4f71-49d6-89f0-a5cb92c1a2dd.png', bgSize: 'cover', bgColor: '#EBE5DC', opacity: 1, repeat: 'no-repeat' },
+  { id: 'bg3', name: 'Текстура 3', type: 'image', value: 'https://i.postimg.cc/02TDQwwj/e153412f-7934-4f95-8ebd-899e3701722a.png', bgSize: 'cover', bgColor: '#EBE5DC', opacity: 1, repeat: 'no-repeat' },
+  { id: 'bg4', name: 'Текстура 4', type: 'image', value: 'https://i.postimg.cc/tJ1nRqRx/f2726b05-f79d-45d7-a544-c622ba678d80.png', bgSize: 'cover', bgColor: '#EBE5DC', opacity: 1, repeat: 'no-repeat' }
 ];
 
 if (typeof window !== 'undefined' && !document.getElementById('tailwind-script')) {
@@ -930,8 +905,10 @@ export default function App() {
                     }
                   }} className={`relative h-20 md:h-24 rounded-2xl overflow-hidden border-4 transition-all hover:scale-105 ${tableBg?.id === bg.id ? 'shadow-lg' : 'border-transparent shadow-sm'}`} style={{ backgroundColor: bg.bgColor, borderColor: tableBg?.id === bg.id ? COLORS.plum : 'transparent' }}>
                     <div className="absolute inset-0 pointer-events-none" style={{
+                      backgroundColor: bg.blendMode ? bg.bgColor : 'transparent',
                       backgroundImage: bg.value === 'none' ? 'none' : (bg.type === 'css' ? bg.value : `url('${bg.value}')`),
-                      backgroundSize: bg.bgSize, backgroundPosition: 'center', opacity: bg.opacity, backgroundRepeat: bg.repeat || 'repeat'
+                      backgroundSize: bg.bgSize, backgroundPosition: 'center', opacity: bg.opacity, backgroundRepeat: bg.repeat || 'repeat',
+                      backgroundBlendMode: bg.blendMode || 'normal'
                     }}></div>
                     <div className="absolute inset-0 flex items-end p-2 md:p-3 bg-gradient-to-t from-black/50 to-transparent">
                       <span className="text-white text-[9px] md:text-[10px] font-bold leading-tight drop-shadow-md">{bg.name}</span>
@@ -948,7 +925,7 @@ export default function App() {
                       const data = await new Promise(r => { const rd = new FileReader(); rd.onload = ev => r(ev.target.result); rd.readAsDataURL(f); });
                       let comp = await compressImage(data, 1920, 1920);
                       const url = await uploadImageToStorage(comp, `backgrounds/${user.uid}/${Date.now()}.jpg`);
-                      const customBg = { id: 'custom', name: 'Свой фон', type: 'image', value: url, bgSize: 'cover', bgColor: COLORS.haze, opacity: 1, repeat: 'no-repeat' };
+                      const customBg = { id: 'custom', name: 'Свой фон', type: 'image', value: url, bgSize: 'cover', bgColor: COLORS.haze, opacity: 1, repeat: 'no-repeat', blendMode: 'normal' };
                       setTableBg(customBg);
                       if (isDbConnected && roomId) {
                         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { tableBg: customBg }, { merge: true });
@@ -1146,10 +1123,12 @@ export default function App() {
         <div ref={scrollContainerRef} className="flex-1 overflow-auto custom-scrollbar relative transition-colors duration-500" style={{ backgroundColor: tableBg.bgColor }}>
           <div ref={boardRef} className="relative min-w-[3000px] min-h-[3000px] bg-transparent" onMouseMove={handleMouseMove} onTouchMove={handleMouseMove}>
             <div className="absolute inset-0 pointer-events-none transition-opacity duration-500" style={{ 
+              backgroundColor: tableBg.blendMode ? tableBg.bgColor : 'transparent',
               backgroundImage: tableBg.value === 'none' ? 'none' : (tableBg.type === 'css' ? tableBg.value : `url('${tableBg.value}')`), 
               backgroundSize: tableBg.bgSize, 
               backgroundPosition: 'center', 
               backgroundRepeat: tableBg.repeat || 'repeat',
+              backgroundBlendMode: tableBg.blendMode || 'normal',
               opacity: tableBg.opacity 
             }}></div>
 
