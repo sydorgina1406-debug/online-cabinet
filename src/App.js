@@ -68,54 +68,34 @@ const COLORS = {
 
 const TABLE_BACKGROUNDS = [
   {
-    id: 'beige',
-    name: 'Светлый беж',
+    id: 'off-white',
+    name: 'Молочный',
     type: 'css',
-    value: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.6  0 0 0 0 0.5  0 0 0 0 0.38  0 0 0 0.1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"), radial-gradient(ellipse at 50% 40%, rgba(255,250,240,0.5), transparent 70%)`,
-    bgSize: '140px 140px, auto',
-    bgColor: '#F0E6D6',
+    value: 'none',
+    bgSize: 'auto',
+    bgColor: '#F7F4EE',
     opacity: 1,
-    repeat: 'repeat'
+    repeat: 'no-repeat'
   },
   {
-    id: 'light-wood',
-    name: 'Светлое дерево',
-    type: 'css',
-    value: `repeating-linear-gradient(90deg, transparent 0px, rgba(101,67,33,0.12) 1px, transparent 2px, transparent 180px, rgba(101,67,33,0.18) 181px, transparent 182px), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='180'><defs><filter id='wood'><feTurbulence type='turbulence' baseFrequency='0.025 0.4' numOctaves='3' seed='5'/><feColorMatrix values='0 0 0 0 0.45  0 0 0 0 0.3  0 0 0 0 0.18  0 0 0 0.55 0'/></filter></defs><rect width='100%' height='100%' filter='url(%23wood)'/></svg>"), linear-gradient(180deg, rgba(180,140,90,0.2) 0%, transparent 50%, rgba(180,140,90,0.2) 100%)`,
-    bgSize: 'auto, 600px 180px, auto',
-    bgColor: '#D4A574',
+    id: 'wood-table',
+    name: 'Деревянный стол',
+    type: 'image',
+    value: 'https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=2400&q=80',
+    bgSize: 'cover',
+    bgColor: '#A0724A',
     opacity: 1,
-    repeat: 'repeat'
+    repeat: 'no-repeat'
   },
   {
-    id: 'dark-wood',
-    name: 'Тёмное дерево',
-    type: 'css',
-    value: `repeating-linear-gradient(90deg, transparent 0px, rgba(20,10,5,0.35) 1px, transparent 2px, transparent 200px, rgba(20,10,5,0.45) 201px, transparent 202px), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='200'><defs><filter id='wood'><feTurbulence type='turbulence' baseFrequency='0.022 0.5' numOctaves='4' seed='12'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.05  0 0 0 0 0.02  0 0 0 0.7 0'/></filter></defs><rect width='100%' height='100%' filter='url(%23wood)'/></svg>"), linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 50%, rgba(0,0,0,0.3) 100%)`,
-    bgSize: 'auto, 600px 200px, auto',
-    bgColor: '#5C3A1E',
+    id: 'stone-table',
+    name: 'Каменный стол',
+    type: 'image',
+    value: 'https://images.unsplash.com/photo-1615873968403-89e068629265?auto=format&fit=crop&w=2400&q=80',
+    bgSize: 'cover',
+    bgColor: '#8B8680',
     opacity: 1,
-    repeat: 'repeat'
-  },
-  {
-    id: 'green-velvet',
-    name: 'Зелёный бархат',
-    type: 'css',
-    value: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.4  0 0 0 0 0.2  0 0 0 0.18 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"), radial-gradient(ellipse at 50% 50%, rgba(60,120,80,0.5), rgba(15,45,30,0.4) 80%)`,
-    bgSize: '150px 150px, auto',
-    bgColor: '#1B4D2E',
-    opacity: 1,
-    repeat: 'repeat'
-  },
-  {
-    id: 'purple-stars',
-    name: 'Фиолетовый со звёздами',
-    type: 'css',
-    value: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><g fill='white'><circle cx='30' cy='50' r='1.2' opacity='0.9'/><circle cx='90' cy='120' r='0.6' opacity='0.5'/><circle cx='150' cy='40' r='1.5' opacity='1'/><circle cx='220' cy='180' r='0.8' opacity='0.7'/><circle cx='290' cy='90' r='1' opacity='0.8'/><circle cx='350' cy='200' r='0.7' opacity='0.6'/><circle cx='60' cy='240' r='1.3' opacity='0.9'/><circle cx='180' cy='320' r='0.9' opacity='0.7'/><circle cx='270' cy='280' r='1.1' opacity='0.85'/><circle cx='370' cy='350' r='0.6' opacity='0.5'/><circle cx='110' cy='370' r='1.4' opacity='1'/><circle cx='320' cy='30' r='0.8' opacity='0.7'/><circle cx='200' cy='100' r='0.5' opacity='0.4'/><circle cx='50' cy='160' r='1' opacity='0.8'/><circle cx='250' cy='220' r='0.6' opacity='0.5'/><circle cx='130' cy='200' r='1.2' opacity='0.9'/><circle cx='380' cy='130' r='0.9' opacity='0.7'/><circle cx='20' cy='320' r='1' opacity='0.8'/></g><g fill='%23FFE08A'><circle cx='75' cy='75' r='1.8' opacity='0.95'/><circle cx='310' cy='250' r='2' opacity='1'/><circle cx='160' cy='280' r='1.6' opacity='0.9'/></g></svg>"), radial-gradient(ellipse at 30% 20%, rgba(120,80,200,0.4), transparent 60%), radial-gradient(ellipse at 70% 80%, rgba(200,100,180,0.3), transparent 60%), linear-gradient(135deg, #1A0B3D 0%, #2D1B5C 50%, #1A0B3D 100%)`,
-    bgSize: '400px 400px, auto, auto, auto',
-    bgColor: '#1A0B3D',
-    opacity: 1,
-    repeat: 'repeat'
+    repeat: 'no-repeat'
   }
 ];
 
