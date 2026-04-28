@@ -16,7 +16,7 @@ import {
   Users, LogOut, AlertCircle, ExternalLink, Image as ImageIcon,
   Volume2, VolumeX, ArrowUp, Save, MousePointer2, UserCircle, UserPlus,
   Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
-  Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, Image
+  Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2
 } from 'lucide-react';
 
 const firebaseConfig = {
