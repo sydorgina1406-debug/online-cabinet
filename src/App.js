@@ -16,7 +16,7 @@ import {
   Users, LogOut, AlertCircle, ExternalLink, Image as ImageIcon,
   Volume2, VolumeX, ArrowUp, Save, MousePointer2, UserCircle, UserPlus,
   Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
-  Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2
+  Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, MessageCircle
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -36,6 +36,164 @@ const DRIVE_API_KEY = "AIzaSyDXSTiw-Sd2jZve2Yv7bnbVRIAYcPre3N4";
 
 const PLATFORM_BASE_URL = "https://online-cabinet.vercel.app";
 const PLATFORM_DECKS_URL = `${PLATFORM_BASE_URL}/decks.json`;
+
+const MaxIcon = ({ size = 14, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2 20V4L12 14L22 4V20" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '', isMenu = false, className }) => {
+  const isMale = gender === 'male';
+
+  // Если это иконка для бокового МЕНЮ (чтобы было красиво и понятно при мелком размере)
+  if (isMenu) {
+    return (
+      <svg viewBox="0 0 100 100" className={className} style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.15))' }}>
+        <circle cx="50" cy="22" r="16" fill={color} />
+        {isMale ? (
+          <path d="M 22,90 C 22,50 35,42 50,42 C 65,42 78,50 78,90 Z" fill={color} />
+        ) : (
+          <path d="M 50,42 C 55,42 62,55 78,90 L 22,90 C 38,55 45,42 50,42 Z" fill={color} />
+        )}
+      </svg>
+    );
+  }
+
+  // --- Если это фигура НА СТОЛЕ (Детальная деревянная 3D-фигура) ---
+  const isSide = viewMode === 'side';
+  const rot = ((rotation % 360) + 360) % 360;
+
+  let dir = 'up'; 
+  if (rot > 45 && rot < 135) dir = 'right';
+  else if (rot >= 135 && rot <= 225) dir = 'down'; // Смотрит на нас (анфас)
+  else if (rot > 225 && rot < 315) dir = 'left';
+
+  const hexColor = color.replace('#', '');
+  const gradientId = `grad-${hexColor}-${gender}`;
+
+  return (
+    <svg viewBox="0 0 100 100" className={className} style={{ overflow: 'visible', filter: 'drop-shadow(0px 8px 16px rgba(0,0,0,0.3))' }}>
+      <defs>
+        <radialGradient id="woodHead" cx="40%" cy="30%" r="60%">
+          <stop offset="0%" stopColor="#FDE3B6" />
+          <stop offset="100%" stopColor="#D4A364" />
+        </radialGradient>
+        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.5" />
+          <stop offset="50%" stopColor="#ffffff" stopOpacity="0.1" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.5" />
+        </linearGradient>
+      </defs>
+
+      {isSide ? (
+        /* ================= ВИД СБОКУ (Фигурка стоит прямо) ================= */
+        <g>
+          <ellipse cx="50" cy="85" rx="25" ry="8" fill="rgba(0,0,0,0.2)" />
+
+          {(dir === 'left' || dir === 'right') && (
+            <g transform={dir === 'left' ? "scale(-1, 1) translate(-100, 0)" : ""}>
+              {isMale ? (
+                <>
+                  <path d="M 42,38 L 58,38 L 56,85 L 44,85 Z" fill={color} />
+                  <path d="M 42,38 L 58,38 L 56,85 L 44,85 Z" fill={`url(#${gradientId})`} />
+                </>
+              ) : (
+                <>
+                  <path d="M 46,38 C 46,38 54,38 54,38 C 58,55 64,83 64,85 L 36,85 C 36,83 42,55 46,38 Z" fill={color} />
+                  <path d="M 46,38 C 46,38 54,38 54,38 C 58,55 64,83 64,85 L 36,85 C 36,83 42,55 46,38 Z" fill={`url(#${gradientId})`} />
+                </>
+              )}
+              <circle cx="50" cy="24" r="13" fill="url(#woodHead)" />
+              {/* Профиль: носик и глазик (смещены вверх, голова запрокинута) */}
+              <polygon points="62,20 67,22 62,24" fill="#C89652" />
+              <circle cx="57" cy="19" r="1.5" fill="#333" />
+            </g>
+          )}
+
+          {dir === 'down' && (
+            <g>
+              {isMale ? (
+                <>
+                  <path d="M 32,38 L 68,38 L 64,85 L 36,85 Z" fill={color} />
+                  <path d="M 32,38 L 68,38 L 64,85 L 36,85 Z" fill={`url(#${gradientId})`} />
+                </>
+              ) : (
+                <>
+                  <path d="M 45,38 C 45,38 55,38 55,38 C 65,55 75,83 75,85 L 25,85 C 25,83 35,55 45,38 Z" fill={color} />
+                  <path d="M 45,38 C 45,38 55,38 55,38 C 65,55 75,83 75,85 L 25,85 C 25,83 35,55 45,38 Z" fill={`url(#${gradientId})`} />
+                </>
+              )}
+              <circle cx="50" cy="24" r="13" fill="url(#woodHead)" />
+              {/* Анфас: носик и оба глаза (смещены вверх, смотрит на нас) */}
+              <polygon points="50,21 48,25 52,25" fill="#C89652" />
+              <circle cx="45" cy="20" r="1.5" fill="#333" />
+              <circle cx="55" cy="20" r="1.5" fill="#333" />
+            </g>
+          )}
+
+          {dir === 'up' && (
+            <g>
+              {isMale ? (
+                <>
+                  <path d="M 32,38 L 68,38 L 64,85 L 36,85 Z" fill={color} />
+                  <path d="M 32,38 L 68,38 L 64,85 L 36,85 Z" fill={`url(#${gradientId})`} />
+                </>
+              ) : (
+                <>
+                  <path d="M 45,38 C 45,38 55,38 55,38 C 65,55 75,83 75,85 L 25,85 C 25,83 35,55 45,38 Z" fill={color} />
+                  <path d="M 45,38 C 45,38 55,38 55,38 C 65,55 75,83 75,85 L 25,85 C 25,83 35,55 45,38 Z" fill={`url(#${gradientId})`} />
+                </>
+              )}
+              <circle cx="50" cy="24" r="13" fill="url(#woodHead)" />
+            </g>
+          )}
+
+          {name && (
+            <text
+              x="50" y="65" textAnchor="middle" fontSize={dir === 'left' || dir === 'right' ? "7" : "10"}
+              fontWeight="900" fill="rgba(255,255,255,0.95)" style={{ textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }}
+              textLength={name.length > 4 ? (dir === 'left' || dir === 'right' ? "18" : "28") : undefined} lengthAdjust="spacingAndGlyphs"
+            >
+              {name}
+            </text>
+          )}
+        </g>
+      ) : (
+        /* ================= ВИД СВЕРХУ (Фигурка смотрит прямо в кадр) ================= */
+        <g>
+          <circle cx="50" cy="50" r="32" fill="rgba(0,0,0,0.15)" />
+          
+          {isMale ? (
+            <>
+              <circle cx="50" cy="50" r="28" fill={color} />
+              <circle cx="50" cy="50" r="28" fill={`url(#${gradientId})`} />
+            </>
+          ) : (
+            <>
+              <ellipse cx="50" cy="50" rx="28" ry="26" fill={color} />
+              <ellipse cx="50" cy="50" rx="28" ry="26" fill={`url(#${gradientId})`} />
+            </>
+          )}
+          <circle cx="50" cy="50" r="14" fill="url(#woodHead)" stroke="rgba(0,0,0,0.1)" strokeWidth="2" />
+          {/* Носик и глаза смотрят прямо в кадр (по центру) */}
+          <polygon points="50,51 48,47 52,47" fill="#C89652" />
+          <circle cx="45" cy="46" r="1.5" fill="#333" />
+          <circle cx="55" cy="46" r="1.5" fill="#333" />
+
+          {name && (
+            <text
+              x="50" y="82" textAnchor="middle" fontSize="10" fontWeight="900" fill="rgba(255,255,255,0.95)"
+              style={{ textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }} textLength={name.length > 5 ? "35" : undefined} lengthAdjust="spacingAndGlyphs"
+            >
+              {name}
+            </text>
+          )}
+        </g>
+      )}
+    </svg>
+  );
+};
 
 const loadPlatformDecks = async () => {
   try {
@@ -88,6 +246,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+
 const myCursorColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
 
 const extractDriveFileId = (url) => {
@@ -134,9 +293,11 @@ const loadBaseDecks = async (notifyCb) => {
     if (!res.ok) return [];
     const data = await res.json();
     const allItems = data.files || [];
+    
     const folders = allItems.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
     const images = allItems.filter(f => f.mimeType.includes('image/'));
     const loadedDecks = [];
+    
     if (folders.length > 0) {
       for (const folder of folders) {
         const files = await loadDriveFolderFiles(folder.id, DRIVE_API_KEY);
@@ -279,49 +440,53 @@ export default function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [isCheckingKey, setIsCheckingKey] = useState(false);
   const [appLoading, setAppLoading] = useState(true);
-
+  
   const [platformName, setPlatformName] = useState("ОНЛАЙН КАБИНЕТ");
-  const [isGameMode, setIsGameMode] = useState(false);
+  const [roomMode, setRoomMode] = useState('consultation'); // 'consultation' | 'game' | 'constellation'
+  
+  const [figureColor, setFigureColor] = useState('#8B3252'); 
+  const [figureName, setFigureName] = useState('');
+  const [figureViewMode, setFigureViewMode] = useState('side'); // ГЛОБАЛЬНЫЙ режим фигур 'side' | 'top'
+  
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [clientNameInput, setClientNameInput] = useState('');
   const [userName, setUserName] = useState('');
   const [showKeyPrompt, setShowKeyPrompt] = useState(false);
-
+  
   const [cardsOnTable, setCardsOnTable] = useState([]);
   const [localDecks, setLocalDecks] = useState([]);
   const [cloudDecks, setCloudDecks] = useState([]);
   const [baseDecks, setBaseDecks] = useState([]);
   const [platformDecks, setPlatformDecks] = useState([]);
+  
   const [isPlatformDecksLoading, setIsPlatformDecksLoading] = useState(false);
   const [isBaseDecksLoading, setIsBaseDecksLoading] = useState(false);
-
   const [selectedDeckId, setSelectedDeckId] = useState(null);
   const [activeDeckData, setActiveDeckData] = useState(null);
-
+  
   const [dice, setDice] = useState({ value: 1, timestamp: 0 });
   const [visualDice, setVisualDice] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
   const prevDiceTime = useRef(0);
+  
   const [diceType, setDiceType] = useState(6);
   const [diceD10, setDiceD10] = useState({ value: 1, timestamp: 0 });
   const [visualDiceD10, setVisualDiceD10] = useState(1);
   const [isAnimatingD10, setIsAnimatingD10] = useState(false);
   const prevDiceTimeD10 = useRef(0);
-
+  
   const [cursors, setCursors] = useState({});
   const lastCursorSync = useRef(0);
-
   const scrollContainerRef = useRef(null);
   const boardRef = useRef(null);
-
+  
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isLibraryFullscreen, setIsLibraryFullscreen] = useState(false);
   const [isLibraryDeckFlipped, setIsLibraryDeckFlipped] = useState(false);
   const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
   const [isUploadingBg, setIsUploadingBg] = useState(false);
   const [tableBg, setTableBg] = useState(TABLE_BACKGROUNDS[0]);
-
   const [previewCard, setPreviewCard] = useState(null);
   const [notification, setNotification] = useState("");
   const [isNamingDeck, setIsNamingDeck] = useState(false);
@@ -332,14 +497,12 @@ export default function App() {
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [activeTab, setActiveTab] = useState('platform');
   const [isDbConnected, setIsDbConnected] = useState(false);
-
   const [sessionTimer, setSessionTimer] = useState(null);
   const [timerDisplay, setTimerDisplay] = useState('');
   const [timerIsWarning, setTimerIsWarning] = useState(false);
   const timerIntervalRef = useRef(null);
-
   const [undoStack, setUndoStack] = useState(null);
-
+  
   const notifyTimeoutRef = useRef(null);
   const notify = (text, time = 4000) => {
     setNotification(text);
@@ -379,7 +542,7 @@ export default function App() {
     if (isDbConnected && roomId) {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_timer_state'), data);
     }
-    notify(`Таймер запущен: ${minutes} минут ⏱`);
+    notify(`Таймер запущен: ${minutes} минут  ⏱ `);
   };
 
   const stopTimer = async () => {
@@ -484,8 +647,13 @@ export default function App() {
         else if (d.id === '_dice_type') setDiceType(d.data().type || 6);
         else if (d.id === '_settings') {
           if (d.data().platformName) setPlatformName(d.data().platformName);
-          if (d.data().isGameMode !== undefined) setIsGameMode(d.data().isGameMode);
+          if (d.data().roomMode) {
+             setRoomMode(d.data().roomMode);
+          } else if (d.data().isGameMode !== undefined) {
+             setRoomMode(d.data().isGameMode ? 'game' : 'consultation');
+          }
           if (d.data().tableBg) setTableBg(d.data().tableBg);
+          if (d.data().figureViewMode) setFigureViewMode(d.data().figureViewMode);
         }
         else if (d.id === '_library_state') {
           const libraryData = d.data();
@@ -536,11 +704,16 @@ export default function App() {
     }
   };
 
-  const toggleGameMode = async () => {
+  const changeMode = async (mode) => {
     if (!isDbConnected || !roomId) return;
-    const newMode = !isGameMode;
-    setIsGameMode(newMode);
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isGameMode: newMode }, { merge: true });
+    setRoomMode(mode);
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { roomMode: mode }, { merge: true });
+  };
+  
+  const updateGlobalFigureView = async (mode) => {
+    if (!isDbConnected || !roomId) return;
+    setFigureViewMode(mode);
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { figureViewMode: mode }, { merge: true });
   };
 
   const syncLibraryUI = async (updates) => {
@@ -580,7 +753,7 @@ export default function App() {
         id: deck.id, name: deck.name, cards: deck.cards || [], backImage: deck.backImage || null
       });
       syncLibraryUI({ isFlipped: false });
-      notify(`Колода "${deck.name}" активирована ✓`);
+      notify(`Колода "${deck.name}" активирована  ✓ `);
     } catch(e) {
       notify("Ошибка синхронизации: " + e.message);
     }
@@ -590,7 +763,6 @@ export default function App() {
     if (!emailInput || !passwordInput) return notify("Введите Email и Пароль");
     const inputEmail = emailInput.trim().toLowerCase();
     const inputPwd = passwordInput.trim();
-
     const enterRoomAsPsy = (name) => {
       if (!roomId) {
         const newRoomId = `session_${Math.random().toString(36).substr(2, 6)}`;
@@ -603,29 +775,26 @@ export default function App() {
       setIsClientMode(false); setIsAuthorized(true); setInRoom(true); setShowKeyPrompt(false);
       notify(`Привет, ${name}! Базовые колоды загружаются...`);
     };
-
+    
     if ((inputEmail === "yulia" || inputEmail === "юлия") && inputPwd === "owner777") {
       enterRoomAsPsy("Юлия");
       return;
     }
-
+    
     setIsCheckingKey(true);
     try {
       let csvText = '';
       try {
-        // Сначала пробуем запросить напрямую (на случай если Google Sheets отдает CORS корректно)
         const response = await fetch(GOOGLE_SHEET_CSV_URL);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         csvText = await response.text();
       } catch (directErr) {
-        // Если запрос заблокирован CORS политикой, обращаемся через публичный прокси
         console.warn('Direct fetch failed, falling back to proxy...', directErr);
         const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(GOOGLE_SHEET_CSV_URL)}`;
         const proxyResponse = await fetch(proxyUrl);
         if (!proxyResponse.ok) throw new Error(`Proxy HTTP ${proxyResponse.status}`);
         csvText = await proxyResponse.text();
       }
-
       const rows = csvText.split('\n').map(row => {
         const result = [];
         let current = '';
@@ -638,28 +807,18 @@ export default function App() {
         result.push(current.trim());
         return result;
       });
-
       let found = null; let valid = false;
       for (let i = 1; i < rows.length; i++) {
-        // Увеличили проверку длины до 6 колонок
         if (rows[i].length >= 6 &&
           rows[i][0].trim().toLowerCase() === inputEmail &&
           rows[i][1].trim() === inputPwd) {
           found = rows[i][2].trim();
-          
-          // Изменили индекс с 3 на 5 (это 6-я колонка "Действует до")
           let dateStr = rows[i][5].trim();
-          
-          // Поддержка русского формата дат: ДД.ММ.ГГГГ -> ГГГГ-ММ-ДД для корректного парсинга в JS
           if (dateStr.includes('.')) {
             const parts = dateStr.split('.');
-            if (parts.length === 3) {
-              dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            }
+            if (parts.length === 3) dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
           }
-          
           const expiry = new Date(dateStr).getTime();
-          // Проверяем, что дата распарсилась и срок еще не истек (плюс 1 день в миллисекундах)
           if (expiry && Date.now() < (expiry + 86400000)) {
             valid = true;
           }
@@ -694,10 +853,9 @@ export default function App() {
     const id = `elem_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
     const maxZ = cardsOnTable.reduce((m, c) => Math.max(m, c.zIndex || 0), 0);
     const isField = type === 'field';
-
-    let width = isField ? 800 : (type === 'token' ? 45 : (type === 'text' ? 200 : 160));
-    let height = isField ? 600 : (type === 'token' ? 45 : (type === 'text' ? 100 : 240));
-
+    let width = isField ? 800 : (type === 'figure' ? 80 : (type === 'token' ? 45 : (type === 'text' ? 200 : 160)));
+    let height = isField ? 600 : (type === 'figure' ? 80 : (type === 'token' ? 45 : (type === 'text' ? 100 : 240)));
+    
     if (type === 'card' && data.img) {
       try {
         const dims = await new Promise((resolve) => {
@@ -709,7 +867,7 @@ export default function App() {
         if (dims && dims.w > dims.h) { width = 240; height = 160; }
       } catch (e) {}
     }
-
+    
     let spawnX = 200;
     let spawnY = 150;
     if (scrollContainerRef.current) {
@@ -722,13 +880,13 @@ export default function App() {
         spawnY = container.scrollTop + (container.clientHeight / 2) - (height / 2) + (Math.random() * 40 - 20);
       }
     }
-
+    
     const elem = {
       id, type, ...data,
       x: spawnX, y: spawnY,
       width, height,
-      rotation: 0,
-      isFlipped: type !== 'token' && type !== 'text' && !isField,
+      rotation: type === 'figure' ? 180 : 0,
+      isFlipped: type !== 'token' && type !== 'text' && type !== 'figure' && !isField,
       zIndex: isField ? 0 : maxZ + 1,
       isLocked: false
     };
@@ -756,7 +914,7 @@ export default function App() {
     if (!undoStack) return;
     clearTimeout(undoStack.timeoutId);
     setUndoStack(null);
-    notify("Восстановлено ✓");
+    notify("Восстановлено  ✓ ");
   };
 
   const confirmUpload = async () => {
@@ -787,7 +945,7 @@ export default function App() {
       const newDeck = { name: tempDeckName || "Колода", cards, backImage, createdAt: Date.now() };
       if (isDbConnected && user && !isClientMode) {
         await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_decks'), newDeck);
-        notify("Колода сохранена в Облако ✓");
+        notify("Колода сохранена в Облако  ✓ ");
       } else {
         setLocalDecks(p => [...p, { ...newDeck, id: Date.now().toString() }]);
         notify("Добавлено локально");
@@ -826,7 +984,7 @@ export default function App() {
         const newDeck = { name, cards, backImage: backImage || null, createdAt: Date.now() };
         if (isDbConnected && user && !isClientMode) {
           await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_decks'), newDeck);
-          notify(`Колода "${name}": ${cards.length} карт ✓`);
+          notify(`Колода "${name}": ${cards.length} карт  ✓ `);
           setActiveTab('cloud');
         } else {
           setLocalDecks(p => [...p, { ...newDeck, id: Date.now().toString() }]);
@@ -842,7 +1000,7 @@ export default function App() {
       const newDeck = { name, cards: linkArray, backImage: null, createdAt: Date.now() };
       if (isDbConnected && user && !isClientMode) {
         await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_decks'), newDeck);
-        notify(`Колода "${name}" сохранена: ${linkArray.length} карт ✓`);
+        notify(`Колода "${name}" сохранена: ${linkArray.length} карт  ✓ `);
         setActiveTab('cloud');
       } else {
         setLocalDecks(p => [...p, { ...newDeck, id: Date.now().toString() }]);
@@ -903,19 +1061,35 @@ export default function App() {
             </div>
           )}
         </div>
+
+        {/* --- ССЫЛКИ ДЛЯ СВЯЗИ С СОЗДАТЕЛЕМ --- */}
+        <div className="mt-6 pt-6 border-t-2 border-dashed flex flex-col items-center gap-3" style={{ borderColor: `${COLORS.ink}10` }}>
+          <span className="text-[9px] font-black uppercase tracking-widest text-center" style={{ color: `${COLORS.ink}50` }}>Нужна помощь или есть вопросы по платформе?</span>
+          
+          <div className="flex flex-col gap-2 w-full">
+            <a href="https://t.me/psyplat" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:opacity-80" style={{ backgroundColor: `${COLORS.plum}10`, color: COLORS.plum }}>
+               <MessageCircle size={14} /> Telegram-канал
+            </a>
+            
+            <a href="https://max.ru/join/kmLoxZy4ssavrneuneZhry22HKbI5hbe11kPGlQUXUg" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:opacity-80" style={{ backgroundColor: `${COLORS.forest}10`, color: COLORS.forest }}>
+               <MaxIcon size={14} /> Связь (Макс)
+            </a>
+          </div>
+        </div>
+        {/* -------------------------------------- */}
+
       </div>
     </div>
   );
 
   return (
     <div className="flex flex-col h-screen overflow-hidden font-sans select-none relative" style={{ backgroundColor: COLORS.haze }}>
-
       {notification && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] text-white px-8 py-3 rounded-full shadow-2xl text-sm font-bold flex items-center gap-2 border" style={{ backgroundColor: COLORS.ink, borderColor: `${COLORS.plum}33` }}>
           <CheckCircle size={16} color={COLORS.terra} /> {notification}
         </div>
       )}
-
+      
       {/* MODAL: ТАБЛИЦА / ОФОРМЛЕНИЕ СТОЛА */}
       {isFieldModalOpen && !isClientMode && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
@@ -924,10 +1098,9 @@ export default function App() {
               <X size={24} style={{ color: COLORS.ink }} />
             </button>
             <h2 className="text-xl md:text-2xl font-black uppercase mb-6" style={{ color: COLORS.ink }}>Оформление стола</h2>
-
             <div className="mb-8">
               <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3 opacity-50 flex items-center gap-2">
-                <LayoutGrid size={14} /> Фон всего пространства (Нейро-дизайн)
+                <LayoutGrid size={14} /> Фон всего пространства
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                 {TABLE_BACKGROUNDS.map(bg => (
@@ -948,7 +1121,6 @@ export default function App() {
                     </div>
                   </button>
                 ))}
-
                 <label className="relative h-20 md:h-24 rounded-2xl overflow-hidden border-2 border-dashed flex flex-col items-center justify-center gap-1 cursor-pointer transition-all hover:bg-black/5" style={{ borderColor: `${COLORS.plum}4D`, color: COLORS.plum }}>
                   <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                     const f = e.target.files[0]; if (!f) return;
@@ -963,7 +1135,7 @@ export default function App() {
                       if (isDbConnected && roomId) {
                         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { tableBg: customBg }, { merge: true });
                       }
-                      notify("Фон установлен! ✓");
+                      notify("Фон установлен!  ✓ ");
                     } catch(err) { notify("Ошибка: " + err.message); }
                     finally { setIsUploadingBg(false); e.target.value = ''; }
                   }} />
@@ -972,7 +1144,6 @@ export default function App() {
                 </label>
               </div>
             </div>
-
             <div>
               <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3 opacity-50 flex items-center gap-2">
                 <ImageIcon size={14} /> Отдельное игровое поле (Как объект)
@@ -999,7 +1170,7 @@ export default function App() {
                     }
                     notify(`Размещаю поле на столе (${sizeKB}KB)...`, 4000);
                     await addElement('field', { img: comp });
-                    notify("Игровое поле появилось на столе! ✓");
+                    notify("Игровое поле появилось на столе!  ✓ ");
                   } catch (err) {
                     notify("Ошибка: " + err.message);
                   } finally {
@@ -1013,11 +1184,12 @@ export default function App() {
           </div>
         </div>
       )}
-
-      <header className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-3 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm gap-2" style={{ borderColor: `${COLORS.ink}10` }}>
+      
+      {/* ПЛАВАЮЩАЯ ВЕРХНЯЯ ПАНЕЛЬ С КРАСИВЫМ ДИЗАЙНОМ */}
+      <header className="absolute top-4 left-4 right-4 md:left-6 md:right-6 z-30 flex flex-col md:flex-row items-center justify-between px-5 md:px-6 py-3 bg-white/70 backdrop-blur-xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[2rem] gap-3 transition-all pointer-events-auto">
         <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.plum}, ${COLORS.forest})` }}>
+            <div className="w-10 h-10 rounded-[1rem] flex items-center justify-center text-white shadow-md" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.plum}, ${COLORS.forest})` }}>
               <Layers size={20} />
             </div>
             <div>
@@ -1033,103 +1205,108 @@ export default function App() {
                 <span className="text-[8px] md:text-[9px] font-bold tracking-widest uppercase flex items-center gap-1" style={{ color: COLORS.plum }}>
                   СЕССИЯ: {roomId} <span className="opacity-50">|</span> ВЫ: {userName}
                 </span>
-                <div className="flex bg-black/5 p-0.5 rounded-lg border shadow-inner" style={{ borderColor: `${COLORS.ink}10` }}>
-                  <button onClick={() => isGameMode && toggleGameMode()} className={`px-2 md:px-3 py-1 rounded-md text-[8px] md:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all ${!isGameMode ? 'bg-white shadow-sm' : 'hover:bg-black/5 opacity-60'}`} style={{ color: !isGameMode ? COLORS.plum : COLORS.ink }}>
-                    <Users size={12} /> Консультация
+                
+                {/* ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМОВ СТОЛА */}
+                <div className="flex bg-black/5 p-0.5 rounded-[0.75rem] border shadow-inner" style={{ borderColor: `${COLORS.ink}10` }}>
+                  <button onClick={() => changeMode('consultation')} className={`px-2.5 md:px-3 py-1 rounded-[0.5rem] text-[8px] md:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all ${roomMode === 'consultation' ? 'bg-white shadow-sm' : 'hover:bg-black/5 opacity-60'}`} style={{ color: roomMode === 'consultation' ? COLORS.plum : COLORS.ink }}>
+                    <Users size={12} /> Конс.
                   </button>
-                  <button onClick={() => !isGameMode && toggleGameMode()} className={`px-2 md:px-3 py-1 rounded-md text-[8px] md:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all ${isGameMode ? 'shadow-sm' : 'hover:bg-black/5 opacity-60'}`} style={{ backgroundColor: isGameMode ? COLORS.plum : 'transparent', color: isGameMode ? 'white' : COLORS.ink }}>
-                    <Gamepad2 size={12} /> Т-Игра
+                  <button onClick={() => changeMode('game')} className={`px-2.5 md:px-3 py-1 rounded-[0.5rem] text-[8px] md:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all ${roomMode === 'game' ? 'shadow-sm' : 'hover:bg-black/5 opacity-60'}`} style={{ backgroundColor: roomMode === 'game' ? COLORS.plum : 'transparent', color: roomMode === 'game' ? 'white' : COLORS.ink }}>
+                    <Gamepad2 size={12} /> Игра
+                  </button>
+                  <button onClick={() => changeMode('constellation')} className={`px-2.5 md:px-3 py-1 rounded-[0.5rem] text-[8px] md:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all ${roomMode === 'constellation' ? 'shadow-sm' : 'hover:bg-black/5 opacity-60'}`} style={{ backgroundColor: roomMode === 'constellation' ? COLORS.forest : 'transparent', color: roomMode === 'constellation' ? 'white' : COLORS.ink }}>
+                    <UserPlus size={12} /> Расстановка
                   </button>
                 </div>
+                
               </div>
             </div>
           </div>
         </div>
+        
         <div className="flex items-center gap-2 flex-wrap justify-center md:justify-end w-full md:w-auto">
           {timerDisplay ? (
             <div className="flex items-center gap-1.5">
-              <div className="px-4 py-2 rounded-xl font-black text-sm tabular-nums tracking-widest flex items-center gap-2 border transition-all" style={{ backgroundColor: timerIsWarning ? '#FEE2E2' : `${COLORS.plum}12`, color: timerIsWarning ? '#DC2626' : COLORS.plum, borderColor: timerIsWarning ? '#FCA5A5' : `${COLORS.plum}30` }}>
+              <div className="px-4 py-2 rounded-2xl font-black text-sm tabular-nums tracking-widest flex items-center gap-2 border transition-all" style={{ backgroundColor: timerIsWarning ? '#FEE2E2' : `${COLORS.plum}12`, color: timerIsWarning ? '#DC2626' : COLORS.plum, borderColor: timerIsWarning ? '#FCA5A5' : `${COLORS.plum}30` }}>
                 <Timer size={14} />{timerDisplay}
               </div>
               {!isClientMode && (
-                <button onClick={stopTimer} className="p-2 rounded-xl hover:opacity-70 transition-colors" style={{ color: COLORS.terra, backgroundColor: `${COLORS.terra}15` }} title="Остановить таймер">
+                <button onClick={stopTimer} className="p-2 rounded-2xl hover:bg-black/5 transition-colors" style={{ color: COLORS.terra }} title="Остановить таймер">
                   <TimerOff size={15} />
                 </button>
               )}
             </div>
           ) : (
             !isClientMode && (
-              <div className="flex items-center gap-1 bg-white/50 p-1 rounded-xl border shadow-sm" style={{ borderColor: `${COLORS.plum}30`, backgroundColor: `${COLORS.plum}10` }}>
+              <div className="flex items-center gap-1 bg-white/50 p-1 rounded-2xl border shadow-sm" style={{ borderColor: `${COLORS.plum}30`, backgroundColor: `${COLORS.plum}10` }}>
                 <Timer size={14} className="ml-1" style={{ color: COLORS.plum }} />
-                <button onClick={() => startTimer(60)} className="px-2 py-1 rounded-lg text-[10px] font-black hover:opacity-70 transition-all" style={{ color: COLORS.plum, backgroundColor: 'white' }} title="Таймер 60 мин">60</button>
-                <button onClick={() => startTimer(90)} className="px-2 py-1 rounded-lg text-[10px] font-black hover:opacity-70 transition-all" style={{ color: COLORS.plum, backgroundColor: 'white' }} title="Таймер 90 мин">90</button>
+                <button onClick={() => startTimer(60)} className="px-2 py-1 rounded-xl text-[10px] font-black hover:opacity-70 transition-all" style={{ color: COLORS.plum, backgroundColor: 'white' }} title="Таймер 60 мин">60</button>
+                <button onClick={() => startTimer(90)} className="px-2 py-1 rounded-xl text-[10px] font-black hover:opacity-70 transition-all" style={{ color: COLORS.plum, backgroundColor: 'white' }} title="Таймер 90 мин">90</button>
               </div>
             )
           )}
-
-          <button onClick={() => setIsMuted(!isMuted)} className="p-2.5 rounded-xl transition-colors hover:opacity-70" style={{ backgroundColor: COLORS.haze, color: COLORS.ink }}>
+          
+          <button onClick={() => setIsMuted(!isMuted)} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5" style={{ color: COLORS.ink }}>
             {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
-
+          
           {!isClientMode && (
             <button onClick={async () => {
               const url = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
               await copyToClipboard(url);
               setCopyFeedback(true);
               setTimeout(() => setCopyFeedback(false), 2000);
-            }} className="px-4 py-2.5 rounded-xl text-[10px] font-black border flex items-center gap-2 shadow-sm transition-all hover:opacity-70" style={{ backgroundColor: copyFeedback ? `${COLORS.forest}10` : `${COLORS.plum}10`, borderColor: copyFeedback ? `${COLORS.forest}30` : `${COLORS.plum}30`, color: copyFeedback ? COLORS.forest : COLORS.plum }}>
+            }} className="px-4 py-2.5 rounded-[1rem] text-[10px] font-black border flex items-center gap-2 shadow-sm transition-all hover:scale-105" style={{ backgroundColor: copyFeedback ? COLORS.forest : 'white', borderColor: copyFeedback ? COLORS.forest : `${COLORS.plum}30`, color: copyFeedback ? 'white' : COLORS.plum }}>
               {copyFeedback ? <CheckCircle size={14} /> : <UserPlus size={14} />}
               <span className="hidden sm:inline">{copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА ДЛЯ КЛИЕНТА"}</span>
             </button>
           )}
-
+          
           {!isClientMode && (
             <>
-              <button onClick={() => addElement('text', { text: "" })} className="p-2.5 rounded-xl transition-all hover:opacity-80 border" style={{ backgroundColor: '#FFF9C4', color: COLORS.terra, borderColor: '#FDE047' }} title="Добавить заметку">
+              <button onClick={() => addElement('text', { text: "" })} className="p-2.5 rounded-[1rem] transition-all hover:scale-105 shadow-sm border" style={{ backgroundColor: '#FFF9C4', color: COLORS.terra, borderColor: '#FDE047' }} title="Добавить заметку">
                 <Type size={18} />
               </button>
-
-              <button onClick={() => setIsFieldModalOpen(true)} className="px-3 py-2.5 rounded-xl border transition-all hover:opacity-80 flex items-center gap-2" style={{ backgroundColor: COLORS.haze, color: COLORS.forest, borderColor: `${COLORS.forest}20` }} title="Настройки стола и поля">
+              <button onClick={() => setIsFieldModalOpen(true)} className="px-3 py-2.5 rounded-[1rem] border transition-all hover:bg-black/5 hover:scale-105 flex items-center gap-2" style={{ backgroundColor: 'white', color: COLORS.forest, borderColor: `${COLORS.forest}20` }} title="Настройки стола и поля">
                 <LayoutGrid size={14} />
-                <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest">СТОЛ / ПОЛЕ</span>
+                <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">ПОЛЕ</span>
               </button>
-
-              <button onClick={clearTable} className="p-2.5 rounded-xl transition-colors hover:opacity-70" style={{ color: COLORS.terra }} title="Очистить стол">
+              <button onClick={clearTable} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5" style={{ color: COLORS.terra }} title="Очистить стол">
                 <Trash2 size={18} />
               </button>
             </>
           )}
-
-          <button onClick={() => window.location.reload()} className="p-2.5 transition-colors hover:opacity-70" style={{ color: `${COLORS.ink}80` }} title="Выйти">
+          <button onClick={() => window.location.reload()} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5" style={{ color: `${COLORS.ink}80` }} title="Выйти">
             <LogOut size={18} />
           </button>
         </div>
       </header>
 
-      <main className="flex-1 relative flex flex-col overflow-hidden">
-        {isGameMode && (
-          <div className="fixed top-[120px] md:top-24 right-2 md:right-10 z-40 flex flex-col items-center gap-2 md:gap-3 bg-white/60 backdrop-blur-md p-2 md:p-4 rounded-[1.5rem] md:rounded-[2.5rem] shadow-xl border border-white transition-all pointer-events-auto">
+      <main className="flex-1 relative flex flex-col overflow-hidden pt-28 md:pt-24">
+        {/* ИГРОВОЙ РЕЖИМ (КУБИКИ И ФИШКИ) */}
+        {roomMode === 'game' && (
+          <div className="absolute top-24 md:top-28 right-4 md:right-8 z-40 flex flex-col items-center gap-2 md:gap-3 bg-white/70 backdrop-blur-xl p-3 md:p-4 rounded-[1.5rem] md:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white transition-all pointer-events-auto">
             <div className="flex gap-1.5 md:gap-2 p-1.5 md:p-2 rounded-[1rem] md:rounded-2xl border border-white" style={{ backgroundColor: `${COLORS.ink}10` }}>
               {['#8B3252', '#2D4A3E', '#C4714A', '#4A90E2', '#E2A94A'].map(color => (
                 <button key={color} onClick={() => addElement('token', { color })} className="w-4 h-4 md:w-5 md:h-5 rounded-full shadow-md border border-white/50 hover:scale-125 transition-transform" style={{ backgroundColor: color }} />
               ))}
             </div>
-            <div className="flex p-0.5 rounded-lg md:rounded-xl" style={{ backgroundColor: `${COLORS.ink}15` }}>
+            <div className="flex p-0.5 rounded-xl border border-white/50" style={{ backgroundColor: `${COLORS.ink}10` }}>
               {[6, 10].map(type => (
                 <button key={type} onClick={async () => {
                   setDiceType(type);
                   await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_type'), { type }, { merge: true });
-                }} className="px-2 py-1 md:px-3 md:py-1.5 rounded-md md:rounded-lg text-[9px] md:text-[10px] font-black transition-all" style={{ backgroundColor: diceType === type ? 'white' : 'transparent', color: diceType === type ? COLORS.plum : `${COLORS.ink}60`, boxShadow: diceType === type ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>
+                }} className="px-2 py-1 md:px-3 md:py-1.5 rounded-[0.5rem] text-[9px] md:text-[10px] font-black transition-all" style={{ backgroundColor: diceType === type ? 'white' : 'transparent', color: diceType === type ? COLORS.plum : `${COLORS.ink}60`, boxShadow: diceType === type ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>
                   d{type}
                 </button>
               ))}
             </div>
             {diceType === 6 ? (
-              <div className={`w-10 h-10 md:w-14 md:h-14 bg-white rounded-xl md:rounded-2xl shadow-lg flex items-center justify-center border-2 transition-all ${isAnimating ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.plum}20` }}>
+              <div className={`w-10 h-10 md:w-14 md:h-14 bg-white rounded-xl md:rounded-2xl shadow-md flex items-center justify-center border transition-all ${isAnimating ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.plum}20` }}>
                 {renderDiceFace(visualDice, COLORS.plum)}
               </div>
             ) : (
-              <div className={`w-10 h-10 md:w-14 md:h-14 bg-white rounded-xl md:rounded-2xl shadow-lg flex items-center justify-center border-2 transition-all ${isAnimatingD10 ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.forest}30` }}>
+              <div className={`w-10 h-10 md:w-14 md:h-14 bg-white rounded-xl md:rounded-2xl shadow-md flex items-center justify-center border transition-all ${isAnimatingD10 ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.forest}30` }}>
                 <span className="font-black text-xl md:text-2xl" style={{ color: COLORS.forest }}>{visualDiceD10}</span>
               </div>
             )}
@@ -1147,13 +1324,57 @@ export default function App() {
                 const v = (array[0] % 10) + 1;
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_d10_state'), { value: v, timestamp: Date.now() });
               }
-            }} disabled={diceType === 6 ? isAnimating : isAnimatingD10} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="px-3 py-1.5 md:px-5 md:py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-md hover:opacity-90 transition-colors disabled:opacity-50">
+            }} disabled={diceType === 6 ? isAnimating : isAnimatingD10} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="px-3 py-1.5 md:px-5 md:py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-md hover:scale-105 transition-all disabled:opacity-50">
               Бросить
             </button>
           </div>
         )}
 
-        <div ref={scrollContainerRef} className="flex-1 overflow-auto custom-scrollbar relative transition-colors duration-500" style={{ backgroundColor: tableBg.bgColor }}>
+        {/* РЕЖИМ РАССТАНОВКИ (ФИГУРЫ) */}
+        {roomMode === 'constellation' && (
+          <div className="absolute top-24 md:top-28 right-4 md:right-8 z-40 flex flex-col items-center gap-2 md:gap-3 bg-white/70 backdrop-blur-xl p-3 rounded-[1.5rem] md:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white transition-all pointer-events-auto w-28 md:w-36">
+            <span className="text-[9px] font-black uppercase tracking-widest text-center" style={{ color: COLORS.forest }}>Все фигуры</span>
+            
+            {/* ГЛОБАЛЬНЫЙ Переключатель вида (Сверху / Сбоку) */}
+            <div className="flex bg-black/5 p-0.5 rounded-[0.75rem] border shadow-inner w-full mb-1">
+              <button onClick={() => updateGlobalFigureView('side')} className={`flex-1 px-1.5 py-1.5 rounded-[0.5rem] text-[8px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'side' ? 'bg-white shadow-sm' : 'hover:bg-black/5 opacity-60'}`} style={{ color: figureViewMode === 'side' ? COLORS.plum : COLORS.ink }}>Сбоку</button>
+              <button onClick={() => updateGlobalFigureView('top')} className={`flex-1 px-1.5 py-1.5 rounded-[0.5rem] text-[8px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'top' ? 'bg-white shadow-sm' : 'hover:bg-black/5 opacity-60'}`} style={{ color: figureViewMode === 'top' ? COLORS.plum : COLORS.ink }}>Сверху</button>
+            </div>
+
+            {/* ПОЛЕ ВВОДА ИМЕНИ */}
+            <input 
+              type="text" 
+              value={figureName}
+              onChange={e => setFigureName(e.target.value)}
+              placeholder="Имя (по жел.)"
+              maxLength={12}
+              className="w-full px-2 py-1.5 rounded-xl border text-[9px] md:text-[10px] font-bold outline-none text-center shadow-inner"
+              style={{ borderColor: `${COLORS.ink}15`, color: COLORS.ink, backgroundColor: 'white' }}
+            />
+
+            {/* ВЫБОР ЦВЕТА */}
+            <div className="flex gap-1.5 p-1.5 rounded-[1rem] border border-white/50 flex-wrap justify-center w-full mt-1" style={{ backgroundColor: `${COLORS.ink}10` }}>
+              {['#8B3252', '#2D4A3E', '#C4714A', '#4A90E2', '#E2A94A', '#8E44AD', '#34495E', '#D35400'].map(color => (
+                <button key={color} onClick={() => setFigureColor(color)} className={`w-4 h-4 md:w-5 md:h-5 rounded-full shadow-md border-2 hover:scale-125 transition-transform ${figureColor === color ? 'border-white scale-125' : 'border-transparent'}`} style={{ backgroundColor: color }} />
+              ))}
+            </div>
+
+            {/* КНОПКИ ДОБАВЛЕНИЯ ФИГУР */}
+            <div className="flex gap-1.5 w-full mt-1">
+              <button onClick={() => { addElement('figure', { gender: 'male', color: figureColor, name: figureName }); setFigureName(''); }} className="flex-1 py-2 bg-white rounded-xl shadow-sm border border-transparent hover:border-plum/30 flex items-center justify-center flex-col gap-1.5 transition-all hover:shadow-md">
+                <FigureIcon gender="male" color={figureColor} isMenu={true} className="w-7 h-7" />
+                <span className="text-[8px] font-black uppercase text-center leading-none text-ink/70">Муж</span>
+              </button>
+              <button onClick={() => { addElement('figure', { gender: 'female', color: figureColor, name: figureName }); setFigureName(''); }} className="flex-1 py-2 bg-white rounded-xl shadow-sm border border-transparent hover:border-plum/30 flex items-center justify-center flex-col gap-1.5 transition-all hover:shadow-md">
+                <FigureIcon gender="female" color={figureColor} isMenu={true} className="w-7 h-7" />
+                <span className="text-[8px] font-black uppercase text-center leading-none text-ink/70">Жен</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ИГРОВОЕ ПОЛЕ */}
+        <div ref={scrollContainerRef} className="absolute inset-0 overflow-auto custom-scrollbar transition-colors duration-500" style={{ backgroundColor: tableBg.bgColor }}>
           <div ref={boardRef} className="relative min-w-[3000px] min-h-[3000px] bg-transparent" onMouseMove={handleMouseMove} onTouchMove={handleMouseMove}>
             <div className="absolute inset-0 pointer-events-none transition-opacity duration-500" style={{ 
               backgroundColor: tableBg.blendMode ? tableBg.bgColor : 'transparent',
@@ -1164,13 +1385,14 @@ export default function App() {
               backgroundBlendMode: tableBg.blendMode || 'normal',
               opacity: tableBg.opacity 
             }}></div>
-
+            
             {cardsOnTable
               .filter(elem => !undoStack?.cards.some(c => c.id === elem.id))
               .map((elem) => (
                 <DraggableElement
                   key={elem.id}
                   element={elem}
+                  globalFigureView={figureViewMode}
                   isClientMode={isClientMode}
                   isMuted={isMuted}
                   playSound={playSound}
@@ -1184,7 +1406,7 @@ export default function App() {
                   boardRef={boardRef}
                 />
               ))}
-
+            
             {Object.entries(cursors).map(([id, cur]) => (
               <div key={id} className="absolute pointer-events-none z-[2000] flex flex-col items-center transition-all duration-150 ease-out" style={{ left: cur.x, top: cur.y }}>
                 <MousePointer2 size={24} fill={cur.color} color="white" strokeWidth={2} className="drop-shadow-md -rotate-12 transform -translate-x-2 -translate-y-2" />
@@ -1195,7 +1417,7 @@ export default function App() {
         </div>
 
         {undoStack && (
-          <div className="fixed z-[110] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border" style={{ bottom: isLibraryOpen ? '320px' : '80px', left: '50%', transform: 'translateX(-50%)', backgroundColor: COLORS.ink, borderColor: `${COLORS.terra}40`, transition: 'bottom 0.4s ease' }}>
+          <div className="fixed z-[110] flex items-center gap-3 px-5 py-3 rounded-3xl shadow-[0_10px_40px_rgb(0,0,0,0.2)] border" style={{ bottom: isLibraryOpen ? '320px' : '80px', left: '50%', transform: 'translateX(-50%)', backgroundColor: COLORS.ink, borderColor: `${COLORS.terra}40`, transition: 'bottom 0.4s ease' }}>
             <Undo2 size={16} color={COLORS.terra} />
             <span className="text-white text-sm font-bold whitespace-nowrap">{undoStack.cards.length} {undoStack.cards.length === 1 ? 'объект' : 'объектов'} удалено</span>
             <button onClick={undoClear} className="px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:opacity-80 transition-all" style={{ backgroundColor: COLORS.plum, color: 'white' }}>ОТМЕНА</button>
@@ -1203,29 +1425,34 @@ export default function App() {
           </div>
         )}
 
-        <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-700 pointer-events-none ${isLibraryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-60px)]'}`}>
-          <div className={`bg-white/95 backdrop-blur-xl rounded-t-[3rem] shadow-2xl border-t border-white flex flex-col transition-all duration-500 pointer-events-auto ${isLibraryFullscreen ? 'h-[90vh]' : 'h-[75vh] md:h-80'}`}>
-            <div className="relative w-full flex justify-center py-3" style={{ color: COLORS.plum }}>
-              <button onClick={toggleLibrary} className="flex flex-col items-center gap-1 w-full cursor-pointer hover:opacity-70 transition-opacity">
-                <ChevronUp size={24} className={`transition-transform duration-500 ${isLibraryOpen ? 'rotate-180' : ''}`} />
-                <span className="text-[10px] font-black uppercase tracking-widest leading-none">{isClientMode ? "Выбор карты" : "Библиотека Мастера"}</span>
+        {/* НИЖНЯЯ ПАНЕЛЬ (БИБЛИОТЕКА) */}
+        <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-700 pointer-events-none ${isLibraryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-48px)]'}`}>
+          <div className={`bg-white/90 backdrop-blur-2xl rounded-t-[3rem] shadow-[0_-10px_50px_rgba(0,0,0,0.1)] border-t border-white flex flex-col transition-all duration-500 pointer-events-auto ${isLibraryFullscreen ? 'h-[95vh]' : 'h-[75vh] md:h-80'}`}>
+            
+            {/* Кнопка открытия библиотеки */}
+            <div className="relative w-full flex justify-center py-2 h-12">
+              <button onClick={toggleLibrary} className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-black/5 transition-colors rounded-t-[3rem]">
+                <div className="w-12 h-1.5 bg-ink/10 rounded-full mb-1"></div>
+                <span className="text-[10px] font-black uppercase tracking-widest leading-none text-plum flex items-center gap-2">
+                  <Layers size={14} /> {isClientMode ? "Выбор карты" : "Библиотека Мастера"}
+                </span>
               </button>
               {isLibraryOpen && !isClientMode && (
-                <button onClick={toggleFullscreen} className="absolute right-8 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-colors hover:opacity-70" style={{ backgroundColor: COLORS.haze, color: COLORS.ink }}>
-                  <Maximize2 size={20} />
+                <button onClick={toggleFullscreen} className="absolute right-8 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors hover:bg-black/5" style={{ color: COLORS.ink }}>
+                  <Maximize2 size={18} />
                 </button>
               )}
             </div>
-
+            
             <div className="flex flex-1 flex-col md:flex-row p-4 md:p-8 pt-0 gap-4 md:gap-8 min-h-0 overflow-hidden">
               {!isClientMode && (
                 <div className="w-full md:w-72 border-b md:border-b-0 md:border-r pb-4 md:pb-0 pr-0 md:pr-6 h-[30%] md:h-auto flex-shrink-0 overflow-y-auto custom-scrollbar flex flex-col gap-3" style={{ borderColor: `${COLORS.ink}10` }}>
-                  <div className="flex p-1 rounded-xl mb-1 flex-shrink-0" style={{ backgroundColor: COLORS.haze }}>
-                    <button onClick={() => setActiveTab('platform')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'platform' ? 'bg-white shadow-sm' : 'hover:opacity-70'}`} style={{ color: activeTab === 'platform' ? COLORS.plum : `${COLORS.ink}99` }}>БАЗА</button>
-                    <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'cloud' ? 'bg-white shadow-sm' : 'hover:opacity-70'}`} style={{ color: activeTab === 'cloud' ? COLORS.plum : `${COLORS.ink}99` }}>ОБЛАКО</button>
-                    <button onClick={() => setActiveTab('local')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'local' ? 'bg-white shadow-sm' : 'hover:opacity-70'}`} style={{ color: activeTab === 'local' ? COLORS.plum : `${COLORS.ink}99` }}>МОИ</button>
+                  <div className="flex p-1 rounded-xl mb-1 flex-shrink-0 bg-black/5">
+                    <button onClick={() => setActiveTab('platform')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'platform' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>БАЗА</button>
+                    <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'cloud' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>ОБЛАКО</button>
+                    <button onClick={() => setActiveTab('local')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'local' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>МОИ</button>
                   </div>
-
+                  
                   {activeTab === 'local' && (
                     <div className="flex flex-col gap-3 flex-shrink-0">
                       <div className="rounded-2xl p-3 text-[9px] leading-relaxed" style={{ backgroundColor: `${COLORS.forest}12`, color: COLORS.forest, border: `1px solid ${COLORS.forest}25` }}>
@@ -1245,11 +1472,11 @@ export default function App() {
 
                   {activeTab === 'platform' && isPlatformDecksLoading && <div className="flex justify-center py-4 flex-shrink-0"><Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} /></div>}
                   {activeTab === 'cloud' && isBaseDecksLoading && <div className="flex justify-center py-4 flex-shrink-0"><Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} /></div>}
-
+                  
                   {(activeTab === 'platform' ? platformDecks : activeTab === 'local' ? localDecks : [...baseDecks, ...cloudDecks]).map(item => (
-                    <div key={item.id} className={`group flex items-center gap-3 p-3 rounded-2xl transition-all relative border flex-shrink-0 ${selectedDeckId === item.id ? 'shadow-sm' : 'border-transparent'}`} style={{ backgroundColor: selectedDeckId === item.id ? `${COLORS.plum}10` : 'transparent', borderColor: selectedDeckId === item.id ? `${COLORS.plum}33` : 'transparent' }}>
+                    <div key={item.id} className={`group flex items-center gap-3 p-3 rounded-2xl transition-all relative border flex-shrink-0 ${selectedDeckId === item.id ? 'bg-white shadow-sm border-white' : 'border-transparent hover:bg-black/5'}`}>
                       <button onClick={() => selectDeck(item)} className="flex-1 flex items-center gap-3 text-left overflow-hidden hover:opacity-70">
-                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden border flex-shrink-0" style={{ borderColor: `${COLORS.ink}10` }}>
+                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden border flex-shrink-0 shadow-sm" style={{ borderColor: `${COLORS.ink}10` }}>
                           {item.backImage ? <img src={item.backImage} className="w-full h-full object-contain" alt="" /> : <FolderOpen size={16} color={`${COLORS.ink}4D`} />}
                         </div>
                         <div className="flex flex-col overflow-hidden">
@@ -1265,7 +1492,7 @@ export default function App() {
                             else await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_decks', item.id));
                             notify("Удалено");
                           }
-                        }} className="opacity-0 group-hover:opacity-100 p-2 rounded-xl transition-colors hover:opacity-70" style={{ color: COLORS.terra }}>
+                        }} className="opacity-0 group-hover:opacity-100 p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: COLORS.terra }}>
                           <Trash2 size={16} />
                         </button>
                       )}
@@ -1273,14 +1500,14 @@ export default function App() {
                   ))}
                 </div>
               )}
-
+              
               <div className="flex-1 flex flex-col overflow-hidden">
                 {activeDeckData ? (
                   <>
                     <div className="flex justify-between items-center mb-3 flex-shrink-0">
                       <span className="text-sm font-black uppercase" style={{ color: `${COLORS.ink}B3` }}>{activeDeckData.name}</span>
                       {!isClientMode && (
-                        <button onClick={toggleDeckFlip} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:opacity-90 transition-all">
+                        <button onClick={toggleDeckFlip} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:scale-105 transition-all">
                           {isLibraryDeckFlipped ? "Скрыть карты" : "Открыть колоду"}
                         </button>
                       )}
@@ -1292,20 +1519,21 @@ export default function App() {
                         const randomIndex = array[0] % activeDeckData.cards.length;
                         addElement('card', { img: activeDeckData.cards[randomIndex], backImg: activeDeckData.backImage });
                         if (isLibraryFullscreen) toggleLibrary();
-                      }} className="flex-shrink-0 w-24 h-36 md:w-28 md:h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 hover:opacity-70 transition-all shadow-md" style={{ borderColor: `${COLORS.plum}4D`, backgroundColor: `${COLORS.plum}10`, color: COLORS.plum }}>
+                      }} className="flex-shrink-0 w-24 h-36 md:w-28 md:h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 hover:scale-105 transition-all shadow-sm" style={{ borderColor: `${COLORS.plum}4D`, backgroundColor: `${COLORS.plum}10`, color: COLORS.plum }}>
                         <Plus size={28} /><span className="text-[9px] font-black uppercase">Наугад</span>
                       </button>
+                      
                       {activeDeckData.cards.map((img, idx) => (
                         <button key={idx} onClick={() => {
                           addElement('card', { img, backImg: activeDeckData.backImage });
                           if (isLibraryFullscreen) toggleLibrary();
-                        }} className="relative flex-shrink-0 h-36 md:h-40 rounded-2xl group shadow-sm hover:shadow-md transition-all flex items-center justify-center">
+                        }} className="relative flex-shrink-0 h-36 md:h-40 rounded-2xl group shadow-sm hover:shadow-lg transition-all flex items-center justify-center hover:scale-105">
                           {isLibraryDeckFlipped
                             ? <img src={img} className="h-full w-auto min-w-[5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
-                            : <div className="h-full w-24 md:w-28 flex items-center justify-center rounded-2xl overflow-hidden relative shadow-sm" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
+                            : <div className="h-full w-24 md:w-28 flex items-center justify-center rounded-2xl overflow-hidden relative shadow-sm border border-white/20" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
                               {activeDeckData.backImage ? <img src={activeDeckData.backImage} className="w-full h-full object-cover absolute inset-0" alt="Рубашка" /> : <Layers size={20} className="text-white/20" />}
                             </div>}
-                          <div className="absolute top-2 left-2 text-white text-[10px] font-black px-2 py-0.5 rounded z-10 pointer-events-none" style={{ backgroundColor: `${COLORS.ink}99` }}>{idx + 1}</div>
+                          <div className="absolute top-2 left-2 text-white text-[10px] font-black px-2 py-0.5 rounded-md z-10 pointer-events-none backdrop-blur-md bg-black/40 border border-white/20 shadow-sm">{idx + 1}</div>
                         </button>
                       ))}
                     </div>
@@ -1321,12 +1549,14 @@ export default function App() {
         </div>
       </main>
 
+      {/* МОДАЛКА ИМЕНИ КОЛОДЫ */}
       {isNamingDeck && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center backdrop-blur-sm p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl border-4" style={{ borderColor: COLORS.haze }}>
             <h3 className="text-xl font-black mb-2 uppercase italic" style={{ color: COLORS.ink }}>ИМЯ КОЛОДЫ</h3>
             <p className="text-[10px] mb-6 font-medium" style={{ color: `${COLORS.ink}66` }}>Выбрано файлов: {pendingFiles.length}. Файл с "рубашка" в названии станет обложкой.</p>
             <input autoFocus value={tempDeckName} onChange={e => setTempDeckName(e.target.value)} onKeyDown={e => e.key === 'Enter' && confirmUpload()} placeholder="Напр: Эмоции" className="w-full px-6 py-4 rounded-2xl border-2 mb-8 outline-none font-bold text-base" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
+            
             {isUploading && (
               <div className="mb-6">
                 <div className="flex justify-between text-[10px] font-bold mb-2" style={{ color: `${COLORS.ink}66` }}>
@@ -1337,6 +1567,7 @@ export default function App() {
                 </div>
               </div>
             )}
+            
             <div className="flex gap-4">
               <button onClick={() => { setIsNamingDeck(false); setPendingFiles([]); }} disabled={isUploading} className="flex-1 font-bold uppercase text-xs hover:opacity-70 transition-colors disabled:opacity-30" style={{ color: `${COLORS.ink}66` }}>Отмена</button>
               <button onClick={confirmUpload} disabled={isUploading} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="flex-[2] py-4 rounded-2xl font-black shadow-lg uppercase text-xs disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-2">
@@ -1347,6 +1578,7 @@ export default function App() {
         </div>
       )}
 
+      {/* ПРОСМОТР КАРТЫ */}
       {previewCard && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}F2` }} onClick={() => setPreviewCard(null)}>
           <div className="absolute top-6 left-1/2 -translate-x-1/2 text-white font-black tracking-widest uppercase bg-black/50 px-6 py-2 rounded-full backdrop-blur-md text-xs text-center w-[90%] md:w-auto">
@@ -1370,15 +1602,17 @@ export default function App() {
   );
 }
 
-function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, playSound, isMuted, isClientMode, currentUser, currentUserName, onNotify, boardRef }) {
+function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, playSound, isMuted, isClientMode, currentUser, currentUserName, onNotify, boardRef, globalFigureView }) {
+  const elementRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  
   const startPos = useRef({ x: 0, y: 0 });
   const initialMousePos = useRef({ x: 0, y: 0 });
   const startDim = useRef({ w: 0, h: 0 });
   const hasMoved = useRef(false);
   const clickTimestamp = useRef(0);
-
+  
   const COLORS = { plum: '#8B3252', forest: '#2D4A3E', terra: '#C4714A', ink: '#1C1020', haze: '#F2EFF5' };
 
   const isField = element.type === 'field';
@@ -1390,8 +1624,10 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     if (isLocked) return;
     if (isField && isClientMode) return;
     if (isText && e.target.tagName.toLowerCase() === 'textarea') return;
+
     const cx = e.touches ? e.touches[0].clientX : e.clientX;
     const cy = e.touches ? e.touches[0].clientY : e.clientY;
+
     setIsDragging(true); hasMoved.current = false; clickTimestamp.current = Date.now();
     initialMousePos.current = { x: cx, y: cy };
     startPos.current = { x: cx - element.x, y: cy - element.y };
@@ -1412,26 +1648,29 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       if (isLocked) return;
       const cx = e.touches ? e.touches[0].clientX : e.clientX;
       const cy = e.touches ? e.touches[0].clientY : e.clientY;
+
       if (isDragging) {
         if (Math.sqrt(Math.pow(cx - initialMousePos.current.x, 2) + Math.pow(cy - initialMousePos.current.y, 2)) > 5) hasMoved.current = true;
         onUpdate({ x: cx - startPos.current.x, y: cy - startPos.current.y });
       } else if (isResizing) {
         const dx = cx - startPos.current.x;
         const ratio = startDim.current.w / startDim.current.h;
-        const nw = Math.max(element.type === 'token' ? 25 : (isText ? 100 : 80), startDim.current.w + dx);
+        const nw = Math.max(element.type === 'token' ? 25 : (element.type === 'figure' ? 40 : (isText ? 100 : 80)), startDim.current.w + dx);
         onUpdate({ width: nw, height: nw / ratio });
       }
     };
+
     const end = () => {
       if (isDragging) {
         setIsDragging(false);
         if (hasMoved.current) playSound('drop', isMuted);
-        if (!hasMoved.current && (Date.now() - clickTimestamp.current < 250) && element.type !== 'token' && !isField && !isText) {
+        if (!hasMoved.current && (Date.now() - clickTimestamp.current < 250) && element.type !== 'token' && element.type !== 'figure' && !isField && !isText) {
           playSound('flip', isMuted); onUpdate({ isFlipped: !element.isFlipped });
         }
       }
       setIsResizing(false);
     };
+
     if (isDragging || isResizing) {
       window.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
       window.addEventListener('touchmove', move, { passive: true }); window.addEventListener('touchend', end);
@@ -1444,20 +1683,26 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
 
   const canDrag = !isLocked && !(isField && isClientMode);
 
+  // Для фигур в режиме СБОКУ контейнер не крутится, чтобы фигура не "падала"
+  const appliedRotation = (element.type === 'figure' && globalFigureView === 'side') ? 0 : element.rotation;
+
   return (
     <div
+      ref={elementRef}
       className={`absolute group ${canDrag ? 'touch-none' : ''} ${isDragging ? 'z-[1000]' : ''}`}
       style={{
         left: element.x, top: element.y,
         width: element.width, height: element.height,
         zIndex: isField ? 0 : (element.zIndex || 1),
-        transform: `rotate(${element.rotation}deg)`,
+        transform: `rotate(${appliedRotation}deg)`,
         transition: (isDragging || isResizing) ? 'none' : 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
       }}
     >
-      <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all bg-white/95 backdrop-blur-sm rounded-xl px-1.5 py-1 shadow-xl z-20 border" style={{ borderColor: `${COLORS.ink}10` }}>
-        {!isField && <button onClick={(e) => { e.stopPropagation(); onUpdate({ zIndex: maxZIndex + 1 }); }} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: `${COLORS.ink}80`, backgroundColor: COLORS.haze }} title="На передний план"><ArrowUp size={14} /></button>}
 
+      {/* МЕНЮ ДЕЙСТВИЙ */}
+      <div className="absolute -top-14 left-1/2 -translate-x-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all bg-white/80 backdrop-blur-xl rounded-full px-2 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-20 border border-white">
+        {!isField && <button onClick={(e) => { e.stopPropagation(); onUpdate({ zIndex: maxZIndex + 1 }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="На передний план"><ArrowUp size={16} /></button>}
+        
         {element.type === 'card' && !element.isFlipped && (
           <button onClick={(e) => {
             e.stopPropagation();
@@ -1467,13 +1712,13 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
             } else if (element.owner === currentUser?.uid || !isClientMode) {
               onPreview();
             } else {
-              onNotify(`Эта карта принадлежит: ${element.ownerName}. Подсматривать нельзя! 🤫`);
+              onNotify(`Эта карта принадлежит: ${element.ownerName}. Подсматривать нельзя!  🤫 `);
             }
-          }} className="p-1.5 rounded-lg transition-colors hover:opacity-70 font-bold" style={{ color: COLORS.forest, backgroundColor: `${COLORS.forest}20` }} title="Подсмотреть карту">
-            <Eye size={14} />
+          }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 bg-forest/10 text-forest" title="Подсмотреть карту">
+            <Eye size={16} />
           </button>
         )}
-
+        
         {element.type === 'card' && (
           <button onClick={(e) => {
             e.stopPropagation();
@@ -1483,27 +1728,38 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
             }
             playSound('flip', isMuted);
             onUpdate({ isFlipped: !element.isFlipped });
-          }} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: `${COLORS.ink}80`, backgroundColor: COLORS.haze }} title="Перевернуть">
-            <RefreshCw size={14} />
+          }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="Перевернуть">
+            <RefreshCw size={16} />
+          </button>
+        )}
+        
+        {(isField || (element.type === 'card' && element.isFlipped)) && (
+          <button onClick={(e) => { e.stopPropagation(); onPreview(); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="Увеличить"><Maximize2 size={16} /></button>
+        )}
+        
+        {/* КНОПКА ПОВОРОТА для всего, включая фигуры (Фигуры крутятся по 45 градусов, остальное по 90) */}
+        {(!isClientMode || !isField) && (
+          <button 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              const step = element.type === 'figure' ? 45 : 90;
+              onUpdate({ rotation: (element.rotation + step) % 360 }); 
+            }} 
+            className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" 
+            title={`Повернуть на ${element.type === 'figure' ? 45 : 90}°`}
+          >
+            <RotateCw size={16} />
           </button>
         )}
 
-        {(isField || (element.type === 'card' && element.isFlipped)) && (
-          <button onClick={(e) => { e.stopPropagation(); onPreview(); }} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: `${COLORS.ink}80`, backgroundColor: COLORS.haze }} title="Увеличить"><Maximize2 size={14} /></button>
-        )}
-
-        {(!isClientMode || !isField) && (
-          <button onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (element.rotation + 90) % 360 }); }} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: `${COLORS.ink}80`, backgroundColor: COLORS.haze }} title="Повернуть"><RotateCw size={14} /></button>
-        )}
-
         {!isClientMode && !isField && (
-          <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: isLocked ? COLORS.terra : `${COLORS.ink}80`, backgroundColor: COLORS.haze }} title={isLocked ? "Открепить" : "Закрепить"}>
-            {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
+          <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 ${isLocked ? 'bg-terra/10 text-terra' : 'hover:bg-black/5 text-ink/70'}`} title={isLocked ? "Открепить" : "Закрепить"}>
+            {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
           </button>
         )}
 
         {!isClientMode && (
-          <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: COLORS.terra }} title="Удалить"><Trash2 size={14} /></button>
+          <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-terra/10 text-terra" title="Удалить"><Trash2 size={16} /></button>
         )}
       </div>
 
@@ -1511,51 +1767,62 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         <div className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all z-20" style={{ left: 'calc(100% + 12px)' }}>
           <button
             onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }}
-            className="p-2 rounded-xl transition-colors hover:opacity-80 shadow-xl border"
+            className="p-3 rounded-full transition-colors hover:opacity-80 shadow-xl border bg-white/90 backdrop-blur-md"
             style={{
-              backgroundColor: isLocked ? COLORS.terra : 'white',
-              color: isLocked ? 'white' : `${COLORS.ink}80`,
+              color: isLocked ? COLORS.terra : `${COLORS.ink}80`,
               borderColor: isLocked ? COLORS.terra : `${COLORS.ink}20`
             }}
             title={isLocked ? "Открепить поле" : "Закрепить поле"}
           >
-            {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
+            {isLocked ? <Lock size={20} /> : <Unlock size={20} />}
           </button>
         </div>
       )}
 
+      {/* ОСНОВНОЙ КОНТЕЙНЕР ЭЛЕМЕНТА */}
       <div
-        className={`w-full h-full relative ${isLocked ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} transition-transform ${isDragging ? 'scale-105 shadow-2xl' : isField ? '' : 'shadow-lg'} ${isText ? 'rounded-lg bg-[#FFF9C4] border-2 border-[#FDE047] flex flex-col overflow-hidden' : isField ? '' : 'rounded-2xl'}`}
+        className={`w-full h-full relative ${isLocked ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} transition-transform ${isDragging ? 'scale-105 shadow-2xl' : isField ? '' : 'shadow-[0_8px_30px_rgb(0,0,0,0.12)]'} ${isText ? 'rounded-2xl bg-yellow-100/90 backdrop-blur-md border border-yellow-300 flex flex-col overflow-hidden' : isField ? '' : (element.type === 'figure' ? '' : 'rounded-[1rem]')}`}
         onMouseDown={handleDragStart}
         onTouchStart={handleDragStart}
         style={{ perspective: isField ? 'none' : '1000px' }}
       >
         {isText ? (
           <>
-            <div className="w-full h-6 bg-[#FDE047] border-b border-[#EAB308] flex items-center justify-center flex-shrink-0 cursor-grab active:cursor-grabbing">
-              <div className="flex gap-1 opacity-50">
+            <div className="w-full h-8 bg-yellow-200/50 border-b border-yellow-300/50 flex items-center justify-center flex-shrink-0 cursor-grab active:cursor-grabbing">
+              <div className="flex gap-1.5 opacity-40">
                 <div className="w-1 h-1 rounded-full bg-black" />
                 <div className="w-1 h-1 rounded-full bg-black" />
                 <div className="w-1 h-1 rounded-full bg-black" />
               </div>
             </div>
-            <textarea className="flex-1 w-full p-2.5 bg-transparent resize-none outline-none text-[13px] font-bold text-gray-800 custom-scrollbar" value={element.text || ''} onChange={(e) => onUpdate({ text: e.target.value })} placeholder="Заметка..." />
+            <textarea className="flex-1 w-full p-4 bg-transparent resize-none outline-none text-[13px] font-bold text-gray-800 custom-scrollbar leading-relaxed" value={element.text || ''} onChange={(e) => onUpdate({ text: e.target.value })} placeholder="Заметка..." />
           </>
         ) : element.type === 'token' ? (
-          <div className="w-full h-full rounded-full shadow-inner border-2 border-white" style={{ backgroundColor: element.color }} />
+          <div className="w-full h-full rounded-full shadow-inner border-2 border-white/80" style={{ backgroundColor: element.color }} />
+        ) : element.type === 'figure' ? (
+          <div className="w-full h-full relative flex items-center justify-center">
+             <FigureIcon 
+                gender={element.gender} 
+                color={element.color} 
+                viewMode={globalFigureView} 
+                rotation={element.rotation}
+                name={element.name}
+                className="w-full h-full" 
+             />
+          </div>
         ) : (
           <div className="relative w-full h-full" style={isField ? {} : { transformStyle: 'preserve-3d', transition: 'transform 0.6s ease', transform: element.isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
             {isField ? (
               <img src={element.img} className="w-full h-full object-contain pointer-events-none" alt="Игровое поле" />
             ) : (
               <>
-                <div className="absolute inset-0 rounded-2xl overflow-hidden flex items-center justify-center bg-white" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+                <div className="absolute inset-0 rounded-[1rem] overflow-hidden flex items-center justify-center bg-white border border-black/5" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
                   <img src={element.img} className="w-full h-full object-contain pointer-events-none" alt="Карта" />
                 </div>
-                <div className="absolute inset-0 rounded-2xl overflow-hidden flex items-center justify-center" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
+                <div className="absolute inset-0 rounded-[1rem] overflow-hidden flex items-center justify-center border border-white/10" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
                   {element.backImg
-                    ? <img src={element.backImg} className="w-full h-full object-contain pointer-events-none" alt="Рубашка" />
-                    : <div className="flex flex-col items-center justify-center gap-1 opacity-20"><Layers size={32} className="text-white" /><span className="text-[8px] text-white font-black uppercase tracking-tighter leading-none">MAK SPACE</span></div>}
+                    ? <img src={element.backImg} className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" />
+                    : <div className="flex flex-col items-center justify-center gap-2 opacity-30"><Layers size={40} className="text-white" /><span className="text-[10px] text-white font-black uppercase tracking-widest leading-none">MAK SPACE</span></div>}
                 </div>
               </>
             )}
@@ -1563,15 +1830,16 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         )}
       </div>
 
+      {/* ПОЛЗУНОК ИЗМЕНЕНИЯ РАЗМЕРА */}
       {(!isLocked && (!isClientMode || !isField)) && (
-        <div onMouseDown={handleResizeStart} onTouchStart={handleResizeStart} className="absolute -bottom-2 -right-2 w-8 h-8 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center z-30 drop-shadow-md bg-white/80 backdrop-blur-sm rounded-full scale-75 hover:scale-100 shadow-lg" style={{ color: COLORS.plum }}>
-          <Move size={14} />
+        <div onMouseDown={handleResizeStart} onTouchStart={handleResizeStart} className="absolute -bottom-3 -right-3 w-10 h-10 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center z-30 drop-shadow-md bg-white/90 backdrop-blur-md rounded-full scale-75 hover:scale-100 shadow-[0_4px_15px_rgb(0,0,0,0.15)] border border-white/50 text-plum">
+          <Move size={16} />
         </div>
       )}
 
       {element.owner && element.type === 'card' && (
-        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white text-[9px] font-bold px-3 py-0.5 rounded-full z-10 whitespace-nowrap shadow-md pointer-events-none flex items-center gap-1">
-          <UserCircle size={10} /> {element.ownerName}
+        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-ink/80 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-full z-10 whitespace-nowrap shadow-lg pointer-events-none flex items-center gap-1.5 border border-white/10">
+          <UserCircle size={12} /> {element.ownerName}
         </div>
       )}
     </div>
