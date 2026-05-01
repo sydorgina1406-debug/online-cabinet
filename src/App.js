@@ -447,6 +447,7 @@ export default function App() {
   
   const [videoLink, setVideoLink] = useState('');
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [isVideoActive, setIsVideoActive] = useState(false);
   const [tempVideoLink, setTempVideoLink] = useState('');
   
   const [figureColor, setFigureColor] = useState('#8B3252'); 
@@ -659,7 +660,10 @@ export default function App() {
           if (d.data().roomMode) setRoomMode(d.data().roomMode);
           if (d.data().tableBg) setTableBg(d.data().tableBg);
           if (d.data().figureViewMode) setFigureViewMode(d.data().figureViewMode);
-          if (d.data().videoLink !== undefined) setVideoLink(d.data().videoLink);
+          if (d.data().videoLink !== undefined) {
+             setVideoLink(d.data().videoLink);
+             if (!d.data().videoLink) setIsVideoActive(false);
+          }
         }
         else if (d.id === '_library_state') {
           const libraryData = d.data();
@@ -873,12 +877,10 @@ export default function App() {
     notify("Загружаю сессию...");
     try {
       const batch = writeBatch(db);
-      // Очищаем текущий стол
       const currentElements = cardsOnTable.filter(c => !c.id.startsWith('_'));
       currentElements.forEach(el => {
         batch.delete(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, el.id));
       });
-      // Добавляем новые элементы
       session.elements.forEach(el => {
         const newId = `elem_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
         batch.set(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, newId), { ...el, id: newId });
@@ -1157,7 +1159,41 @@ export default function App() {
         </div>
       )}
 
-      {/* МОДАЛКА ВИДЕОСВЯЗИ */}
+      {/* ПЛАВАЮЩЕЕ ОКНО ВИДЕОСВЯЗИ */}
+      {isVideoActive && videoLink && (
+        <div className="fixed bottom-24 right-4 md:right-8 z-[200] w-72 md:w-80 h-52 md:h-60 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col resize overflow-auto" style={{ minWidth: '240px', minHeight: '180px' }}>
+          <div className="flex justify-between items-center bg-gray-100 px-3 py-2 border-b border-gray-200">
+            <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest flex items-center gap-2"><Video size={12} /> Видеосвязь</span>
+            <div className="flex items-center gap-2">
+               <a href={videoLink} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-plum transition-colors" title="Открыть в новой вкладке (если видео не грузится)">
+                  <ExternalLink size={14} />
+               </a>
+               <button onClick={() => setIsVideoActive(false)} className="text-gray-500 hover:text-terra transition-colors" title="Закрыть окно">
+                  <X size={16} />
+               </button>
+            </div>
+          </div>
+          <div className="flex-1 bg-black relative">
+             <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                <Video size={24} className="text-white/20 mb-2" />
+                <p className="text-[9px] text-white/50 uppercase font-bold tracking-widest">
+                  Если видео не появилось, сервис запрещает встраивание.
+                </p>
+                <a href={videoLink} target="_blank" rel="noopener noreferrer" className="mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[10px] font-black transition-colors">
+                  Открыть в новой вкладке
+                </a>
+             </div>
+             <iframe 
+               src={videoLink} 
+               title="Video Call"
+               allow="camera; microphone; fullscreen; display-capture; autoplay" 
+               className="absolute inset-0 w-full h-full border-0 z-10"
+             />
+          </div>
+        </div>
+      )}
+
+      {/* МОДАЛКА ВИДЕОСВЯЗИ (НАСТРОЙКИ) */}
       {isVideoModalOpen && !isClientMode && (
         <div className="fixed inset-0 z-[160] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl relative">
@@ -1182,6 +1218,7 @@ export default function App() {
                   onClick={async () => { 
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: '' }, { merge: true }); 
                     setIsVideoModalOpen(false); 
+                    setIsVideoActive(false);
                     notify("Ссылка на звонок удалена"); 
                   }} 
                   className="flex-1 py-3 font-bold rounded-xl text-[10px] uppercase tracking-widest transition-colors hover:opacity-80"
@@ -1303,11 +1340,10 @@ export default function App() {
           </div>
         </div>
       )}
-      
       <header className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-3 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm gap-2" style={{ borderColor: `${COLORS.ink}10` }}>
         <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-[1rem] flex items-center justify-center text-white shadow-md" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.plum}, ${COLORS.forest})` }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.plum}, ${COLORS.forest})` }}>
               <Layers size={20} />
             </div>
             <div>
@@ -1325,7 +1361,7 @@ export default function App() {
                 </span>
                 
                 {/* ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМОВ СТОЛА */}
-                <div className="flex bg-black/5 p-0.5 rounded-[0.75rem] border shadow-inner" style={{ borderColor: `${COLORS.ink}10` }}>
+                <div className="flex bg-black/5 p-0.5 rounded-lg border shadow-inner" style={{ borderColor: `${COLORS.ink}10` }}>
                   <button onClick={() => changeMode('consultation')} className={`px-2.5 md:px-3 py-1 rounded-[0.5rem] text-[8px] md:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all ${roomMode === 'consultation' ? 'bg-white shadow-sm' : 'hover:bg-black/5 opacity-60'}`} style={{ color: roomMode === 'consultation' ? COLORS.plum : COLORS.ink }}>
                     <Users size={12} /> Конс.
                   </button>
@@ -1351,16 +1387,16 @@ export default function App() {
                 <Video size={16} />
               </button>
               {videoLink && (
-                <a href={videoLink} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-xl text-[10px] font-black transition-all bg-white text-forest hover:scale-105 shadow-sm uppercase">
+                <button onClick={() => setIsVideoActive(true)} className="px-3 py-1.5 rounded-xl text-[10px] font-black transition-all bg-white text-forest hover:scale-105 shadow-sm uppercase">
                   Войти в звонок
-                </a>
+                </button>
               )}
             </div>
           ) : (
             videoLink && (
-              <a href={videoLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black text-white shadow-[0_0_15px_rgba(45,74,62,0.4)] transition-all hover:scale-105 uppercase animate-pulse" style={{ backgroundColor: COLORS.forest }}>
+              <button onClick={() => setIsVideoActive(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black text-white shadow-[0_0_15px_rgba(45,74,62,0.4)] transition-all hover:scale-105 uppercase animate-pulse" style={{ backgroundColor: COLORS.forest }}>
                 <Video size={14} /> Подключиться к видео
-              </a>
+              </button>
             )
           )}
 
@@ -1451,7 +1487,7 @@ export default function App() {
       <main className="flex-1 relative flex flex-col overflow-hidden pt-28 md:pt-24">
         {/* ИГРОВОЙ РЕЖИМ (КУБИКИ И ФИШКИ) */}
         {roomMode === 'game' && (
-          <div className="absolute top-2 right-4 md:right-8 z-40 flex flex-col items-center gap-2 md:gap-3 bg-white/70 backdrop-blur-xl p-3 md:p-4 rounded-[1.5rem] md:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white transition-all pointer-events-auto">
+          <div className="absolute top-2 right-4 md:right-8 z-40 flex flex-col items-center gap-2 md:gap-3 bg-white/70 backdrop-blur-xl p-3 md:p-4 rounded-[1.5rem] md:rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white transition-all pointer-events-auto">
             <div className="flex gap-1.5 md:gap-2 p-1.5 md:p-2 rounded-[1rem] md:rounded-2xl border border-white" style={{ backgroundColor: `${COLORS.ink}10` }}>
               {['#8B3252', '#2D4A3E', '#C4714A', '#4A90E2', '#E2A94A'].map(color => (
                 <button key={color} onClick={() => addElement('token', { color })} className="w-4 h-4 md:w-5 md:h-5 rounded-full shadow-md border border-white/50 hover:scale-125 transition-transform" style={{ backgroundColor: color }} />
@@ -1496,54 +1532,58 @@ export default function App() {
           </div>
         )}
 
-        {/* РЕЖИМ РАССТАНОВКИ (ФИГУРЫ) - ОБНОВЛЕННАЯ КОМПАКТНАЯ ПАНЕЛЬ */}
+        {/* РЕЖИМ РАССТАНОВКИ (ФИГУРЫ) - ГОРИЗОНТАЛЬНАЯ ПЛАВАЮЩАЯ ПАНЕЛЬ СВЕРХУ */}
         {roomMode === 'constellation' && (
-          <div className="absolute top-2 right-4 md:right-8 z-40 flex flex-col items-center gap-3 bg-white/90 backdrop-blur-xl p-4 rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white transition-all pointer-events-auto w-[160px] md:w-[180px]">
-            <span className="text-[10px] font-black uppercase tracking-widest text-center" style={{ color: COLORS.forest }}>Все фигуры</span>
+          <div className="absolute top-2 md:top-4 left-1/2 -translate-x-1/2 z-40 flex flex-wrap md:flex-nowrap items-center justify-center gap-2 md:gap-4 bg-white/90 backdrop-blur-xl px-4 py-2 rounded-2xl md:rounded-full shadow-lg border border-white transition-all pointer-events-auto w-[95%] md:w-max">
             
             {/* ГЛОБАЛЬНЫЙ Переключатель вида (Сверху / Сбоку) */}
-            <div className="flex bg-[#F3F4F6] p-1 rounded-xl w-full">
-              <button onClick={() => updateGlobalFigureView('side')} className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'side' ? 'bg-white shadow-sm text-plum' : 'text-gray-500'}`}>Сбоку</button>
-              <button onClick={() => updateGlobalFigureView('top')} className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'top' ? 'bg-white shadow-sm text-plum' : 'text-gray-500'}`}>Сверху</button>
+            <div className="flex bg-[#F3F4F6] p-1 rounded-full">
+              <button onClick={() => updateGlobalFigureView('side')} className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'side' ? 'bg-white shadow-sm text-plum' : 'text-gray-500'}`}>Сбоку</button>
+              <button onClick={() => updateGlobalFigureView('top')} className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'top' ? 'bg-white shadow-sm text-plum' : 'text-gray-500'}`}>Сверху</button>
             </div>
+
+            <div className="w-[1px] h-6 bg-gray-200 hidden md:block"></div>
 
             {/* ПОЛЕ ВВОДА ИМЕНИ */}
             <input 
               type="text" 
               value={figureName}
               onChange={e => setFigureName(e.target.value)}
-              placeholder="Имя (по жел.)"
+              placeholder="Имя"
               maxLength={12}
-              className="w-full px-3 py-2 rounded-xl border-2 text-[10px] font-bold outline-none text-center transition-colors"
+              className="w-20 md:w-24 px-3 py-1.5 rounded-full border-2 text-[10px] font-bold outline-none text-center transition-colors"
               style={{ borderColor: '#F3F4F6', color: COLORS.ink }}
             />
 
-            {/* ВЫБОР ЦВЕТА (4х2) */}
-            <div className="grid grid-cols-4 gap-2 p-2.5 rounded-2xl w-full" style={{ backgroundColor: '#F3F4F6' }}>
+            <div className="w-[1px] h-6 bg-gray-200 hidden md:block"></div>
+
+            {/* ВЫБОР ЦВЕТА */}
+            <div className="flex gap-1.5 p-1 rounded-full bg-[#F3F4F6]">
               {['#8B3252', '#2D4A3E', '#C4714A', '#4A90E2', '#E2A94A', '#8E44AD', '#34495E', '#D35400'].map(color => (
-                <button key={color} onClick={() => setFigureColor(color)} className={`w-5 h-5 md:w-6 md:h-6 rounded-full shadow-sm border-2 hover:scale-110 transition-transform mx-auto ${figureColor === color ? 'border-white scale-110' : 'border-transparent'}`} style={{ backgroundColor: color }} />
+                <button key={color} onClick={() => setFigureColor(color)} className={`w-5 h-5 rounded-full shadow-sm border-2 hover:scale-110 transition-transform ${figureColor === color ? 'border-white scale-110' : 'border-transparent'}`} style={{ backgroundColor: color }} />
               ))}
             </div>
 
+            <div className="w-[1px] h-6 bg-gray-200 hidden md:block"></div>
+
             {/* КНОПКИ ДОБАВЛЕНИЯ ФИГУР */}
-            <div className="flex gap-1.5 w-full">
-              <button onClick={() => { addElement('figure', { gender: 'male', color: figureColor, name: figureName }); setFigureName(''); }} className="flex-1 py-2.5 bg-white rounded-2xl border-2 border-gray-100 hover:border-plum/30 flex items-center justify-center flex-col gap-1.5 transition-all">
-                <FigureIcon gender="male" color={figureColor} isMenu={true} className="w-5 h-5 md:w-6 md:h-6" />
-                <span className="text-[8px] font-black uppercase text-center leading-none text-gray-600">Муж</span>
+            <div className="flex gap-1.5">
+              <button onClick={() => { addElement('figure', { gender: 'male', color: figureColor, name: figureName }); setFigureName(''); }} className="px-3 py-1.5 bg-white rounded-full border border-gray-100 hover:border-plum/30 flex items-center gap-1.5 transition-all shadow-sm">
+                <FigureIcon gender="male" color={figureColor} isMenu={true} className="w-4 h-4" />
+                <span className="text-[9px] font-black uppercase text-gray-600 hidden lg:block">Муж</span>
               </button>
-              <button onClick={() => { addElement('figure', { gender: 'female', color: figureColor, name: figureName }); setFigureName(''); }} className="flex-1 py-2.5 bg-white rounded-2xl border-2 border-gray-100 hover:border-plum/30 flex items-center justify-center flex-col gap-1.5 transition-all">
-                <FigureIcon gender="female" color={figureColor} isMenu={true} className="w-5 h-5 md:w-6 md:h-6" />
-                <span className="text-[8px] font-black uppercase text-center leading-none text-gray-600">Жен</span>
+              <button onClick={() => { addElement('figure', { gender: 'female', color: figureColor, name: figureName }); setFigureName(''); }} className="px-3 py-1.5 bg-white rounded-full border border-gray-100 hover:border-plum/30 flex items-center gap-1.5 transition-all shadow-sm">
+                <FigureIcon gender="female" color={figureColor} isMenu={true} className="w-4 h-4" />
+                <span className="text-[9px] font-black uppercase text-gray-600 hidden lg:block">Жен</span>
               </button>
-              <button onClick={() => addElement('arrow', { color: figureColor })} className="flex-1 py-2.5 bg-white rounded-2xl border-2 border-gray-100 hover:border-plum/30 flex items-center justify-center flex-col gap-1.5 transition-all">
-                <ArrowElementIcon color={figureColor} className="w-5 h-5 md:w-6 md:h-6" />
-                <span className="text-[8px] font-black uppercase text-center leading-none text-gray-600">Стрелка</span>
+              <button onClick={() => addElement('arrow', { color: figureColor })} className="px-3 py-1.5 bg-white rounded-full border border-gray-100 hover:border-plum/30 flex items-center gap-1.5 transition-all shadow-sm">
+                <ArrowElementIcon color={figureColor} className="w-4 h-4" />
+                <span className="text-[9px] font-black uppercase text-gray-600 hidden lg:block">Стрелка</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* ИГРОВОЕ ПОЛЕ */}
         <div ref={scrollContainerRef} className="absolute inset-0 overflow-auto custom-scrollbar transition-colors duration-500" style={{ backgroundColor: tableBg.bgColor }}>
           <div ref={boardRef} className="relative min-w-[3000px] min-h-[3000px] bg-transparent" onMouseMove={handleMouseMove} onTouchMove={handleMouseMove}>
             <div className="absolute inset-0 pointer-events-none transition-opacity duration-500" style={{ 
@@ -1829,7 +1869,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     if (isLocked) return;
     if (isField && isClientMode) return;
     if (isText && e.target.tagName.toLowerCase() === 'textarea') return;
-    if (isLaserMode && !isClientMode) return; // В режиме указки мы не можем ничего брать
+    if (isLaserMode && !isClientMode) return; 
 
     const cx = e.touches ? e.touches[0].clientX : e.clientX;
     const cy = e.touches ? e.touches[0].clientY : e.clientY;
@@ -1892,7 +1932,6 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
 
   const canDrag = !isLocked && !(isField && isClientMode) && !(isLaserMode && !isClientMode);
 
-  // Для фигур в режиме СБОКУ контейнер не крутится, чтобы фигура не "падала"
   const appliedRotation = (element.type === 'figure' && globalFigureView === 'side') ? 0 : element.rotation;
 
   return (
@@ -1947,7 +1986,6 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
             <button onClick={(e) => { e.stopPropagation(); onPreview(); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="Увеличить"><Maximize2 size={16} /></button>
           )}
           
-          {/* КНОПКА ПОВОРОТА для всего, включая фигуры (Фигуры крутятся по 45 градусов, Стрелка по 22.5, остальное по 90) */}
           {(!isClientMode || !isField) && (
             <button 
               onClick={(e) => { 
@@ -1990,7 +2028,6 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         </div>
       )}
 
-      {/* ОСНОВНОЙ КОНТЕЙНЕР ЭЛЕМЕНТА */}
       <div
         className={`w-full h-full relative ${isLocked || (isLaserMode && !isClientMode) ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} transition-transform ${isDragging ? 'scale-105 shadow-2xl' : isField ? '' : 'shadow-[0_8px_30px_rgb(0,0,0,0.12)]'} ${isText ? 'rounded-2xl bg-yellow-100/90 backdrop-blur-md border border-yellow-300 flex flex-col overflow-hidden' : isField ? '' : (element.type === 'figure' || element.type === 'arrow' ? '' : 'rounded-[1rem]')}`}
         onMouseDown={handleDragStart}
@@ -2045,7 +2082,6 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         )}
       </div>
 
-      {/* ПОЛЗУНОК ИЗМЕНЕНИЯ РАЗМЕРА */}
       {(!isLocked && (!isClientMode || !isField) && !(isLaserMode && !isClientMode)) && (
         <div onMouseDown={handleResizeStart} onTouchStart={handleResizeStart} className="absolute -bottom-3 -right-3 w-10 h-10 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center z-30 drop-shadow-md bg-white/90 backdrop-blur-md rounded-full scale-75 hover:scale-100 shadow-[0_4px_15px_rgb(0,0,0,0.15)] border border-white/50 text-plum">
           <Move size={16} />
