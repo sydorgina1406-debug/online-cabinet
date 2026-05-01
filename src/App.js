@@ -16,7 +16,8 @@ import {
   Users, LogOut, AlertCircle, ExternalLink, Image as ImageIcon,
   Volume2, VolumeX, ArrowUp, Save, MousePointer2, UserCircle, UserPlus,
   Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
-  Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, MessageCircle
+  Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, MessageCircle,
+  Camera, Crosshair, UploadCloud, Video
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -43,71 +44,72 @@ const MaxIcon = ({ size = 14, color = 'currentColor' }) => (
   </svg>
 );
 
+const ArrowElementIcon = ({ color, className }) => (
+  <svg viewBox="0 0 100 100" className={className} style={{ filter: 'drop-shadow(0px 4px 6px rgba(0,0,0,0.25))' }}>
+    <polygon points="50,10 80,85 50,70 20,85" fill={color} />
+  </svg>
+);
+
 const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '', isMenu = false, className }) => {
   const isMale = gender === 'male';
 
-  // Если это иконка для бокового МЕНЮ (чтобы было красиво и понятно при мелком размере)
   if (isMenu) {
     return (
       <svg viewBox="0 0 100 100" className={className} style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.15))' }}>
-        <circle cx="50" cy="22" r="16" fill={color} />
+        <circle cx="50" cy="26" r="15" fill="#D4A364" />
         {isMale ? (
-          <path d="M 22,90 C 22,50 35,42 50,42 C 65,42 78,50 78,90 Z" fill={color} />
+          <path d="M 32,42 L 68,42 L 60,85 L 40,85 Z" fill={color} />
         ) : (
-          <path d="M 50,42 C 55,42 62,55 78,90 L 22,90 C 38,55 45,42 50,42 Z" fill={color} />
+          <path d="M 50,40 L 75,85 L 25,85 Z" fill={color} />
         )}
       </svg>
     );
   }
 
-  // --- Если это фигура НА СТОЛЕ (Детальная деревянная 3D-фигура) ---
   const isSide = viewMode === 'side';
   const rot = ((rotation % 360) + 360) % 360;
 
-  let dir = 'up'; 
+  let dir = 'up';
   if (rot > 45 && rot < 135) dir = 'right';
-  else if (rot >= 135 && rot <= 225) dir = 'down'; // Смотрит на нас (анфас)
+  else if (rot >= 135 && rot <= 225) dir = 'down';
   else if (rot > 225 && rot < 315) dir = 'left';
 
   const hexColor = color.replace('#', '');
   const gradientId = `grad-${hexColor}-${gender}`;
 
   return (
-    <svg viewBox="0 0 100 100" className={className} style={{ overflow: 'visible', filter: 'drop-shadow(0px 8px 16px rgba(0,0,0,0.3))' }}>
+    <svg viewBox="0 0 100 100" className={className} style={{ overflow: 'visible', filter: 'drop-shadow(0px 6px 12px rgba(0,0,0,0.3))' }}>
       <defs>
-        <radialGradient id="woodHead" cx="40%" cy="30%" r="60%">
-          <stop offset="0%" stopColor="#FDE3B6" />
-          <stop offset="100%" stopColor="#D4A364" />
+        <radialGradient id="woodHead" cx="30%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#FCE3C5" />
+          <stop offset="100%" stopColor="#C99454" />
         </radialGradient>
         <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.5" />
-          <stop offset="50%" stopColor="#ffffff" stopOpacity="0.1" />
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
+          <stop offset="50%" stopColor="#ffffff" stopOpacity="0.0" />
           <stop offset="100%" stopColor="#000000" stopOpacity="0.5" />
         </linearGradient>
       </defs>
 
       {isSide ? (
-        /* ================= ВИД СБОКУ (Фигурка стоит прямо) ================= */
         <g>
           <ellipse cx="50" cy="85" rx="25" ry="8" fill="rgba(0,0,0,0.2)" />
-
           {(dir === 'left' || dir === 'right') && (
             <g transform={dir === 'left' ? "scale(-1, 1) translate(-100, 0)" : ""}>
               {isMale ? (
                 <>
-                  <path d="M 42,38 L 58,38 L 56,85 L 44,85 Z" fill={color} />
-                  <path d="M 42,38 L 58,38 L 56,85 L 44,85 Z" fill={`url(#${gradientId})`} />
+                  <rect x="38" y="38" width="24" height="47" rx="4" fill={color} />
+                  <rect x="38" y="38" width="24" height="47" rx="4" fill={`url(#${gradientId})`} />
                 </>
               ) : (
                 <>
-                  <path d="M 46,38 C 46,38 54,38 54,38 C 58,55 64,83 64,85 L 36,85 C 36,83 42,55 46,38 Z" fill={color} />
-                  <path d="M 46,38 C 46,38 54,38 54,38 C 58,55 64,83 64,85 L 36,85 C 36,83 42,55 46,38 Z" fill={`url(#${gradientId})`} />
+                  <path d="M 50,35 L 70,85 L 30,85 Z" fill={color} />
+                  <path d="M 50,35 L 70,85 L 30,85 Z" fill={`url(#${gradientId})`} />
                 </>
               )}
-              <circle cx="50" cy="24" r="13" fill="url(#woodHead)" />
-              {/* Профиль: носик и глазик (смещены вверх, голова запрокинута) */}
-              <polygon points="62,20 67,22 62,24" fill="#C89652" />
-              <circle cx="57" cy="19" r="1.5" fill="#333" />
+              <circle cx="50" cy="24" r="14" fill="url(#woodHead)" />
+              <polygon points="62,23 68,26 62,28" fill="#B3783A" />
+              <circle cx="56" cy="22" r="1.8" fill="#222" />
             </g>
           )}
 
@@ -115,20 +117,19 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
             <g>
               {isMale ? (
                 <>
-                  <path d="M 32,38 L 68,38 L 64,85 L 36,85 Z" fill={color} />
-                  <path d="M 32,38 L 68,38 L 64,85 L 36,85 Z" fill={`url(#${gradientId})`} />
+                  <path d="M 32,38 L 68,38 L 60,85 L 40,85 Z" fill={color} />
+                  <path d="M 32,38 L 68,38 L 60,85 L 40,85 Z" fill={`url(#${gradientId})`} />
                 </>
               ) : (
                 <>
-                  <path d="M 45,38 C 45,38 55,38 55,38 C 65,55 75,83 75,85 L 25,85 C 25,83 35,55 45,38 Z" fill={color} />
-                  <path d="M 45,38 C 45,38 55,38 55,38 C 65,55 75,83 75,85 L 25,85 C 25,83 35,55 45,38 Z" fill={`url(#${gradientId})`} />
+                  <path d="M 50,35 L 75,85 L 25,85 Z" fill={color} />
+                  <path d="M 50,35 L 75,85 L 25,85 Z" fill={`url(#${gradientId})`} />
                 </>
               )}
-              <circle cx="50" cy="24" r="13" fill="url(#woodHead)" />
-              {/* Анфас: носик и оба глаза (смещены вверх, смотрит на нас) */}
-              <polygon points="50,21 48,25 52,25" fill="#C89652" />
-              <circle cx="45" cy="20" r="1.5" fill="#333" />
-              <circle cx="55" cy="20" r="1.5" fill="#333" />
+              <circle cx="50" cy="24" r="14" fill="url(#woodHead)" />
+              <polygon points="50,26 47,30 53,30" fill="#A67C52" />
+              <circle cx="44" cy="24" r="1.5" fill="#333" />
+              <circle cx="56" cy="24" r="1.5" fill="#333" />
             </g>
           )}
 
@@ -136,16 +137,16 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
             <g>
               {isMale ? (
                 <>
-                  <path d="M 32,38 L 68,38 L 64,85 L 36,85 Z" fill={color} />
-                  <path d="M 32,38 L 68,38 L 64,85 L 36,85 Z" fill={`url(#${gradientId})`} />
+                  <path d="M 32,38 L 68,38 L 60,85 L 40,85 Z" fill={color} />
+                  <path d="M 32,38 L 68,38 L 60,85 L 40,85 Z" fill={`url(#${gradientId})`} />
                 </>
               ) : (
                 <>
-                  <path d="M 45,38 C 45,38 55,38 55,38 C 65,55 75,83 75,85 L 25,85 C 25,83 35,55 45,38 Z" fill={color} />
-                  <path d="M 45,38 C 45,38 55,38 55,38 C 65,55 75,83 75,85 L 25,85 C 25,83 35,55 45,38 Z" fill={`url(#${gradientId})`} />
+                  <path d="M 50,35 L 75,85 L 25,85 Z" fill={color} />
+                  <path d="M 50,35 L 75,85 L 25,85 Z" fill={`url(#${gradientId})`} />
                 </>
               )}
-              <circle cx="50" cy="24" r="13" fill="url(#woodHead)" />
+              <circle cx="50" cy="24" r="14" fill="url(#woodHead)" />
             </g>
           )}
 
@@ -160,30 +161,29 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
           )}
         </g>
       ) : (
-        /* ================= ВИД СВЕРХУ (Фигурка смотрит прямо в кадр) ================= */
         <g>
-          <circle cx="50" cy="50" r="32" fill="rgba(0,0,0,0.15)" />
-          
-          {isMale ? (
-            <>
-              <circle cx="50" cy="50" r="28" fill={color} />
-              <circle cx="50" cy="50" r="28" fill={`url(#${gradientId})`} />
-            </>
-          ) : (
-            <>
-              <ellipse cx="50" cy="50" rx="28" ry="26" fill={color} />
-              <ellipse cx="50" cy="50" rx="28" ry="26" fill={`url(#${gradientId})`} />
-            </>
-          )}
-          <circle cx="50" cy="50" r="14" fill="url(#woodHead)" stroke="rgba(0,0,0,0.1)" strokeWidth="2" />
-          {/* Носик и глаза смотрят прямо в кадр (по центру) */}
-          <polygon points="50,51 48,47 52,47" fill="#C89652" />
-          <circle cx="45" cy="46" r="1.5" fill="#333" />
-          <circle cx="55" cy="46" r="1.5" fill="#333" />
+          <g transform={`rotate(${rot}, 50, 50)`}>
+            <circle cx="50" cy="50" r="30" fill="rgba(0,0,0,0.15)" />
+            {isMale ? (
+              <>
+                <rect x="25" y="30" width="50" height="40" rx="6" fill={color} />
+                <rect x="25" y="30" width="50" height="40" rx="6" fill={`url(#${gradientId})`} />
+              </>
+            ) : (
+              <>
+                <circle cx="50" cy="50" r="28" fill={color} />
+                <circle cx="50" cy="50" r="28" fill={`url(#${gradientId})`} />
+              </>
+            )}
+          </g>
+          <circle cx="50" cy="50" r="14" fill="url(#woodHead)" stroke="rgba(0,0,0,0.1)" strokeWidth="1" />
+          <polygon points="50,55 47,51 53,51" fill="#B3783A" />
+          <circle cx="45" cy="48" r="1.8" fill="#222" />
+          <circle cx="55" cy="48" r="1.8" fill="#222" />
 
           {name && (
             <text
-              x="50" y="82" textAnchor="middle" fontSize="10" fontWeight="900" fill="rgba(255,255,255,0.95)"
+              x="50" y="85" textAnchor="middle" fontSize="10" fontWeight="900" fill="rgba(255,255,255,0.95)"
               style={{ textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }} textLength={name.length > 5 ? "35" : undefined} lengthAdjust="spacingAndGlyphs"
             >
               {name}
@@ -438,15 +438,20 @@ export default function App() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isClientMode, setIsClientMode] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isLaserMode, setIsLaserMode] = useState(false);
   const [isCheckingKey, setIsCheckingKey] = useState(false);
   const [appLoading, setAppLoading] = useState(true);
   
   const [platformName, setPlatformName] = useState("ОНЛАЙН КАБИНЕТ");
-  const [roomMode, setRoomMode] = useState('consultation'); // 'consultation' | 'game' | 'constellation'
+  const [roomMode, setRoomMode] = useState('consultation'); 
+  
+  const [videoLink, setVideoLink] = useState('');
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [tempVideoLink, setTempVideoLink] = useState('');
   
   const [figureColor, setFigureColor] = useState('#8B3252'); 
   const [figureName, setFigureName] = useState('');
-  const [figureViewMode, setFigureViewMode] = useState('side'); // ГЛОБАЛЬНЫЙ режим фигур 'side' | 'top'
+  const [figureViewMode, setFigureViewMode] = useState('side');
   
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -457,6 +462,7 @@ export default function App() {
   const [cardsOnTable, setCardsOnTable] = useState([]);
   const [localDecks, setLocalDecks] = useState([]);
   const [cloudDecks, setCloudDecks] = useState([]);
+  const [savedSessions, setSavedSessions] = useState([]);
   const [baseDecks, setBaseDecks] = useState([]);
   const [platformDecks, setPlatformDecks] = useState([]);
   
@@ -631,10 +637,13 @@ export default function App() {
 
   useEffect(() => {
     if (!user || !isDbConnected || isClientMode) return;
-    const unsub = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_decks'), (s) => {
+    const unsubDecks = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_decks'), (s) => {
       setCloudDecks(s.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    return () => unsub();
+    const unsubSessions = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions'), (s) => {
+      setSavedSessions(s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => b.createdAt - a.createdAt));
+    });
+    return () => { unsubDecks(); unsubSessions(); };
   }, [user, isDbConnected, isClientMode]);
 
   useEffect(() => {
@@ -647,13 +656,10 @@ export default function App() {
         else if (d.id === '_dice_type') setDiceType(d.data().type || 6);
         else if (d.id === '_settings') {
           if (d.data().platformName) setPlatformName(d.data().platformName);
-          if (d.data().roomMode) {
-             setRoomMode(d.data().roomMode);
-          } else if (d.data().isGameMode !== undefined) {
-             setRoomMode(d.data().isGameMode ? 'game' : 'consultation');
-          }
+          if (d.data().roomMode) setRoomMode(d.data().roomMode);
           if (d.data().tableBg) setTableBg(d.data().tableBg);
           if (d.data().figureViewMode) setFigureViewMode(d.data().figureViewMode);
+          if (d.data().videoLink !== undefined) setVideoLink(d.data().videoLink);
         }
         else if (d.id === '_library_state') {
           const libraryData = d.data();
@@ -678,7 +684,7 @@ export default function App() {
   const handleMouseMove = (e) => {
     if (!isAuthorized || !isDbConnected || !user || !roomId) return;
     const now = Date.now();
-    if (now - lastCursorSync.current > 200) {
+    if (now - lastCursorSync.current > 100) {
       lastCursorSync.current = now;
       const board = boardRef.current;
       if (!board) return;
@@ -688,7 +694,7 @@ export default function App() {
       const x = clientX - rect.left;
       const y = clientY - rect.top;
       setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_cursors`, user.uid), {
-        x, y, color: myCursorColor, timestamp: now, name: userName
+        x, y, color: myCursorColor, timestamp: now, name: userName, isLaser: isLaserMode
       }).catch(() => {});
     }
   };
@@ -789,7 +795,6 @@ export default function App() {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         csvText = await response.text();
       } catch (directErr) {
-        console.warn('Direct fetch failed, falling back to proxy...', directErr);
         const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(GOOGLE_SHEET_CSV_URL)}`;
         const proxyResponse = await fetch(proxyUrl);
         if (!proxyResponse.ok) throw new Error(`Proxy HTTP ${proxyResponse.status}`);
@@ -834,7 +839,6 @@ export default function App() {
       }
     } catch (e) {
       setIsCheckingKey(false);
-      console.error("Sheet fetch error:", e);
       notify("Ошибка связи с таблицей. Включите прокси или убедитесь что таблица опубликована в интернете.");
     }
   };
@@ -847,14 +851,76 @@ export default function App() {
     window._isClientMode = true;
   };
 
+  const saveCurrentSession = async () => {
+    const name = prompt("Введите название для сохранения текущего стола (например: Сессия с Анной):");
+    if (!name || !name.trim()) return;
+    notify("Сохраняю сессию...");
+    try {
+      const elementsToSave = cardsOnTable.filter(c => c.id !== '_settings' && c.id !== '_dice_state' && c.id !== '_dice_type' && c.id !== '_library_state' && !c.id.startsWith('_'));
+      await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions'), {
+        name: name.trim(),
+        elements: elementsToSave,
+        createdAt: Date.now()
+      });
+      notify("Сессия успешно сохранена! Ищите ее во вкладке СЕССИИ в библиотеке.");
+    } catch (e) {
+      notify("Ошибка сохранения сессии: " + e.message);
+    }
+  };
+
+  const loadSavedSession = async (session) => {
+    if (!window.confirm(`Вы уверены, что хотите загрузить "${session.name}"? Текущий стол будет ОЧИЩЕН.`)) return;
+    notify("Загружаю сессию...");
+    try {
+      const batch = writeBatch(db);
+      // Очищаем текущий стол
+      const currentElements = cardsOnTable.filter(c => !c.id.startsWith('_'));
+      currentElements.forEach(el => {
+        batch.delete(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, el.id));
+      });
+      // Добавляем новые элементы
+      session.elements.forEach(el => {
+        const newId = `elem_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+        batch.set(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, newId), { ...el, id: newId });
+      });
+      await batch.commit();
+      notify("Сессия загружена на стол! ✓");
+      if (isLibraryOpen) toggleLibrary();
+    } catch (e) {
+      notify("Ошибка загрузки сессии: " + e.message);
+    }
+  };
+
+  const takeScreenshot = async () => {
+    if (!boardRef.current) return;
+    notify("Создаю скриншот, пожалуйста, подождите...");
+    try {
+      if (!window.html2canvas) {
+        const script = document.createElement('script');
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+        document.body.appendChild(script);
+        await new Promise(resolve => script.onload = resolve);
+      }
+      const canvas = await window.html2canvas(boardRef.current, { useCORS: true, backgroundColor: tableBg.bgColor });
+      const link = document.createElement('a');
+      link.download = `session_${new Date().toLocaleDateString()}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+      notify("Скриншот успешно сохранен! ✓");
+    } catch(e) {
+      notify("Ошибка при создании скриншота. Попробуйте системный скриншот.");
+    }
+  };
+
   const addElement = async (type, data) => {
     if (!isAuthorized || !roomId) return;
     playSound('drop', isMuted);
     const id = `elem_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
     const maxZ = cardsOnTable.reduce((m, c) => Math.max(m, c.zIndex || 0), 0);
     const isField = type === 'field';
-    let width = isField ? 800 : (type === 'figure' ? 80 : (type === 'token' ? 45 : (type === 'text' ? 200 : 160)));
-    let height = isField ? 600 : (type === 'figure' ? 80 : (type === 'token' ? 45 : (type === 'text' ? 100 : 240)));
+    
+    let width = isField ? 800 : (type === 'figure' ? 80 : (type === 'arrow' ? 60 : (type === 'token' ? 45 : (type === 'text' ? 200 : 160))));
+    let height = isField ? 600 : (type === 'figure' ? 80 : (type === 'arrow' ? 60 : (type === 'token' ? 45 : (type === 'text' ? 100 : 240))));
     
     if (type === 'card' && data.img) {
       try {
@@ -885,8 +951,8 @@ export default function App() {
       id, type, ...data,
       x: spawnX, y: spawnY,
       width, height,
-      rotation: type === 'figure' ? 180 : 0,
-      isFlipped: type !== 'token' && type !== 'text' && type !== 'figure' && !isField,
+      rotation: (type === 'figure' || type === 'arrow') ? 180 : 0,
+      isFlipped: type !== 'token' && type !== 'text' && type !== 'figure' && type !== 'arrow' && !isField,
       zIndex: isField ? 0 : maxZ + 1,
       isLocked: false
     };
@@ -1062,21 +1128,22 @@ export default function App() {
           )}
         </div>
 
-        {/* --- ССЫЛКИ ДЛЯ СВЯЗИ С СОЗДАТЕЛЕМ --- */}
-        <div className="mt-6 pt-6 border-t-2 border-dashed flex flex-col items-center gap-3" style={{ borderColor: `${COLORS.ink}10` }}>
-          <span className="text-[9px] font-black uppercase tracking-widest text-center" style={{ color: `${COLORS.ink}50` }}>Нужна помощь или есть вопросы по платформе?</span>
+        {/* --- ССЫЛКИ ДЛЯ СВЯЗИ С СОЗДАТЕЛЕМ (ОБНОВЛЕННЫЙ ДИЗАЙН) --- */}
+        <div className="mt-8 pt-6 border-t-2 border-dashed flex flex-col items-center gap-4" style={{ borderColor: `${COLORS.ink}15` }}>
+          <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-center" style={{ color: `${COLORS.ink}60` }}>
+            Нужна помощь или есть вопросы по платформе?
+          </span>
           
-          <div className="flex flex-col gap-2 w-full">
-            <a href="https://t.me/psyplat" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:opacity-80" style={{ backgroundColor: `${COLORS.plum}10`, color: COLORS.plum }}>
-               <MessageCircle size={14} /> Telegram-канал
+          <div className="flex flex-col gap-3 w-full">
+            <a href="https://t.me/psyplat" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2.5 w-full py-4 rounded-[1rem] text-[11px] font-black uppercase tracking-[0.15em] transition-all hover:scale-[1.02] shadow-sm border border-transparent hover:border-plum/20" style={{ backgroundColor: '#FDF7F9', color: COLORS.plum }}>
+               <MessageCircle size={16} strokeWidth={2.5} /> TELEGRAM-КАНАЛ
             </a>
             
-            <a href="https://max.ru/join/kmLoxZy4ssavrneuneZhry22HKbI5hbe11kPGlQUXUg" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:opacity-80" style={{ backgroundColor: `${COLORS.forest}10`, color: COLORS.forest }}>
-               <MaxIcon size={14} /> Связь (Макс)
+            <a href="https://max.ru/join/kmLoxZy4ssavrneuneZhry22HKbI5hbe11kPGlQUXUg" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2.5 w-full py-4 rounded-[1rem] text-[11px] font-black uppercase tracking-[0.15em] transition-all hover:scale-[1.02] shadow-sm border border-transparent hover:border-forest/20" style={{ backgroundColor: '#F5FAF8', color: COLORS.forest }}>
+               <MaxIcon size={16} color={COLORS.forest} /> СВЯЗЬ (МАКС)
             </a>
           </div>
         </div>
-        {/* -------------------------------------- */}
 
       </div>
     </div>
@@ -1087,6 +1154,58 @@ export default function App() {
       {notification && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] text-white px-8 py-3 rounded-full shadow-2xl text-sm font-bold flex items-center gap-2 border" style={{ backgroundColor: COLORS.ink, borderColor: `${COLORS.plum}33` }}>
           <CheckCircle size={16} color={COLORS.terra} /> {notification}
+        </div>
+      )}
+
+      {/* МОДАЛКА ВИДЕОСВЯЗИ */}
+      {isVideoModalOpen && !isClientMode && (
+        <div className="fixed inset-0 z-[160] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
+          <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl relative">
+            <button onClick={() => setIsVideoModalOpen(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
+              <X size={20} style={{ color: COLORS.ink }} />
+            </button>
+            <h2 className="text-xl font-black uppercase mb-3 text-center" style={{ color: COLORS.ink }}>Видеосвязь</h2>
+            <p className="text-[10px] text-center mb-6 font-medium leading-relaxed" style={{ color: `${COLORS.ink}99` }}>
+              Вставьте ссылку на Яндекс.Телемост, Zoom, Google Meet или Skype. <br/>У клиента в кабинете появится яркая кнопка для подключения к вашему звонку.
+            </p>
+            <input 
+              type="text" 
+              value={tempVideoLink} 
+              onChange={e => setTempVideoLink(e.target.value)} 
+              placeholder="https://telemost.yandex.ru/j/..." 
+              className="w-full px-4 py-3 rounded-xl border-2 mb-6 text-sm font-bold outline-none text-center" 
+              style={{ borderColor: COLORS.haze, color: COLORS.ink }} 
+            />
+            <div className="flex gap-3">
+              {videoLink && (
+                <button 
+                  onClick={async () => { 
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: '' }, { merge: true }); 
+                    setIsVideoModalOpen(false); 
+                    notify("Ссылка на звонок удалена"); 
+                  }} 
+                  className="flex-1 py-3 font-bold rounded-xl text-[10px] uppercase tracking-widest transition-colors hover:opacity-80"
+                  style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}
+                >
+                  Удалить
+                </button>
+              )}
+              <button 
+                onClick={async () => { 
+                  if (!tempVideoLink.trim()) return notify("Введите ссылку!");
+                  let linkToSave = tempVideoLink.trim();
+                  if (!linkToSave.startsWith('http')) linkToSave = 'https://' + linkToSave;
+                  await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: linkToSave }, { merge: true }); 
+                  setIsVideoModalOpen(false); 
+                  notify("Связь установлена! У клиента появилась кнопка."); 
+                }} 
+                className="flex-[2] py-3 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:scale-105" 
+                style={{ backgroundColor: COLORS.forest }}
+              >
+                Сохранить
+              </button>
+            </div>
+          </div>
         </div>
       )}
       
@@ -1100,7 +1219,7 @@ export default function App() {
             <h2 className="text-xl md:text-2xl font-black uppercase mb-6" style={{ color: COLORS.ink }}>Оформление стола</h2>
             <div className="mb-8">
               <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3 opacity-50 flex items-center gap-2">
-                <LayoutGrid size={14} /> Фон всего пространства
+                <LayoutGrid size={14} /> Фон всего пространства (Нейро-дизайн)
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                 {TABLE_BACKGROUNDS.map(bg => (
@@ -1185,8 +1304,7 @@ export default function App() {
         </div>
       )}
       
-      {/* ПЛАВАЮЩАЯ ВЕРХНЯЯ ПАНЕЛЬ С КРАСИВЫМ ДИЗАЙНОМ */}
-      <header className="absolute top-4 left-4 right-4 md:left-6 md:right-6 z-30 flex flex-col md:flex-row items-center justify-between px-5 md:px-6 py-3 bg-white/70 backdrop-blur-xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[2rem] gap-3 transition-all pointer-events-auto">
+      <header className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-3 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm gap-2" style={{ borderColor: `${COLORS.ink}10` }}>
         <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-[1rem] flex items-center justify-center text-white shadow-md" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.plum}, ${COLORS.forest})` }}>
@@ -1218,13 +1336,34 @@ export default function App() {
                     <UserPlus size={12} /> Расстановка
                   </button>
                 </div>
-                
               </div>
             </div>
           </div>
         </div>
         
+        {/* ИНСТРУМЕНТЫ ПРАВАЯ ЧАСТЬ */}
         <div className="flex items-center gap-2 flex-wrap justify-center md:justify-end w-full md:w-auto">
+          
+          {/* --- КНОПКА ВИДЕОСВЯЗИ --- */}
+          {!isClientMode ? (
+            <div className="flex items-center gap-1 bg-white/50 p-1 rounded-[1rem] border shadow-sm" style={{ borderColor: `${COLORS.forest}30`, backgroundColor: `${COLORS.forest}10` }}>
+              <button onClick={() => { setTempVideoLink(videoLink || ''); setIsVideoModalOpen(true); }} className="p-2 rounded-xl transition-all hover:bg-white text-forest" title="Настроить видеосвязь">
+                <Video size={16} />
+              </button>
+              {videoLink && (
+                <a href={videoLink} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-xl text-[10px] font-black transition-all bg-white text-forest hover:scale-105 shadow-sm uppercase">
+                  Войти в звонок
+                </a>
+              )}
+            </div>
+          ) : (
+            videoLink && (
+              <a href={videoLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black text-white shadow-[0_0_15px_rgba(45,74,62,0.4)] transition-all hover:scale-105 uppercase animate-pulse" style={{ backgroundColor: COLORS.forest }}>
+                <Video size={14} /> Подключиться к видео
+              </a>
+            )
+          )}
+
           {timerDisplay ? (
             <div className="flex items-center gap-1.5">
               <div className="px-4 py-2 rounded-2xl font-black text-sm tabular-nums tracking-widest flex items-center gap-2 border transition-all" style={{ backgroundColor: timerIsWarning ? '#FEE2E2' : `${COLORS.plum}12`, color: timerIsWarning ? '#DC2626' : COLORS.plum, borderColor: timerIsWarning ? '#FCA5A5' : `${COLORS.plum}30` }}>
@@ -1261,6 +1400,33 @@ export default function App() {
               <span className="hidden sm:inline">{copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА ДЛЯ КЛИЕНТА"}</span>
             </button>
           )}
+
+          {/* НОВЫЕ ИНСТРУМЕНТЫ */}
+          {!isClientMode && (
+            <div className="flex bg-black/5 p-1 rounded-[1rem] gap-1 shadow-inner border border-ink/5">
+              <button 
+                onClick={() => setIsLaserMode(!isLaserMode)} 
+                className={`p-2 rounded-xl transition-all ${isLaserMode ? 'bg-white shadow-sm text-red-500' : 'hover:bg-white text-ink/70'}`} 
+                title={isLaserMode ? "Отключить указку" : "Лазерная указка (клиент видит точку)"}
+              >
+                <Crosshair size={16} />
+              </button>
+              <button 
+                onClick={takeScreenshot} 
+                className="p-2 rounded-xl transition-all hover:bg-white text-ink/70" 
+                title="Скриншот стола"
+              >
+                <Camera size={16} />
+              </button>
+              <button 
+                onClick={saveCurrentSession} 
+                className="p-2 rounded-xl transition-all hover:bg-white text-ink/70" 
+                title="Сохранить сессию"
+              >
+                <Save size={16} />
+              </button>
+            </div>
+          )}
           
           {!isClientMode && (
             <>
@@ -1285,13 +1451,13 @@ export default function App() {
       <main className="flex-1 relative flex flex-col overflow-hidden pt-28 md:pt-24">
         {/* ИГРОВОЙ РЕЖИМ (КУБИКИ И ФИШКИ) */}
         {roomMode === 'game' && (
-          <div className="absolute top-24 md:top-28 right-4 md:right-8 z-40 flex flex-col items-center gap-2 md:gap-3 bg-white/70 backdrop-blur-xl p-3 md:p-4 rounded-[1.5rem] md:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white transition-all pointer-events-auto">
+          <div className="absolute top-2 right-4 md:right-8 z-40 flex flex-col items-center gap-2 md:gap-3 bg-white/70 backdrop-blur-xl p-3 md:p-4 rounded-[1.5rem] md:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white transition-all pointer-events-auto">
             <div className="flex gap-1.5 md:gap-2 p-1.5 md:p-2 rounded-[1rem] md:rounded-2xl border border-white" style={{ backgroundColor: `${COLORS.ink}10` }}>
               {['#8B3252', '#2D4A3E', '#C4714A', '#4A90E2', '#E2A94A'].map(color => (
                 <button key={color} onClick={() => addElement('token', { color })} className="w-4 h-4 md:w-5 md:h-5 rounded-full shadow-md border border-white/50 hover:scale-125 transition-transform" style={{ backgroundColor: color }} />
               ))}
             </div>
-            <div className="flex p-0.5 rounded-xl border border-white/50" style={{ backgroundColor: `${COLORS.ink}10` }}>
+            <div className="flex p-0.5 rounded-lg md:rounded-xl" style={{ backgroundColor: `${COLORS.ink}15` }}>
               {[6, 10].map(type => (
                 <button key={type} onClick={async () => {
                   setDiceType(type);
@@ -1330,15 +1496,15 @@ export default function App() {
           </div>
         )}
 
-        {/* РЕЖИМ РАССТАНОВКИ (ФИГУРЫ) */}
+        {/* РЕЖИМ РАССТАНОВКИ (ФИГУРЫ) - ОБНОВЛЕННАЯ КОМПАКТНАЯ ПАНЕЛЬ */}
         {roomMode === 'constellation' && (
-          <div className="absolute top-24 md:top-28 right-4 md:right-8 z-40 flex flex-col items-center gap-2 md:gap-3 bg-white/70 backdrop-blur-xl p-3 rounded-[1.5rem] md:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white transition-all pointer-events-auto w-28 md:w-36">
-            <span className="text-[9px] font-black uppercase tracking-widest text-center" style={{ color: COLORS.forest }}>Все фигуры</span>
+          <div className="absolute top-2 right-4 md:right-8 z-40 flex flex-col items-center gap-3 bg-white/90 backdrop-blur-xl p-4 rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white transition-all pointer-events-auto w-[160px] md:w-[180px]">
+            <span className="text-[10px] font-black uppercase tracking-widest text-center" style={{ color: COLORS.forest }}>Все фигуры</span>
             
             {/* ГЛОБАЛЬНЫЙ Переключатель вида (Сверху / Сбоку) */}
-            <div className="flex bg-black/5 p-0.5 rounded-[0.75rem] border shadow-inner w-full mb-1">
-              <button onClick={() => updateGlobalFigureView('side')} className={`flex-1 px-1.5 py-1.5 rounded-[0.5rem] text-[8px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'side' ? 'bg-white shadow-sm' : 'hover:bg-black/5 opacity-60'}`} style={{ color: figureViewMode === 'side' ? COLORS.plum : COLORS.ink }}>Сбоку</button>
-              <button onClick={() => updateGlobalFigureView('top')} className={`flex-1 px-1.5 py-1.5 rounded-[0.5rem] text-[8px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'top' ? 'bg-white shadow-sm' : 'hover:bg-black/5 opacity-60'}`} style={{ color: figureViewMode === 'top' ? COLORS.plum : COLORS.ink }}>Сверху</button>
+            <div className="flex bg-[#F3F4F6] p-1 rounded-xl w-full">
+              <button onClick={() => updateGlobalFigureView('side')} className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'side' ? 'bg-white shadow-sm text-plum' : 'text-gray-500'}`}>Сбоку</button>
+              <button onClick={() => updateGlobalFigureView('top')} className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'top' ? 'bg-white shadow-sm text-plum' : 'text-gray-500'}`}>Сверху</button>
             </div>
 
             {/* ПОЛЕ ВВОДА ИМЕНИ */}
@@ -1348,26 +1514,30 @@ export default function App() {
               onChange={e => setFigureName(e.target.value)}
               placeholder="Имя (по жел.)"
               maxLength={12}
-              className="w-full px-2 py-1.5 rounded-xl border text-[9px] md:text-[10px] font-bold outline-none text-center shadow-inner"
-              style={{ borderColor: `${COLORS.ink}15`, color: COLORS.ink, backgroundColor: 'white' }}
+              className="w-full px-3 py-2 rounded-xl border-2 text-[10px] font-bold outline-none text-center transition-colors"
+              style={{ borderColor: '#F3F4F6', color: COLORS.ink }}
             />
 
-            {/* ВЫБОР ЦВЕТА */}
-            <div className="flex gap-1.5 p-1.5 rounded-[1rem] border border-white/50 flex-wrap justify-center w-full mt-1" style={{ backgroundColor: `${COLORS.ink}10` }}>
+            {/* ВЫБОР ЦВЕТА (4х2) */}
+            <div className="grid grid-cols-4 gap-2 p-2.5 rounded-2xl w-full" style={{ backgroundColor: '#F3F4F6' }}>
               {['#8B3252', '#2D4A3E', '#C4714A', '#4A90E2', '#E2A94A', '#8E44AD', '#34495E', '#D35400'].map(color => (
-                <button key={color} onClick={() => setFigureColor(color)} className={`w-4 h-4 md:w-5 md:h-5 rounded-full shadow-md border-2 hover:scale-125 transition-transform ${figureColor === color ? 'border-white scale-125' : 'border-transparent'}`} style={{ backgroundColor: color }} />
+                <button key={color} onClick={() => setFigureColor(color)} className={`w-5 h-5 md:w-6 md:h-6 rounded-full shadow-sm border-2 hover:scale-110 transition-transform mx-auto ${figureColor === color ? 'border-white scale-110' : 'border-transparent'}`} style={{ backgroundColor: color }} />
               ))}
             </div>
 
             {/* КНОПКИ ДОБАВЛЕНИЯ ФИГУР */}
-            <div className="flex gap-1.5 w-full mt-1">
-              <button onClick={() => { addElement('figure', { gender: 'male', color: figureColor, name: figureName }); setFigureName(''); }} className="flex-1 py-2 bg-white rounded-xl shadow-sm border border-transparent hover:border-plum/30 flex items-center justify-center flex-col gap-1.5 transition-all hover:shadow-md">
-                <FigureIcon gender="male" color={figureColor} isMenu={true} className="w-7 h-7" />
-                <span className="text-[8px] font-black uppercase text-center leading-none text-ink/70">Муж</span>
+            <div className="flex gap-1.5 w-full">
+              <button onClick={() => { addElement('figure', { gender: 'male', color: figureColor, name: figureName }); setFigureName(''); }} className="flex-1 py-2.5 bg-white rounded-2xl border-2 border-gray-100 hover:border-plum/30 flex items-center justify-center flex-col gap-1.5 transition-all">
+                <FigureIcon gender="male" color={figureColor} isMenu={true} className="w-5 h-5 md:w-6 md:h-6" />
+                <span className="text-[8px] font-black uppercase text-center leading-none text-gray-600">Муж</span>
               </button>
-              <button onClick={() => { addElement('figure', { gender: 'female', color: figureColor, name: figureName }); setFigureName(''); }} className="flex-1 py-2 bg-white rounded-xl shadow-sm border border-transparent hover:border-plum/30 flex items-center justify-center flex-col gap-1.5 transition-all hover:shadow-md">
-                <FigureIcon gender="female" color={figureColor} isMenu={true} className="w-7 h-7" />
-                <span className="text-[8px] font-black uppercase text-center leading-none text-ink/70">Жен</span>
+              <button onClick={() => { addElement('figure', { gender: 'female', color: figureColor, name: figureName }); setFigureName(''); }} className="flex-1 py-2.5 bg-white rounded-2xl border-2 border-gray-100 hover:border-plum/30 flex items-center justify-center flex-col gap-1.5 transition-all">
+                <FigureIcon gender="female" color={figureColor} isMenu={true} className="w-5 h-5 md:w-6 md:h-6" />
+                <span className="text-[8px] font-black uppercase text-center leading-none text-gray-600">Жен</span>
+              </button>
+              <button onClick={() => addElement('arrow', { color: figureColor })} className="flex-1 py-2.5 bg-white rounded-2xl border-2 border-gray-100 hover:border-plum/30 flex items-center justify-center flex-col gap-1.5 transition-all">
+                <ArrowElementIcon color={figureColor} className="w-5 h-5 md:w-6 md:h-6" />
+                <span className="text-[8px] font-black uppercase text-center leading-none text-gray-600">Стрелка</span>
               </button>
             </div>
           </div>
@@ -1395,6 +1565,7 @@ export default function App() {
                   globalFigureView={figureViewMode}
                   isClientMode={isClientMode}
                   isMuted={isMuted}
+                  isLaserMode={isLaserMode}
                   playSound={playSound}
                   maxZIndex={Math.max(0, ...cardsOnTable.map(c => c.zIndex || 0))}
                   onUpdate={(d) => updateDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, elem.id), d)}
@@ -1407,12 +1578,22 @@ export default function App() {
                 />
               ))}
             
-            {Object.entries(cursors).map(([id, cur]) => (
-              <div key={id} className="absolute pointer-events-none z-[2000] flex flex-col items-center transition-all duration-150 ease-out" style={{ left: cur.x, top: cur.y }}>
-                <MousePointer2 size={24} fill={cur.color} color="white" strokeWidth={2} className="drop-shadow-md -rotate-12 transform -translate-x-2 -translate-y-2" />
-                <span className="text-[9px] font-bold text-white px-1.5 py-0.5 rounded mt-1 shadow-md" style={{ backgroundColor: cur.color }}>{cur.name || 'Гость'}</span>
-              </div>
-            ))}
+            {Object.entries(cursors).map(([id, cur]) => {
+              if (cur.isLaser) {
+                return (
+                  <div key={id} className="absolute pointer-events-none z-[2000] transition-all duration-150 ease-out" style={{ left: cur.x, top: cur.y, transform: 'translate(-50%, -50%)' }}>
+                    <div className="w-4 h-4 rounded-full bg-red-500/80 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.8)] border-2 border-white/50" />
+                    <span className="absolute top-5 left-1/2 -translate-x-1/2 text-[9px] font-bold text-white px-1.5 py-0.5 rounded shadow-md bg-red-500/80 whitespace-nowrap">{cur.name || 'Гость'}</span>
+                  </div>
+                );
+              }
+              return (
+                <div key={id} className="absolute pointer-events-none z-[2000] flex flex-col items-center transition-all duration-150 ease-out" style={{ left: cur.x, top: cur.y }}>
+                  <MousePointer2 size={24} fill={cur.color} color="white" strokeWidth={2} className="drop-shadow-md -rotate-12 transform -translate-x-2 -translate-y-2" />
+                  <span className="text-[9px] font-bold text-white px-1.5 py-0.5 rounded mt-1 shadow-md" style={{ backgroundColor: cur.color }}>{cur.name || 'Гость'}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -1451,7 +1632,31 @@ export default function App() {
                     <button onClick={() => setActiveTab('platform')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'platform' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>БАЗА</button>
                     <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'cloud' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>ОБЛАКО</button>
                     <button onClick={() => setActiveTab('local')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'local' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>МОИ</button>
+                    <button onClick={() => setActiveTab('sessions')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'sessions' ? 'bg-white shadow-sm text-forest' : 'hover:opacity-70 text-ink/60'}`}>СЕССИИ</button>
                   </div>
+
+                  {activeTab === 'sessions' && (
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      <div className="text-[10px] font-bold text-center mb-2" style={{ color: COLORS.ink }}>СОХРАНЕННЫЕ РАССТАНОВКИ</div>
+                      {savedSessions.length === 0 && <div className="text-[9px] text-center opacity-50">Нет сохраненных сессий</div>}
+                      {savedSessions.map(session => (
+                        <div key={session.id} className="group flex items-center justify-between p-3 rounded-2xl border border-gray-100 hover:bg-black/5 transition-colors">
+                           <div>
+                              <div className="text-[10px] font-bold" style={{ color: COLORS.ink }}>{session.name}</div>
+                              <div className="text-[8px] text-gray-500">{new Date(session.createdAt).toLocaleDateString()}</div>
+                           </div>
+                           <div className="flex gap-1">
+                              <button onClick={() => loadSavedSession(session)} className="p-2 text-forest hover:bg-forest/10 rounded-lg transition-colors" title="Загрузить на стол"><UploadCloud size={14}/></button>
+                              <button onClick={async () => {
+                                if(window.confirm('Удалить эту сессию навсегда?')) {
+                                  await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions', session.id));
+                                }
+                              }} className="p-2 text-terra hover:bg-terra/10 rounded-lg transition-colors" title="Удалить сессию"><Trash2 size={14}/></button>
+                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   
                   {activeTab === 'local' && (
                     <div className="flex flex-col gap-3 flex-shrink-0">
@@ -1473,7 +1678,7 @@ export default function App() {
                   {activeTab === 'platform' && isPlatformDecksLoading && <div className="flex justify-center py-4 flex-shrink-0"><Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} /></div>}
                   {activeTab === 'cloud' && isBaseDecksLoading && <div className="flex justify-center py-4 flex-shrink-0"><Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} /></div>}
                   
-                  {(activeTab === 'platform' ? platformDecks : activeTab === 'local' ? localDecks : [...baseDecks, ...cloudDecks]).map(item => (
+                  {activeTab !== 'sessions' && (activeTab === 'platform' ? platformDecks : activeTab === 'local' ? localDecks : [...baseDecks, ...cloudDecks]).map(item => (
                     <div key={item.id} className={`group flex items-center gap-3 p-3 rounded-2xl transition-all relative border flex-shrink-0 ${selectedDeckId === item.id ? 'bg-white shadow-sm border-white' : 'border-transparent hover:bg-black/5'}`}>
                       <button onClick={() => selectDeck(item)} className="flex-1 flex items-center gap-3 text-left overflow-hidden hover:opacity-70">
                         <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden border flex-shrink-0 shadow-sm" style={{ borderColor: `${COLORS.ink}10` }}>
@@ -1531,7 +1736,7 @@ export default function App() {
                           {isLibraryDeckFlipped
                             ? <img src={img} className="h-full w-auto min-w-[5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
                             : <div className="h-full w-24 md:w-28 flex items-center justify-center rounded-2xl overflow-hidden relative shadow-sm border border-white/20" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
-                              {activeDeckData.backImage ? <img src={activeDeckData.backImage} className="w-full h-full object-cover absolute inset-0" alt="Рубашка" /> : <Layers size={20} className="text-white/20" />}
+                              {activeDeckData.backImage ? <img src={activeDeckData.backImage} className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" /> : <Layers size={40} className="text-white opacity-30" />}
                             </div>}
                           <div className="absolute top-2 left-2 text-white text-[10px] font-black px-2 py-0.5 rounded-md z-10 pointer-events-none backdrop-blur-md bg-black/40 border border-white/20 shadow-sm">{idx + 1}</div>
                         </button>
@@ -1602,7 +1807,7 @@ export default function App() {
   );
 }
 
-function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, playSound, isMuted, isClientMode, currentUser, currentUserName, onNotify, boardRef, globalFigureView }) {
+function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, playSound, isMuted, isClientMode, currentUser, currentUserName, onNotify, boardRef, globalFigureView, isLaserMode }) {
   const elementRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -1624,6 +1829,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     if (isLocked) return;
     if (isField && isClientMode) return;
     if (isText && e.target.tagName.toLowerCase() === 'textarea') return;
+    if (isLaserMode && !isClientMode) return; // В режиме указки мы не можем ничего брать
 
     const cx = e.touches ? e.touches[0].clientX : e.clientX;
     const cy = e.touches ? e.touches[0].clientY : e.clientY;
@@ -1638,6 +1844,8 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     e.stopPropagation();
     if (isLocked) return;
     if (isField && isClientMode) return;
+    if (isLaserMode && !isClientMode) return;
+    
     const cx = e.touches ? e.touches[0].clientX : e.clientX;
     const cy = e.touches ? e.touches[0].clientY : e.clientY;
     setIsResizing(true); startPos.current = { x: cx, y: cy }; startDim.current = { w: element.width, h: element.height };
@@ -1646,6 +1854,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
   useEffect(() => {
     const move = (e) => {
       if (isLocked) return;
+      if (isLaserMode && !isClientMode) return;
       const cx = e.touches ? e.touches[0].clientX : e.clientX;
       const cy = e.touches ? e.touches[0].clientY : e.clientY;
 
@@ -1655,7 +1864,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       } else if (isResizing) {
         const dx = cx - startPos.current.x;
         const ratio = startDim.current.w / startDim.current.h;
-        const nw = Math.max(element.type === 'token' ? 25 : (element.type === 'figure' ? 40 : (isText ? 100 : 80)), startDim.current.w + dx);
+        const nw = Math.max(element.type === 'token' ? 25 : (element.type === 'arrow' ? 30 : (isText ? 100 : 80)), startDim.current.w + dx);
         onUpdate({ width: nw, height: nw / ratio });
       }
     };
@@ -1664,7 +1873,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       if (isDragging) {
         setIsDragging(false);
         if (hasMoved.current) playSound('drop', isMuted);
-        if (!hasMoved.current && (Date.now() - clickTimestamp.current < 250) && element.type !== 'token' && element.type !== 'figure' && !isField && !isText) {
+        if (!hasMoved.current && (Date.now() - clickTimestamp.current < 250) && element.type !== 'token' && element.type !== 'figure' && element.type !== 'arrow' && !isField && !isText) {
           playSound('flip', isMuted); onUpdate({ isFlipped: !element.isFlipped });
         }
       }
@@ -1677,11 +1886,11 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     }
     return () => {
       window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', end);
-      window.removeEventListener('touchmove', move); window.removeEventListener('touchend', end);
+      window.removeEventListener('touchmove', move); window.removeEventListener('touchmove', end);
     };
-  }, [isDragging, isResizing, element, onUpdate, playSound, isMuted, isLocked, isText]);
+  }, [isDragging, isResizing, element, onUpdate, playSound, isMuted, isLocked, isText, isLaserMode, isClientMode]);
 
-  const canDrag = !isLocked && !(isField && isClientMode);
+  const canDrag = !isLocked && !(isField && isClientMode) && !(isLaserMode && !isClientMode);
 
   // Для фигур в режиме СБОКУ контейнер не крутится, чтобы фигура не "падала"
   const appliedRotation = (element.type === 'figure' && globalFigureView === 'side') ? 0 : element.rotation;
@@ -1700,70 +1909,72 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     >
 
       {/* МЕНЮ ДЕЙСТВИЙ */}
-      <div className="absolute -top-14 left-1/2 -translate-x-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all bg-white/80 backdrop-blur-xl rounded-full px-2 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-20 border border-white">
-        {!isField && <button onClick={(e) => { e.stopPropagation(); onUpdate({ zIndex: maxZIndex + 1 }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="На передний план"><ArrowUp size={16} /></button>}
-        
-        {element.type === 'card' && !element.isFlipped && (
-          <button onClick={(e) => {
-            e.stopPropagation();
-            if (!element.owner) {
-              if (isClientMode) onUpdate({ owner: currentUser?.uid, ownerName: currentUserName || 'Игрок' });
-              onPreview();
-            } else if (element.owner === currentUser?.uid || !isClientMode) {
-              onPreview();
-            } else {
-              onNotify(`Эта карта принадлежит: ${element.ownerName}. Подсматривать нельзя!  🤫 `);
-            }
-          }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 bg-forest/10 text-forest" title="Подсмотреть карту">
-            <Eye size={16} />
-          </button>
-        )}
-        
-        {element.type === 'card' && (
-          <button onClick={(e) => {
-            e.stopPropagation();
-            if (element.owner && element.owner !== currentUser?.uid && isClientMode) {
-              onNotify(`Только ${element.ownerName} или Психолог могут перевернуть карту`);
-              return;
-            }
-            playSound('flip', isMuted);
-            onUpdate({ isFlipped: !element.isFlipped });
-          }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="Перевернуть">
-            <RefreshCw size={16} />
-          </button>
-        )}
-        
-        {(isField || (element.type === 'card' && element.isFlipped)) && (
-          <button onClick={(e) => { e.stopPropagation(); onPreview(); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="Увеличить"><Maximize2 size={16} /></button>
-        )}
-        
-        {/* КНОПКА ПОВОРОТА для всего, включая фигуры (Фигуры крутятся по 45 градусов, остальное по 90) */}
-        {(!isClientMode || !isField) && (
-          <button 
-            onClick={(e) => { 
-              e.stopPropagation(); 
-              const step = element.type === 'figure' ? 45 : 90;
-              onUpdate({ rotation: (element.rotation + step) % 360 }); 
-            }} 
-            className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" 
-            title={`Повернуть на ${element.type === 'figure' ? 45 : 90}°`}
-          >
-            <RotateCw size={16} />
-          </button>
-        )}
+      {!(isLaserMode && !isClientMode) && (
+        <div className="absolute -top-14 left-1/2 -translate-x-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all bg-white/80 backdrop-blur-xl rounded-full px-2 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-20 border border-white">
+          {!isField && <button onClick={(e) => { e.stopPropagation(); onUpdate({ zIndex: maxZIndex + 1 }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="На передний план"><ArrowUp size={16} /></button>}
+          
+          {element.type === 'card' && !element.isFlipped && (
+            <button onClick={(e) => {
+              e.stopPropagation();
+              if (!element.owner) {
+                if (isClientMode) onUpdate({ owner: currentUser?.uid, ownerName: currentUserName || 'Игрок' });
+                onPreview();
+              } else if (element.owner === currentUser?.uid || !isClientMode) {
+                onPreview();
+              } else {
+                onNotify(`Эта карта принадлежит: ${element.ownerName}. Подсматривать нельзя!  🤫 `);
+              }
+            }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 bg-forest/10 text-forest" title="Подсмотреть карту">
+              <Eye size={16} />
+            </button>
+          )}
+          
+          {element.type === 'card' && (
+            <button onClick={(e) => {
+              e.stopPropagation();
+              if (element.owner && element.owner !== currentUser?.uid && isClientMode) {
+                onNotify(`Только ${element.ownerName} или Психолог могут перевернуть карту`);
+                return;
+              }
+              playSound('flip', isMuted);
+              onUpdate({ isFlipped: !element.isFlipped });
+            }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="Перевернуть">
+              <RefreshCw size={16} />
+            </button>
+          )}
+          
+          {(isField || (element.type === 'card' && element.isFlipped)) && (
+            <button onClick={(e) => { e.stopPropagation(); onPreview(); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="Увеличить"><Maximize2 size={16} /></button>
+          )}
+          
+          {/* КНОПКА ПОВОРОТА для всего, включая фигуры (Фигуры крутятся по 45 градусов, Стрелка по 22.5, остальное по 90) */}
+          {(!isClientMode || !isField) && (
+            <button 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                const step = element.type === 'arrow' ? 22.5 : (element.type === 'figure' ? 45 : 90);
+                onUpdate({ rotation: (element.rotation + step) % 360 }); 
+              }} 
+              className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" 
+              title={`Повернуть на ${element.type === 'arrow' ? 22.5 : (element.type === 'figure' ? 45 : 90)}°`}
+            >
+              <RotateCw size={16} />
+            </button>
+          )}
 
-        {!isClientMode && !isField && (
-          <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 ${isLocked ? 'bg-terra/10 text-terra' : 'hover:bg-black/5 text-ink/70'}`} title={isLocked ? "Открепить" : "Закрепить"}>
-            {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
-          </button>
-        )}
+          {!isClientMode && !isField && (
+            <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 ${isLocked ? 'bg-terra/10 text-terra' : 'hover:bg-black/5 text-ink/70'}`} title={isLocked ? "Открепить" : "Закрепить"}>
+              {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
+            </button>
+          )}
 
-        {!isClientMode && (
-          <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-terra/10 text-terra" title="Удалить"><Trash2 size={16} /></button>
-        )}
-      </div>
+          {!isClientMode && (
+            <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-terra/10 text-terra" title="Удалить"><Trash2 size={16} /></button>
+          )}
+        </div>
+      )}
 
-      {!isClientMode && isField && (
+      {!isClientMode && isField && !(isLaserMode && !isClientMode) && (
         <div className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all z-20" style={{ left: 'calc(100% + 12px)' }}>
           <button
             onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }}
@@ -1781,7 +1992,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
 
       {/* ОСНОВНОЙ КОНТЕЙНЕР ЭЛЕМЕНТА */}
       <div
-        className={`w-full h-full relative ${isLocked ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} transition-transform ${isDragging ? 'scale-105 shadow-2xl' : isField ? '' : 'shadow-[0_8px_30px_rgb(0,0,0,0.12)]'} ${isText ? 'rounded-2xl bg-yellow-100/90 backdrop-blur-md border border-yellow-300 flex flex-col overflow-hidden' : isField ? '' : (element.type === 'figure' ? '' : 'rounded-[1rem]')}`}
+        className={`w-full h-full relative ${isLocked || (isLaserMode && !isClientMode) ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} transition-transform ${isDragging ? 'scale-105 shadow-2xl' : isField ? '' : 'shadow-[0_8px_30px_rgb(0,0,0,0.12)]'} ${isText ? 'rounded-2xl bg-yellow-100/90 backdrop-blur-md border border-yellow-300 flex flex-col overflow-hidden' : isField ? '' : (element.type === 'figure' || element.type === 'arrow' ? '' : 'rounded-[1rem]')}`}
         onMouseDown={handleDragStart}
         onTouchStart={handleDragStart}
         style={{ perspective: isField ? 'none' : '1000px' }}
@@ -1799,6 +2010,10 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
           </>
         ) : element.type === 'token' ? (
           <div className="w-full h-full rounded-full shadow-inner border-2 border-white/80" style={{ backgroundColor: element.color }} />
+        ) : element.type === 'arrow' ? (
+          <div className="w-full h-full relative flex items-center justify-center">
+             <ArrowElementIcon color={element.color} className="w-full h-full" />
+          </div>
         ) : element.type === 'figure' ? (
           <div className="w-full h-full relative flex items-center justify-center">
              <FigureIcon 
@@ -1831,7 +2046,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       </div>
 
       {/* ПОЛЗУНОК ИЗМЕНЕНИЯ РАЗМЕРА */}
-      {(!isLocked && (!isClientMode || !isField)) && (
+      {(!isLocked && (!isClientMode || !isField) && !(isLaserMode && !isClientMode)) && (
         <div onMouseDown={handleResizeStart} onTouchStart={handleResizeStart} className="absolute -bottom-3 -right-3 w-10 h-10 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center z-30 drop-shadow-md bg-white/90 backdrop-blur-md rounded-full scale-75 hover:scale-100 shadow-[0_4px_15px_rgb(0,0,0,0.15)] border border-white/50 text-plum">
           <Move size={16} />
         </div>
