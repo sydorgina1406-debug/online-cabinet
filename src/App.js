@@ -17,7 +17,8 @@ import {
   Volume2, VolumeX, ArrowUp, ArrowDown, ArrowUpToLine, Save, MousePointer2, UserCircle, UserPlus,
   Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
   Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, MessageCircle,
-  Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff, Dices, UserMinus
+  Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff, Dices, UserMinus, BookOpen,
+  Bold, Italic, Underline, Strikethrough, List
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -492,6 +493,13 @@ export default function App() {
   const [isDicePanelOpen, setIsDicePanelOpen] = useState(false);
   const [isFiguresPanelOpen, setIsFiguresPanelOpen] = useState(false);
 
+  // Состояния для Записной книжки (Техник)
+  const [isNotebookOpen, setIsNotebookOpen] = useState(false);
+  const [savedNotes, setSavedNotes] = useState([]);
+  const [isCreatingNote, setIsCreatingNote] = useState(false);
+  const [noteTitleInput, setNoteTitleInput] = useState('');
+  const [noteTextInput, setNoteTextInput] = useState('');
+
   const [figureColor, setFigureColor] = useState('#8B3252'); 
   const [figureName, setFigureName] = useState('');
   const [figureViewMode, setFigureViewMode] = useState('side');
@@ -712,7 +720,10 @@ export default function App() {
     const unsubSessions = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions'), (s) => {
       setSavedSessions(s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => b.createdAt - a.createdAt));
     });
-    return () => { unsubDecks(); unsubSessions(); };
+    const unsubNotes = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_notes'), (s) => {
+      setSavedNotes(s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => b.createdAt - a.createdAt));
+    });
+    return () => { unsubDecks(); unsubSessions(); unsubNotes(); };
   }, [user, isDbConnected, isClientMode]);
 
   useEffect(() => {
@@ -1235,6 +1246,79 @@ export default function App() {
         </div>
       )}
 
+      {/* ПЛАВАЮЩЕЕ ОКНО: ЗАПИСНАЯ КНИЖКА (МОИ ТЕХНИКИ) */}
+      {isNotebookOpen && !isClientMode && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
+          <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-2xl w-full shadow-2xl relative max-h-[90vh] flex flex-col">
+            <button onClick={() => { setIsNotebookOpen(false); setIsCreatingNote(false); }} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
+              <X size={24} style={{ color: COLORS.ink }} />
+            </button>
+            <h2 className="text-xl md:text-2xl font-black uppercase mb-6 flex items-center gap-3" style={{ color: COLORS.ink }}>
+              <BookOpen size={24} className="text-blue-600" /> Мои Техники
+            </h2>
+            
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-4">
+              {!isCreatingNote ? (
+                <>
+                  <button onClick={() => setIsCreatingNote(true)} className="w-full py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-2 hover:bg-black/5 transition-all" style={{ borderColor: `${COLORS.plum}4D`, color: COLORS.plum }}>
+                    <Plus size={20} /> <span className="font-black uppercase text-[10px] tracking-widest">Добавить технику / скрипт</span>
+                  </button>
+                  {savedNotes.length === 0 && (
+                    <p className="text-center text-sm font-medium opacity-50 mt-4">У вас пока нет сохраненных техник.</p>
+                  )}
+                  {savedNotes.map(note => (
+                    <div key={note.id} className="p-4 rounded-2xl border flex flex-col gap-3 shadow-sm bg-gray-50 hover:bg-white transition-colors" style={{ borderColor: `${COLORS.ink}10` }}>
+                      <div className="flex justify-between items-start gap-4">
+                        <h3 className="font-bold text-sm" style={{ color: COLORS.ink }}>{note.title}</h3>
+                        <button onClick={async () => {
+                          if (await askConfirm('Удалить технику?')) {
+                            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_notes', note.id));
+                          }
+                        }} className="text-terra hover:bg-terra/10 p-1.5 rounded-lg transition-colors">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                      <p className="text-xs line-clamp-3 text-gray-500 whitespace-pre-wrap">{note.text}</p>
+                      <button onClick={() => {
+                        addElement('private-text', { text: note.text });
+                        setIsNotebookOpen(false);
+                        notify("Техника добавлена на стол!");
+                      }} className="py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all hover:opacity-90 flex items-center justify-center gap-2 mt-2 shadow-sm" style={{ backgroundColor: COLORS.plum }}>
+                        <Type size={14} /> Выложить на стол (Секретно)
+                      </button>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <input autoFocus type="text" value={noteTitleInput} onChange={e => setNoteTitleInput(e.target.value)} placeholder="Название (напр: Работа с травмой)" className="w-full px-4 py-3 rounded-xl border-2 outline-none font-bold text-sm shadow-inner" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
+                  <textarea value={noteTextInput} onChange={e => setNoteTextInput(e.target.value)} placeholder="Текст техники, алгоритм или вопросы..." className="w-full px-4 py-3 rounded-xl border-2 outline-none text-sm custom-scrollbar min-h-[200px] resize-y shadow-inner leading-relaxed" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
+                  <div className="flex gap-3 mt-2">
+                    <button onClick={() => setIsCreatingNote(false)} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors text-xs uppercase tracking-widest text-gray-600">Отмена</button>
+                    <button onClick={async () => {
+                      if (!noteTitleInput.trim() || !noteTextInput.trim()) return notify("Заполните все поля");
+                      try {
+                        await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_notes'), {
+                          title: noteTitleInput.trim(),
+                          text: noteTextInput.trim(),
+                          createdAt: Date.now()
+                        });
+                        setIsCreatingNote(false);
+                        setNoteTitleInput('');
+                        setNoteTextInput('');
+                        notify("Техника сохранена!");
+                      } catch (e) {
+                        notify("Ошибка: " + e.message);
+                      }
+                    }} className="flex-[2] py-3 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:scale-105" style={{ backgroundColor: COLORS.forest }}>Сохранить</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {customDialog && (
         <div className="fixed inset-0 z-[500] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl">
@@ -1300,7 +1384,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* ЗАМЕТКИ */}
+              {/* ЗАМЕТКИ И ТЕХНИКИ */}
               <div className="space-y-4">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Type size={16}/> Работа с заметками</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
@@ -1311,6 +1395,10 @@ export default function App() {
                   <div className="flex items-start gap-3 bg-purple-50 p-3 rounded-xl border border-purple-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-purple-600 relative shrink-0"><Type size={16} /><EyeOff size={8} className="absolute bottom-1 right-1" /></div>
                     <div><b className="text-purple-900">Фиолетовая (Секретная):</b> <b>Видите только вы</b>. На экране клиента её не существует. Идеально для ваших личных скрытых пометок.</div>
+                  </div>
+                  <div className="flex items-start gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
+                    <div className="p-2 bg-white rounded-lg shadow-sm text-blue-600 shrink-0"><BookOpen size={16} /></div>
+                    <div><b className="text-blue-900">Мои Техники:</b> Записная книжка Психолога. Запишите в неё свои любимые скрипты, вопросы или схемы раскладов до сессии. В один клик текст из неё выкладывается на стол в виде Секретной (фиолетовой) заметки!</div>
                   </div>
                 </div>
               </div>
@@ -1352,17 +1440,17 @@ export default function App() {
               </div>
 
               {/* БИБЛИОТЕКА МАСТЕРА */}
-              <div className="space-y-4">
+              <div className="space-y-4 lg:col-span-2">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><FolderOpen size={16}/> Библиотека Мастера</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
                   <p>Вызывается длинной кнопкой <b>«Библиотека Мастера»</b> в самом низу экрана.</p>
-                  <ul className="space-y-1 list-disc list-inside">
+                  <ul className="space-y-1 list-disc list-inside grid grid-cols-1 md:grid-cols-2">
                     <li><b>БАЗА:</b> Стандартные колоды, доступные всегда.</li>
                     <li><b>ОБЛАКО:</b> Колоды, загруженные разработчиком специально для вас.</li>
                     <li><b>МОИ:</b> Ваше личное пространство. Можно добавить колоды ссылкой с вашего Google Диска. Видите их только вы.</li>
                     <li><b>СЕССИИ:</b> Сохраненные столы (история раскладов).</li>
                   </ul>
-                  <div className="bg-plum/10 p-2 rounded-lg border border-plum/20 mt-2">
+                  <div className="bg-plum/10 p-3 rounded-lg border border-plum/20 mt-2">
                     <p className="font-bold text-plum mb-1">Как вытаскивать карты?</p>
                     <p className="text-xs">Выберите колоду в левом списке. Нажмите <b>«Наугад»</b> (вытащит случайную рубашкой вверх) или нажмите кнопку <b>«Открыть колоду»</b> справа вверху, чтобы увидеть все изображения и выбрать конкретную.</p>
                   </div>
@@ -1607,6 +1695,9 @@ export default function App() {
           {!isClientMode && (
             <>
               {/* ЗАМЕТКИ, ПОЛЕ, ОЧИСТКА */}
+              <button onClick={() => setIsNotebookOpen(true)} className="relative p-2.5 rounded-[1rem] transition-all hover:scale-105 shadow-sm border" style={{ backgroundColor: '#E0F2FE', color: '#2563EB', borderColor: '#BFDBFE' }} title="Мои Техники (Записная книжка)">
+                <BookOpen size={18} />
+              </button>
               <button onClick={() => addElement('private-text', { text: "" })} className="relative p-2.5 rounded-[1rem] transition-all hover:scale-105 shadow-sm border" style={{ backgroundColor: '#F3E8FF', color: '#9333EA', borderColor: '#D8B4FE' }} title="Скрытая заметка (не видна клиенту)">
                 <Type size={18} />
                 <EyeOff size={10} className="absolute bottom-1 right-1 opacity-70" />
@@ -1963,6 +2054,16 @@ export default function App() {
         .backface-hidden { backface-visibility: hidden; }
         .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(139, 50, 82, 0.2); border-radius: 10px; }
+        
+        /* Стили для редактора текста */
+        .rich-text b, .rich-text strong { font-weight: 900; color: inherit; }
+        .rich-text i, .rich-text em { font-style: italic; }
+        .rich-text u { text-decoration: underline; text-underline-offset: 2px; }
+        .rich-text strike, .rich-text s { text-decoration: line-through; opacity: 0.7; }
+        .rich-text ul { list-style-type: disc; padding-left: 1.5rem; margin-top: 0.25rem; margin-bottom: 0.25rem; }
+        .rich-text li { margin-bottom: 0.25rem; }
+        .rich-text:empty:before { content: attr(data-placeholder); color: rgba(0,0,0,0.3); font-weight: bold; pointer-events: none; }
+        
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
         @keyframes timerPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         @keyframes popup { from { opacity: 0; transform: translateY(-10px) scale(0.95) translateX(-50%); } to { opacity: 1; transform: translateY(0) scale(1) translateX(-50%); } }
@@ -1973,6 +2074,7 @@ export default function App() {
 
 function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, playSound, isMuted, isClientMode, currentUser, currentUserName, onNotify, boardRef, globalFigureView, isLaserMode }) {
   const elementRef = useRef(null);
+  const contentEditableRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
@@ -2040,6 +2142,20 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     onUpdate({ rotation: Math.round(angleDeg) });
   };
 
+  const handleTextInput = () => {
+    if (contentEditableRef.current) {
+      onUpdate({ text: contentEditableRef.current.innerHTML });
+    }
+  };
+
+  useEffect(() => {
+    if (isText && contentEditableRef.current && document.activeElement !== contentEditableRef.current) {
+      if (contentEditableRef.current.innerHTML !== (element.text || '')) {
+        contentEditableRef.current.innerHTML = element.text || '';
+      }
+    }
+  }, [element.text, isText]);
+
   useEffect(() => {
     const move = (e) => {
       if (isLocked) return;
@@ -2052,9 +2168,14 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         onUpdate({ x: cx - startPos.current.x, y: cy - startPos.current.y });
       } else if (isResizing) {
         const dx = cx - startPos.current.x;
-        const ratio = startDim.current.w / startDim.current.h;
-        const nw = Math.max(element.type === 'token' ? 25 : (element.type === 'arrow' ? 30 : (isText ? 100 : 80)), startDim.current.w + dx);
-        onUpdate({ width: nw, height: nw / ratio });
+        if (isText) {
+          const nw = Math.max(150, startDim.current.w + dx);
+          onUpdate({ width: nw }); // Высота у текста теперь автоматическая
+        } else {
+          const ratio = startDim.current.w / startDim.current.h;
+          const nw = Math.max(element.type === 'token' ? 25 : (element.type === 'arrow' ? 30 : 80), startDim.current.w + dx);
+          onUpdate({ width: nw, height: nw / ratio });
+        }
       } else if (isRotating) {
         if (!boardRef.current) return;
         const boardRect = boardRef.current.getBoundingClientRect();
@@ -2111,7 +2232,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       className={`absolute group ${canDrag ? 'touch-none' : ''} ${(isDragging || isRotating) ? 'z-[1000]' : ''}`}
       style={{
         left: element.x, top: element.y,
-        width: element.width, height: element.height,
+        width: element.width, height: isText ? 'auto' : element.height,
         zIndex: isField ? 0 : (element.zIndex || 1),
         transform: `rotate(${appliedRotation}deg)`,
         transition: (isDragging || isResizing || isRotating) ? 'none' : 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
@@ -2227,33 +2348,50 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
 
       <div
         className={`${baseClasses} ${dragClasses} ${typeClasses}`}
-        onMouseDown={handleDragStart}
-        onTouchStart={handleDragStart}
-        style={{ perspective: isField ? 'none' : '1000px' }}
+        style={{ perspective: isField ? 'none' : '1000px', height: isText ? 'auto' : '100%' }}
       >
         {isText ? (
           <>
-            <div className={`w-full h-8 flex items-center justify-center flex-shrink-0 cursor-grab active:cursor-grabbing border-b ${isPrivate ? 'bg-purple-200/50 border-purple-300/50' : 'bg-yellow-200/50 border-yellow-300/50'}`}>
-              <div className="flex gap-1.5 opacity-40">
-                <div className="w-1 h-1 rounded-full bg-black" />
-                <div className="w-1 h-1 rounded-full bg-black" />
-                <div className="w-1 h-1 rounded-full bg-black" />
+            <div 
+              onMouseDown={handleDragStart} 
+              onTouchStart={handleDragStart} 
+              className={`w-full h-8 flex items-center justify-between px-2 flex-shrink-0 cursor-grab active:cursor-grabbing border-b ${isPrivate ? 'bg-purple-200/50 border-purple-300/50 text-purple-700' : 'bg-yellow-200/50 border-yellow-300/50 text-yellow-800'}`}
+            >
+              <div className="flex gap-1 items-center">
+                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); document.execCommand('bold', false, null); handleTextInput(); }} className={`p-1 rounded transition-colors ${isPrivate ? 'hover:bg-purple-300/50' : 'hover:bg-yellow-300/50'}`} title="Жирный"><Bold size={12} strokeWidth={3} /></button>
+                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); document.execCommand('italic', false, null); handleTextInput(); }} className={`p-1 rounded transition-colors ${isPrivate ? 'hover:bg-purple-300/50' : 'hover:bg-yellow-300/50'}`} title="Курсив"><Italic size={12} /></button>
+                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); document.execCommand('underline', false, null); handleTextInput(); }} className={`p-1 rounded transition-colors ${isPrivate ? 'hover:bg-purple-300/50' : 'hover:bg-yellow-300/50'}`} title="Подчеркнутый"><Underline size={12} /></button>
+                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); document.execCommand('strikeThrough', false, null); handleTextInput(); }} className={`p-1 rounded transition-colors ${isPrivate ? 'hover:bg-purple-300/50' : 'hover:bg-yellow-300/50'}`} title="Зачеркнутый"><Strikethrough size={12} /></button>
+                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); document.execCommand('insertUnorderedList', false, null); handleTextInput(); }} className={`p-1 rounded transition-colors ${isPrivate ? 'hover:bg-purple-300/50' : 'hover:bg-yellow-300/50'}`} title="Список"><List size={12} /></button>
+              </div>
+              <div className="flex gap-1.5 opacity-30 pr-2 pointer-events-none">
+                <div className="w-1 h-1 rounded-full bg-current" />
+                <div className="w-1 h-1 rounded-full bg-current" />
+                <div className="w-1 h-1 rounded-full bg-current" />
               </div>
             </div>
-            <textarea className="flex-1 w-full p-4 bg-transparent resize-none outline-none text-[13px] font-bold text-gray-800 custom-scrollbar leading-relaxed" value={element.text || ''} onChange={(e) => onUpdate({ text: e.target.value })} placeholder="Заметка..." />
+            <div 
+              ref={contentEditableRef}
+              contentEditable={true}
+              suppressContentEditableWarning={true}
+              onInput={handleTextInput}
+              onBlur={() => { if (contentEditableRef.current) onUpdate({ text: contentEditableRef.current.innerHTML }); }}
+              className="rich-text flex-1 w-full p-4 bg-transparent outline-none text-[13px] text-gray-800 leading-relaxed min-h-[60px]"
+              data-placeholder="Заметка..."
+            />
           </>
         ) : element.type === 'token' ? (
-          <div className="w-full h-full rounded-full shadow-inner border-2 border-white/80" style={{ backgroundColor: element.color }} />
+          <div className="w-full h-full rounded-full shadow-inner border-2 border-white/80" style={{ backgroundColor: element.color }} onMouseDown={handleDragStart} onTouchStart={handleDragStart} />
         ) : element.type === 'arrow' ? (
-          <div className="w-full h-full relative flex items-center justify-center">
+          <div className="w-full h-full relative flex items-center justify-center" onMouseDown={handleDragStart} onTouchStart={handleDragStart}>
              <ArrowElementIcon color={element.color} rotation={element.rotation} className="w-full h-full" />
           </div>
         ) : element.type === 'figure' ? (
-          <div className="w-full h-full relative flex items-center justify-center">
+          <div className="w-full h-full relative flex items-center justify-center" onMouseDown={handleDragStart} onTouchStart={handleDragStart}>
              <FigureIcon gender={element.gender} color={element.color} viewMode={globalFigureView} rotation={element.rotation} name={element.name} isLaying={element.isLaying} className="w-full h-full" />
           </div>
         ) : (
-          <div className="relative w-full h-full" style={isField ? {} : { transformStyle: 'preserve-3d', transition: 'transform 0.6s ease', transform: element.isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
+          <div className="relative w-full h-full" style={isField ? {} : { transformStyle: 'preserve-3d', transition: 'transform 0.6s ease', transform: element.isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }} onMouseDown={handleDragStart} onTouchStart={handleDragStart}>
             {isField ? (
               <img src={element.img} className="w-full h-full object-contain pointer-events-none" alt="Игровое поле" />
             ) : (
