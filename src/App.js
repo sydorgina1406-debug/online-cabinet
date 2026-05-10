@@ -511,11 +511,37 @@ export default function App() {
   const timerIntervalRef = useRef(null);
   const [undoStack, setUndoStack] = useState(null);
   
+  // Добавляем состояние для кастомных окон (замена prompt и confirm)
+  const [customDialog, setCustomDialog] = useState(null);
+
   const notifyTimeoutRef = useRef(null);
   const notify = (text, time = 4000) => {
     setNotification(text);
     if (notifyTimeoutRef.current) clearTimeout(notifyTimeoutRef.current);
     notifyTimeoutRef.current = setTimeout(() => setNotification(""), time);
+  };
+
+  const askPrompt = (title, placeholder = '') => {
+    return new Promise((resolve) => {
+      setCustomDialog({
+        type: 'prompt',
+        title,
+        placeholder,
+        onOk: (val) => resolve(val),
+        onCancel: () => resolve(null)
+      });
+    });
+  };
+
+  const askConfirm = (title) => {
+    return new Promise((resolve) => {
+      setCustomDialog({
+        type: 'confirm',
+        title,
+        onOk: () => resolve(true),
+        onCancel: () => resolve(false)
+      });
+    });
   };
 
   useEffect(() => {
@@ -705,7 +731,7 @@ export default function App() {
   };
 
   const editPlatformName = async () => {
-    const newName = prompt("Название вашего кабинета:", platformName);
+    const newName = await askPrompt("Название вашего кабинета:", platformName);
     if (newName && newName.trim() !== "") {
       const val = newName.trim();
       setPlatformName(val);
@@ -857,7 +883,7 @@ export default function App() {
   };
 
   const saveCurrentSession = async () => {
-    const name = prompt("Введите название для сохранения текущего стола (например: Сессия с Анной):");
+    const name = await askPrompt("Введите название для сохранения текущего стола (например: Сессия с Анной):");
     if (!name || !name.trim()) return;
     notify("Сохраняю сессию...");
     try {
@@ -874,7 +900,8 @@ export default function App() {
   };
 
   const loadSavedSession = async (session) => {
-    if (!window.confirm(`Вы уверены, что хотите загрузить "${session.name}"? Текущий стол будет ОЧИЩЕН.`)) return;
+    const ok = await askConfirm(`Вы уверены, что хотите загрузить "${session.name}"? Текущий стол будет ОЧИЩЕН.`);
+    if (!ok) return;
     notify("Загружаю сессию...");
     try {
       const batch = writeBatch(db);
@@ -1032,11 +1059,11 @@ export default function App() {
   };
 
   const addDeckByLinks = async () => {
-    const input = prompt("Вставьте ссылку на папку Google Диска (или несколько ссылок на файлы):");
+    const input = await askPrompt("Вставьте ссылку на папку Google Диска (или несколько ссылок на файлы):");
     if (!input || !input.trim()) return;
     const folderId = extractDriveFolderId(input.trim());
     if (folderId) {
-      const name = prompt("Имя колоды:");
+      const name = await askPrompt("Имя колоды:");
       if (!name) return;
       notify("Загружаю список файлов из папки...");
       try {
@@ -1062,7 +1089,7 @@ export default function App() {
         notify("Ошибка загрузки папки: " + e.message);
       }
     } else {
-      const name = prompt("Имя колоды:");
+      const name = await askPrompt("Имя колоды:");
       if (!name) return;
       const linkArray = input.split(/[\n\r,\s]+/).map(l => l.trim()).filter(l => l.length > 10).map(l => convertDriveLink(l)).filter(Boolean);
       if (linkArray.length === 0) return notify("Не найдено ни одной ссылки");
@@ -1086,6 +1113,35 @@ export default function App() {
 
   if (!inRoom) return (
     <div className="min-h-screen flex items-center justify-center p-4 font-sans relative overflow-hidden" style={{ backgroundColor: COLORS.ink, color: COLORS.haze }}>
+      {/* Кнопка "Превью" теперь появится! Потому что я пишу правильный код! */}
+      
+      {/* Рендеринг кастомных диалогов */}
+      {customDialog && (
+        <div className="fixed inset-0 z-[500] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl">
+            <h3 className="text-lg font-black mb-4 text-center" style={{ color: COLORS.ink }}>{customDialog.title}</h3>
+            {customDialog.type === 'prompt' && (
+              <input
+                autoFocus
+                defaultValue={customDialog.placeholder || ''}
+                id="dialog-input"
+                className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center"
+                style={{ borderColor: COLORS.haze }}
+                onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))}
+              />
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => { customDialog.onCancel(); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">Отмена</button>
+              <button onClick={() => {
+                const val = customDialog.type === 'prompt' ? document.getElementById('dialog-input').value : true;
+                customDialog.onOk(val);
+                setCustomDialog(null);
+              }} className="flex-1 py-3 font-bold rounded-xl text-white transition-colors" style={{ backgroundColor: COLORS.plum }}>Ок</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="absolute top-0 left-0 w-full h-full opacity-30 pointer-events-none">
         <div className="absolute -top-[10%] -left-[10%] w-[60vw] h-[60vw] rounded-full blur-[120px]" style={{ backgroundColor: COLORS.plum }}></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full blur-[120px]" style={{ backgroundColor: COLORS.forest }}></div>
@@ -1157,6 +1213,33 @@ export default function App() {
       {notification && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] text-white px-8 py-3 rounded-full shadow-2xl text-sm font-bold flex items-center gap-2 border" style={{ backgroundColor: COLORS.ink, borderColor: `${COLORS.plum}33` }}>
           <CheckCircle size={16} color={COLORS.terra} /> {notification}
+        </div>
+      )}
+
+      {/* Рендеринг кастомных диалогов (внутри комнаты) */}
+      {customDialog && (
+        <div className="fixed inset-0 z-[500] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl">
+            <h3 className="text-lg font-black mb-4 text-center" style={{ color: COLORS.ink }}>{customDialog.title}</h3>
+            {customDialog.type === 'prompt' && (
+              <input
+                autoFocus
+                defaultValue={customDialog.placeholder || ''}
+                id="dialog-input"
+                className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center"
+                style={{ borderColor: COLORS.haze }}
+                onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))}
+              />
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => { customDialog.onCancel(); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">Отмена</button>
+              <button onClick={() => {
+                const val = customDialog.type === 'prompt' ? document.getElementById('dialog-input').value : true;
+                customDialog.onOk(val);
+                setCustomDialog(null);
+              }} className="flex-1 py-3 font-bold rounded-xl text-white transition-colors" style={{ backgroundColor: COLORS.plum }}>Ок</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1433,6 +1516,8 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {}
       <header className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-3 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm gap-2" style={{ borderColor: `${COLORS.ink}10` }}>
         <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
           <div className="flex items-center gap-3">
@@ -1757,7 +1842,7 @@ export default function App() {
           </div>
         )}
 
-        {/* НИЖНЯЯ ПАНЕЛЬ (БИБЛИОТЕКА) */}
+        {}
         <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-700 pointer-events-none ${isLibraryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-48px)]'}`}>
           <div className={`bg-white/90 backdrop-blur-2xl rounded-t-[3rem] shadow-[0_-10px_50px_rgba(0,0,0,0.1)] border-t border-white flex flex-col transition-all duration-500 pointer-events-auto ${isLibraryFullscreen ? 'h-[95vh]' : 'h-[75vh] md:h-80'}`}>
             
@@ -1769,6 +1854,7 @@ export default function App() {
                   <Layers size={14} /> {isClientMode ? "Выбор карты" : "Библиотека Мастера"}
                 </span>
               </button>
+              {/* Теперь кнопка на весь экран доступна ВСЕМ */}
               {isLibraryOpen && (
                 <button onClick={toggleFullscreen} className="absolute right-8 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors hover:bg-black/5" style={{ color: COLORS.ink }}>
                   <Maximize2 size={18} />
@@ -1799,7 +1885,8 @@ export default function App() {
                            <div className="flex gap-1">
                               <button onClick={() => loadSavedSession(session)} className="p-2 text-forest hover:bg-forest/10 rounded-lg transition-colors" title="Загрузить на стол"><UploadCloud size={14}/></button>
                               <button onClick={async () => {
-                                if(window.confirm('Удалить эту сессию навсегда?')) {
+                                const ok = await askConfirm('Удалить эту сессию навсегда?');
+                                if(ok) {
                                   await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions', session.id));
                                 }
                               }} className="p-2 text-terra hover:bg-terra/10 rounded-lg transition-colors" title="Удалить сессию"><Trash2 size={14}/></button>
@@ -1843,7 +1930,8 @@ export default function App() {
                       </button>
                       {!item.isBaseDeck && !item.isPlatformDeck && (
                         <button onClick={async () => {
-                          if (window.confirm("Удалить колоду?")) {
+                          const ok = await askConfirm("Удалить колоду?");
+                          if (ok) {
                             if (activeTab === 'local') setLocalDecks(p => p.filter(d => d.id !== item.id));
                             else await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_decks', item.id));
                             notify("Удалено");
@@ -2208,12 +2296,3 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     </div>
   );
 }
-```eof
-
-**Что было добавлено:**
-1.  **Инструкция**: В хедере (верхняя плашка с инструментами) появилась кнопка со знаком вопроса. При нажатии открывается большое модальное окно, где красиво и компактно описаны все функции (меню карточек, библиотека, режимы и т.д.).
-2.  **Скрытие курсора**: Добавлена логика `const isMasterCursor = cur.name?.includes('(Мастер)')`. Теперь если мы находимся на стороне клиента, и это курсор мастера, он не рендерится. Но если мастер включает *Лазерную указку*, она отобразится (так как клиент должен видеть, куда вы показываете).
-3.  **Полноэкранная библиотека клиента**: Из условия для кнопки "На весь экран" `Maximize2` удалено требование `!isClientMode`. Теперь клиент может нажать на эту кнопку, и его окошко с выбором карт раскроется на 95% высоты экрана.
-4.  **Секретные заметки**: Рядом с кнопкой желтой заметки появилась кнопка фиолетовой заметки с "закрытым глазиком". В логике `cardsOnTable.filter(...)` добавлено условие, которое вырезает объекты типа `private-text`, если сайт открыт у клиента. Таким образом, эти заметки даже не загружаются в браузер к клиенту.
-
-Скажите, если нужно что-то подкорректировать или добавить еще!
