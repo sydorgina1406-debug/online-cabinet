@@ -497,8 +497,10 @@ export default function App() {
   const [isNotebookOpen, setIsNotebookOpen] = useState(false);
   const [savedNotes, setSavedNotes] = useState([]);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState(null); // Новое состояние для редактирования
   const [noteTitleInput, setNoteTitleInput] = useState('');
-  const [noteTextInput, setNoteTextInput] = useState('');
+  // Для создания заметок теперь не стейт-переменная текста, а управление через ref:
+  const notebookEditorRef = useRef(null);
 
   const [figureColor, setFigureColor] = useState('#8B3252'); 
   const [figureName, setFigureName] = useState('');
@@ -1250,7 +1252,7 @@ export default function App() {
       {isNotebookOpen && !isClientMode && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-2xl w-full shadow-2xl relative max-h-[90vh] flex flex-col">
-            <button onClick={() => { setIsNotebookOpen(false); setIsCreatingNote(false); }} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
+            <button onClick={() => { setIsNotebookOpen(false); setIsCreatingNote(false); setEditingNoteId(null); setNoteTitleInput(''); }} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
               <X size={24} style={{ color: COLORS.ink }} />
             </button>
             <h2 className="text-xl md:text-2xl font-black uppercase mb-6 flex items-center gap-3" style={{ color: COLORS.ink }}>
@@ -1260,7 +1262,7 @@ export default function App() {
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-4">
               {!isCreatingNote ? (
                 <>
-                  <button onClick={() => setIsCreatingNote(true)} className="w-full py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-2 hover:bg-black/5 transition-all" style={{ borderColor: `${COLORS.plum}4D`, color: COLORS.plum }}>
+                  <button onClick={() => { setIsCreatingNote(true); setEditingNoteId(null); setNoteTitleInput(''); setTimeout(() => { if (notebookEditorRef.current) notebookEditorRef.current.innerHTML = ''; }, 50); }} className="w-full py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-2 hover:bg-black/5 transition-all" style={{ borderColor: `${COLORS.plum}4D`, color: COLORS.plum }}>
                     <Plus size={20} /> <span className="font-black uppercase text-[10px] tracking-widest">Добавить технику / скрипт</span>
                   </button>
                   {savedNotes.length === 0 && (
@@ -1270,15 +1272,29 @@ export default function App() {
                     <div key={note.id} className="p-4 rounded-2xl border flex flex-col gap-3 shadow-sm bg-gray-50 hover:bg-white transition-colors" style={{ borderColor: `${COLORS.ink}10` }}>
                       <div className="flex justify-between items-start gap-4">
                         <h3 className="font-bold text-sm" style={{ color: COLORS.ink }}>{note.title}</h3>
-                        <button onClick={async () => {
-                          if (await askConfirm('Удалить технику?')) {
-                            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_notes', note.id));
-                          }
-                        }} className="text-terra hover:bg-terra/10 p-1.5 rounded-lg transition-colors">
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="flex gap-1">
+                          <button onClick={() => {
+                            setNoteTitleInput(note.title);
+                            setEditingNoteId(note.id);
+                            setIsCreatingNote(true);
+                            setTimeout(() => {
+                              if (notebookEditorRef.current) {
+                                notebookEditorRef.current.innerHTML = note.text;
+                              }
+                            }, 50);
+                          }} className="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-colors" title="Редактировать">
+                            <Edit2 size={16} />
+                          </button>
+                          <button onClick={async () => {
+                            if (await askConfirm('Удалить технику?')) {
+                              await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_notes', note.id));
+                            }
+                          }} className="text-gray-400 hover:text-terra hover:bg-terra/10 p-1.5 rounded-lg transition-colors" title="Удалить">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
-                      <p className="text-xs line-clamp-3 text-gray-500 whitespace-pre-wrap">{note.text}</p>
+                      <div className="text-xs line-clamp-3 text-gray-500 whitespace-pre-wrap rich-text" dangerouslySetInnerHTML={{ __html: note.text }}></div>
                       <button onClick={() => {
                         addElement('private-text', { text: note.text });
                         setIsNotebookOpen(false);
@@ -1290,23 +1306,50 @@ export default function App() {
                   ))}
                 </>
               ) : (
-                <div className="flex flex-col gap-4">
-                  <input autoFocus type="text" value={noteTitleInput} onChange={e => setNoteTitleInput(e.target.value)} placeholder="Название (напр: Работа с травмой)" className="w-full px-4 py-3 rounded-xl border-2 outline-none font-bold text-sm shadow-inner" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
-                  <textarea value={noteTextInput} onChange={e => setNoteTextInput(e.target.value)} placeholder="Текст техники, алгоритм или вопросы..." className="w-full px-4 py-3 rounded-xl border-2 outline-none text-sm custom-scrollbar min-h-[200px] resize-y shadow-inner leading-relaxed" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
-                  <div className="flex gap-3 mt-2">
-                    <button onClick={() => setIsCreatingNote(false)} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors text-xs uppercase tracking-widest text-gray-600">Отмена</button>
+                <div className="flex flex-col mb-4">
+                  <input autoFocus type="text" value={noteTitleInput} onChange={e => setNoteTitleInput(e.target.value)} placeholder="Название (напр: Работа с травмой)" className="w-full px-4 py-3 rounded-xl border-2 border-b-0 rounded-b-none outline-none font-bold text-sm shadow-inner" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
+                  
+                  {/* Панель форматирования для Моих Техник */}
+                  <div className="flex gap-2 items-center bg-gray-100 px-3 py-2 border-2 border-b-0 border-t-0" style={{ borderColor: COLORS.haze }}>
+                    <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('bold', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Жирный"><Bold size={14} strokeWidth={3} /></button>
+                    <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('italic', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Курсив"><Italic size={14} /></button>
+                    <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('underline', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Подчеркнутый"><Underline size={14} /></button>
+                    <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('strikeThrough', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Зачеркнутый"><Strikethrough size={14} /></button>
+                    <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                    <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('insertUnorderedList', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Список"><List size={14} /></button>
+                  </div>
+                  
+                  <div
+                    ref={notebookEditorRef}
+                    contentEditable={true}
+                    className="rich-text w-full px-4 py-3 rounded-b-xl border-2 outline-none text-sm custom-scrollbar min-h-[200px] shadow-inner leading-relaxed bg-white"
+                    style={{ borderColor: COLORS.haze, color: COLORS.ink }}
+                    data-placeholder="Текст техники, алгоритм или вопросы... Выделите текст и используйте кнопки сверху 👆"
+                  />
+                  
+                  <div className="flex gap-3 mt-4">
+                    <button onClick={() => { setIsCreatingNote(false); setEditingNoteId(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors text-xs uppercase tracking-widest text-gray-600">Отмена</button>
                     <button onClick={async () => {
-                      if (!noteTitleInput.trim() || !noteTextInput.trim()) return notify("Заполните все поля");
+                      const finalHtml = notebookEditorRef.current ? notebookEditorRef.current.innerHTML : '';
+                      if (!noteTitleInput.trim() || !finalHtml.trim()) return notify("Заполните все поля");
                       try {
-                        await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_notes'), {
-                          title: noteTitleInput.trim(),
-                          text: noteTextInput.trim(),
-                          createdAt: Date.now()
-                        });
+                        if (editingNoteId) {
+                          await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_notes', editingNoteId), {
+                            title: noteTitleInput.trim(),
+                            text: finalHtml.trim()
+                          });
+                          notify("Техника обновлена!");
+                        } else {
+                          await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_notes'), {
+                            title: noteTitleInput.trim(),
+                            text: finalHtml.trim(),
+                            createdAt: Date.now()
+                          });
+                          notify("Техника сохранена!");
+                        }
                         setIsCreatingNote(false);
+                        setEditingNoteId(null);
                         setNoteTitleInput('');
-                        setNoteTextInput('');
-                        notify("Техника сохранена!");
                       } catch (e) {
                         notify("Ошибка: " + e.message);
                       }
@@ -1398,7 +1441,7 @@ export default function App() {
                   </div>
                   <div className="flex items-start gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-blue-600 shrink-0"><BookOpen size={16} /></div>
-                    <div><b className="text-blue-900">Мои Техники:</b> Записная книжка Психолога. Запишите в неё свои любимые скрипты, вопросы или схемы раскладов до сессии. В один клик текст из неё выкладывается на стол в виде Секретной (фиолетовой) заметки!</div>
+                    <div><b className="text-blue-900">Мои Техники:</b> Записная книжка Психолога. Запишите в неё свои скрипты до сессии. В один клик текст из неё выкладывается на стол в виде Секретной заметки!</div>
                   </div>
                 </div>
               </div>
