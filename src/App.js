@@ -11,13 +11,13 @@ import {
   getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject
 } from 'firebase/storage';
 import {
-  Plus, Layers, RotateCw, Trash2, Maximize2, Minimize2, X, ChevronUp,
+  Plus, Layers, RotateCw, RotateCcw, Trash2, Maximize2, Minimize2, X, ChevronUp,
   FolderOpen, LayoutGrid, Move, Cloud, Copy, CheckCircle,
   Users, LogOut, AlertCircle, ExternalLink, Image as ImageIcon,
-  Volume2, VolumeX, ArrowUp, Save, MousePointer2, UserCircle, UserPlus,
+  Volume2, VolumeX, ArrowUp, ArrowDown, Save, MousePointer2, UserCircle, UserPlus,
   Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
   Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, MessageCircle,
-  Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff, Dices
+  Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff, Dices, UserMinus
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -44,13 +44,15 @@ const MaxIcon = ({ size = 14, color = 'currentColor' }) => (
   </svg>
 );
 
-const ArrowElementIcon = ({ color, className }) => (
+const ArrowElementIcon = ({ color, rotation = 0, className }) => (
   <svg viewBox="0 0 100 100" className={className} style={{ filter: 'drop-shadow(0px 4px 6px rgba(0,0,0,0.25))' }}>
-    <polygon points="50,10 80,85 50,70 20,85" fill={color} />
+    <g transform={`rotate(${rotation}, 50, 50)`}>
+      <polygon points="50,10 80,85 50,70 20,85" fill={color} />
+    </g>
   </svg>
 );
 
-const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '', isMenu = false, className }) => {
+const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '', isMenu = false, isLaying = false, className }) => {
   const isMale = gender === 'male';
 
   if (isMenu) {
@@ -66,19 +68,20 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
     );
   }
 
-  const isSide = viewMode === 'side';
+  const isSide = viewMode === 'side' && !isLaying;
   const rot = ((rotation % 360) + 360) % 360;
 
   let dir = 'up';
-  if (rot > 45 && rot < 135) dir = 'right';
+  if (rot >= 45 && rot < 135) dir = 'right';
   else if (rot >= 135 && rot <= 225) dir = 'down';
   else if (rot > 225 && rot < 315) dir = 'left';
 
   const hexColor = color.replace('#', '');
   const gradientId = `grad-${hexColor}-${gender}`;
+  const shadowStyle = isLaying ? 'drop-shadow(0px 2px 3px rgba(0,0,0,0.4))' : 'drop-shadow(0px 6px 12px rgba(0,0,0,0.3))';
 
   return (
-    <svg viewBox="0 0 100 100" className={className} style={{ overflow: 'visible', filter: 'drop-shadow(0px 6px 12px rgba(0,0,0,0.3))' }}>
+    <svg viewBox="0 0 100 100" className={className} style={{ overflow: 'visible', filter: shadowStyle }}>
       <defs>
         <radialGradient id="woodHead" cx="30%" cy="30%" r="70%">
           <stop offset="0%" stopColor="#FCE3C5" />
@@ -91,8 +94,43 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
         </linearGradient>
       </defs>
 
-      {isSide ? (
+      {isLaying ? (
         <g>
+          <g transform={`rotate(${rot}, 50, 50)`}>
+            {isMale ? (
+              <>
+                <path d="M 32,38 L 68,38 L 60,85 L 40,85 Z" fill={color} />
+                <path d="M 32,38 L 68,38 L 60,85 L 40,85 Z" fill={`url(#${gradientId})`} />
+              </>
+            ) : (
+              <>
+                <path d="M 50,35 L 75,85 L 25,85 Z" fill={color} />
+                <path d="M 50,35 L 75,85 L 25,85 Z" fill={`url(#${gradientId})`} />
+              </>
+            )}
+            <circle cx="50" cy="24" r="14" fill="url(#woodHead)" />
+            <polygon points="50,26 47,30 53,30" fill="#A67C52" />
+            {/* Закрытые глаза для лежащей фигурки */}
+            <path d="M 42,24 Q 44,22 46,24" stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+            <path d="M 54,24 Q 56,22 58,24" stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+          </g>
+          {name && (
+            <text
+              x="50" y="95" textAnchor="middle" fontSize="10" fontWeight="900" fill="rgba(255,255,255,0.95)"
+              style={{ textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }} textLength={name.length > 5 ? "35" : undefined} lengthAdjust="spacingAndGlyphs"
+            >
+              {name}
+            </text>
+          )}
+        </g>
+      ) : isSide ? (
+        <g>
+          {/* Тонкий эстетичный вектор (луч внимания из уровня глаз/головы) */}
+          <g transform={`rotate(${rot}, 50, 24)`} opacity="0.6">
+            <line x1="50" y1="24" x2="50" y2="-36" stroke={color} strokeWidth="1.5" strokeDasharray="3 3" />
+            <polygon points="50,-42 47,-34 53,-34" fill={color} />
+          </g>
+          
           <ellipse cx="50" cy="85" rx="25" ry="8" fill="rgba(0,0,0,0.2)" />
           {(dir === 'left' || dir === 'right') && (
             <g transform={dir === 'left' ? "scale(-1, 1) translate(-100, 0)" : ""}>
@@ -175,11 +213,11 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
                 <circle cx="50" cy="50" r="28" fill={`url(#${gradientId})`} />
               </>
             )}
+            <circle cx="50" cy="50" r="14" fill="url(#woodHead)" stroke="rgba(0,0,0,0.1)" strokeWidth="1" />
+            <polygon points="50,45 47,49 53,49" fill="#B3783A" />
+            <circle cx="45" cy="52" r="1.8" fill="#222" />
+            <circle cx="55" cy="52" r="1.8" fill="#222" />
           </g>
-          <circle cx="50" cy="50" r="14" fill="url(#woodHead)" stroke="rgba(0,0,0,0.1)" strokeWidth="1" />
-          <polygon points="50,55 47,51 53,51" fill="#B3783A" />
-          <circle cx="45" cy="48" r="1.8" fill="#222" />
-          <circle cx="55" cy="48" r="1.8" fill="#222" />
 
           {name && (
             <text
@@ -1234,6 +1272,20 @@ export default function App() {
                 </div>
               </div>
 
+              {/* ГРУППОВЫЕ ИГРЫ И ПРИВАТНОСТЬ КАРТ */}
+              <div className="space-y-4">
+                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> Групповые и Трансформационные игры</h3>
+                <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
+                  <p>Для групповых игр в платформу встроена система <b>приватности карт</b>:</p>
+                  <ul className="space-y-1 list-disc list-inside">
+                    <li>Когда участник (клиент) нажимает <b><Eye size={14} className="inline text-forest" /> Подсмотреть</b> на ничьей закрытой карте, она <b>закрепляется за ним</b>.</li>
+                    <li>Под картой появляется его имя (например, <UserCircle size={12} className="inline" /> Анна).</li>
+                    <li><b>Важно:</b> Никто другой из участников больше не сможет ни подсмотреть, ни перевернуть эту карту.</li>
+                    <li>Вы (Психолог) имеете полный контроль: вы в любой момент можете подсмотреть или перевернуть любую карту любого участника, а также отвязать владельца.</li>
+                  </ul>
+                </div>
+              </div>
+
               {/* ИНСТРУМЕНТЫ ВЕРХНЕЙ ПАНЕЛИ */}
               <div className="space-y-4">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><LayoutGrid size={16}/> Панель инструментов</h3>
@@ -1285,13 +1337,16 @@ export default function App() {
                   <p className="mb-2">Наведите курсор на любую карту или фигурку на столе, чтобы появилось меню:</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><RefreshCw size={14} className="text-gray-500" /> Перевернуть (лицо/рубашка)</div>
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Eye size={14} className="text-forest" /> Подсмотреть (в закрытую)</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Eye size={14} className="text-forest" /> Подсмотреть (только если закрыта)</div>
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Maximize2 size={14} className="text-gray-500" /> Увеличить объект</div>
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><RotateCw size={14} className="text-gray-500" /> Повернуть (на 90°)</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><RotateCw size={14} className="text-gray-500" /> Повернуть</div>
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><ArrowUp size={14} className="text-gray-500" /> На передний план</div>
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Lock size={14} className="text-gray-500" /> Закрепить (от сдвигов)</div>
                   </div>
-                  <p className="mt-3 text-xs bg-gray-50 p-2 rounded-lg"><Move size={14} className="inline text-plum"/> Чтобы <b>изменить размер</b>, потяните за правый нижний угол объекта.</p>
+                  <p className="mt-3 text-xs bg-gray-50 p-3 rounded-lg flex flex-col gap-2">
+                    <span><Move size={14} className="inline text-plum"/> Чтобы <b>изменить размер</b>, потяните за правый нижний угол.</span>
+                    <span><RotateCw size={14} className="inline text-plum"/> Чтобы <b>свободно вращать фигурку</b>, наведите на неё и нажмите на появившийся <b>круг компаса</b> вокруг неё. Для карт используйте кнопки Влево/Вправо в меню.</span>
+                  </p>
                 </div>
               </div>
 
@@ -1894,7 +1949,7 @@ export default function App() {
       {previewCard && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}F2` }} onClick={() => setPreviewCard(null)}>
           <div className="absolute top-6 left-1/2 -translate-x-1/2 text-white font-black tracking-widest uppercase bg-black/50 px-6 py-2 rounded-full backdrop-blur-md text-xs text-center w-[90%] md:w-auto">
-            {previewCard.isFlipped ? "Эта карта открыта для всех" : "Эту карту сейчас видите только вы"}
+            {previewCard.isFlipped ? "Эту карту сейчас видите только вы" : "Эта карта открыта для всех"}
           </div>
           <button className="absolute top-6 right-6 text-white p-2 rounded-full transition-all hover:opacity-70" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
             <X size={40} />
@@ -1919,6 +1974,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
   const elementRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isRotating, setIsRotating] = useState(false);
   
   const startPos = useRef({ x: 0, y: 0 });
   const initialMousePos = useRef({ x: 0, y: 0 });
@@ -1934,7 +1990,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
   const isLocked = element.isLocked;
 
   const handleDragStart = (e) => {
-    if (isResizing) return;
+    if (isResizing || isRotating) return;
     if (isLocked) return;
     if (isField && isClientMode) return;
     if (isText && e.target.tagName.toLowerCase() === 'textarea') return;
@@ -1960,6 +2016,29 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     setIsResizing(true); startPos.current = { x: cx, y: cy }; startDim.current = { w: element.width, h: element.height };
   };
 
+  const handleRotateStart = (e) => {
+    e.stopPropagation();
+    if (isLocked) return;
+    if (isField && isClientMode) return;
+    if (isLaserMode && !isClientMode) return;
+    
+    setIsRotating(true);
+    if (!isField) onUpdate({ zIndex: maxZIndex + 1 });
+
+    if (!boardRef.current) return;
+    const boardRect = boardRef.current.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    const centerX = boardRect.left + element.x + element.width / 2;
+    const centerY = boardRect.top + element.y + element.height / 2;
+
+    const angleRad = Math.atan2(cy - centerY, cx - centerX);
+    let angleDeg = angleRad * (180 / Math.PI) + 90;
+    if (angleDeg < 0) angleDeg += 360;
+
+    onUpdate({ rotation: Math.round(angleDeg) });
+  };
+
   useEffect(() => {
     const move = (e) => {
       if (isLocked) return;
@@ -1975,6 +2054,17 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         const ratio = startDim.current.w / startDim.current.h;
         const nw = Math.max(element.type === 'token' ? 25 : (element.type === 'arrow' ? 30 : (isText ? 100 : 80)), startDim.current.w + dx);
         onUpdate({ width: nw, height: nw / ratio });
+      } else if (isRotating) {
+        if (!boardRef.current) return;
+        const boardRect = boardRef.current.getBoundingClientRect();
+        const centerX = boardRect.left + element.x + element.width / 2;
+        const centerY = boardRect.top + element.y + element.height / 2;
+        
+        const angleRad = Math.atan2(cy - centerY, cx - centerX);
+        let angleDeg = angleRad * (180 / Math.PI) + 90;
+        if (angleDeg < 0) angleDeg += 360;
+        
+        onUpdate({ rotation: Math.round(angleDeg) });
       }
     };
 
@@ -1987,49 +2077,91 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         }
       }
       setIsResizing(false);
+      setIsRotating(false);
     };
 
-    if (isDragging || isResizing) {
+    if (isDragging || isResizing || isRotating) {
       window.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
-      window.addEventListener('touchmove', move, { passive: true }); window.addEventListener('touchend', end);
+      window.addEventListener('touchmove', move, { passive: false }); window.addEventListener('touchend', end);
     }
     return () => {
       window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', end);
       window.removeEventListener('touchmove', move); window.removeEventListener('touchmove', end);
     };
-  }, [isDragging, isResizing, element, onUpdate, playSound, isMuted, isLocked, isText, isLaserMode, isClientMode]);
+  }, [isDragging, isResizing, isRotating, element, onUpdate, playSound, isMuted, isLocked, isText, isLaserMode, isClientMode, boardRef]);
 
   const canDrag = !isLocked && !(isField && isClientMode) && !(isLaserMode && !isClientMode);
-  const appliedRotation = (element.type === 'figure' && globalFigureView === 'side') ? 0 : element.rotation;
+  const isFigureOrArrow = element.type === 'figure' || element.type === 'arrow';
+  const appliedRotation = isFigureOrArrow ? 0 : element.rotation;
+
+  let dragClasses = '';
+  if (isDragging || isRotating) {
+    dragClasses = isFigureOrArrow ? 'scale-105' : 'scale-105 shadow-2xl';
+  } else {
+    dragClasses = isField || isFigureOrArrow ? '' : 'shadow-[0_8px_30px_rgb(0,0,0,0.12)]';
+  }
+  
+  const baseClasses = `w-full h-full relative ${canDrag ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} transition-transform`;
+  const typeClasses = isText ? `rounded-2xl backdrop-blur-md border flex flex-col overflow-hidden ${isPrivate ? 'bg-purple-100/90 border-purple-300' : 'bg-yellow-100/90 border-yellow-300'}` : (isField || isFigureOrArrow ? '' : 'rounded-[1rem]');
 
   return (
     <div
       ref={elementRef}
-      className={`absolute group ${canDrag ? 'touch-none' : ''} ${isDragging ? 'z-[1000]' : ''}`}
+      className={`absolute group ${canDrag ? 'touch-none' : ''} ${(isDragging || isRotating) ? 'z-[1000]' : ''}`}
       style={{
         left: element.x, top: element.y,
         width: element.width, height: element.height,
         zIndex: isField ? 0 : (element.zIndex || 1),
         transform: `rotate(${appliedRotation}deg)`,
-        transition: (isDragging || isResizing) ? 'none' : 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        transition: (isDragging || isResizing || isRotating) ? 'none' : 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
       }}
     >
+      {/* РАДАР / КОМПАС ДЛЯ ВРАЩЕНИЯ ФИГУРОК */}
+      {isFigureOrArrow && canDrag && (
+        <div
+          onMouseDown={handleRotateStart}
+          onTouchStart={handleRotateStart}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair z-[-1]"
+          style={{ width: element.width + 60, height: element.height + 60 }}
+          title="Нажмите на круг, чтобы повернуть"
+        >
+          <div className="absolute inset-0 rounded-full border-2 border-plum/30 border-dashed bg-plum/5" />
+          {[0, 45, 90, 135, 180, 225, 270, 315].map(angle => (
+            <div key={angle} className="absolute w-full h-full pointer-events-none" style={{ transform: `rotate(${angle}deg)` }}>
+              <div className="mx-auto w-2.5 h-2.5 bg-plum/80 rounded-full mt-[-5px] shadow-sm border border-white" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* МЕНЮ БЫСТРЫХ ДЕЙСТВИЙ */}
       {!(isLaserMode && !isClientMode) && (
-        <div className="absolute -top-14 left-1/2 -translate-x-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all bg-white/80 backdrop-blur-xl rounded-full px-2 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-20 border border-white">
+        <div className="absolute -top-16 left-1/2 -translate-x-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all bg-white/80 backdrop-blur-xl rounded-full px-2 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-20 border border-white">
           {!isField && <button onClick={(e) => { e.stopPropagation(); onUpdate({ zIndex: maxZIndex + 1 }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="На передний план"><ArrowUp size={16} /></button>}
           
-          {element.type === 'card' && !element.isFlipped && (
+          {/* НОВАЯ КНОПКА ПОЛОЖИТЬ/ПОСТАВИТЬ (ТОЛЬКО ДЛЯ ФИГУР) */}
+          {element.type === 'figure' && (
+            <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLaying: !element.isLaying }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title={element.isLaying ? "Поставить фигурку" : "Положить фигурку (сон/смерть)"}>
+              {element.isLaying ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+            </button>
+          )}
+
+          {/* ГЛАЗОК - появляется ТОЛЬКО когда карта рубашкой вверх (isFlipped === true) */}
+          {element.type === 'card' && element.isFlipped && (
             <button onClick={(e) => {
               e.stopPropagation();
               if (!element.owner) {
-                if (isClientMode) onUpdate({ owner: currentUser?.uid, ownerName: currentUserName || 'Игрок' });
+                if (isClientMode) {
+                   onUpdate({ owner: currentUser?.uid, ownerName: currentUserName || 'Игрок' });
+                   onNotify("Карта закреплена за вами. Только вы и Психолог можете её видеть и переворачивать.");
+                }
                 onPreview();
               } else if (element.owner === currentUser?.uid || !isClientMode) {
                 onPreview();
               } else {
                 onNotify(`Эта карта принадлежит: ${element.ownerName}. Подсматривать нельзя! 🤫`);
               }
-            }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 bg-forest/10 text-forest" title="Подсмотреть карту">
+            }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 bg-forest/10 text-forest" title={!element.owner ? "Взять себе и подсмотреть" : (element.owner === currentUser?.uid ? "Подсмотреть свою карту" : "Подсмотреть (только для владельца и Психолога)")}>
               <Eye size={16} />
             </button>
           )}
@@ -2050,15 +2182,31 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
             <button onClick={(e) => { e.stopPropagation(); onPreview(); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="Увеличить"><Maximize2 size={16} /></button>
           )}
           
-          {(!isClientMode || !isField) && (
-            <button onClick={(e) => { e.stopPropagation(); const step = element.type === 'arrow' ? 22.5 : (element.type === 'figure' ? 45 : 90); onUpdate({ rotation: (element.rotation + step) % 360 }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title={`Повернуть на ${element.type === 'arrow' ? 22.5 : (element.type === 'figure' ? 45 : 90)}°`}>
-              <RotateCw size={16} />
-            </button>
+          {/* Кнопки поворота (Для карт, где нет компаса) */}
+          {(!isClientMode || !isField) && !isFigureOrArrow && (
+            <div className="flex bg-gray-100 rounded-full p-0.5 shadow-inner border border-gray-200/50 ml-1">
+              <button onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (element.rotation - 90 + 360) % 360 }); }} className="w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white text-ink/70 shadow-sm" title={`Повернуть влево (90°)`}>
+                <RotateCcw size={14} />
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (element.rotation + 90) % 360 }); }} className="w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white text-ink/70 shadow-sm" title={`Повернуть вправо (90°)`}>
+                <RotateCw size={14} />
+              </button>
+            </div>
           )}
 
           {!isClientMode && !isField && (
             <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 ${isLocked ? 'bg-terra/10 text-terra' : 'hover:bg-black/5 text-ink/70'}`} title={isLocked ? "Открепить" : "Закрепить"}>
               {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
+            </button>
+          )}
+
+          {!isClientMode && element.owner && (
+            <button onClick={(e) => {
+              e.stopPropagation();
+              onUpdate({ owner: null, ownerName: null });
+              onNotify("Сброшена привязка карты к игроку");
+            }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="Отвязать владельца">
+              <UserMinus size={16} />
             </button>
           )}
 
@@ -2077,7 +2225,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       )}
 
       <div
-        className={`w-full h-full relative ${isLocked || (isLaserMode && !isClientMode) ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} transition-transform ${isDragging ? 'scale-105 shadow-2xl' : isField ? '' : 'shadow-[0_8px_30px_rgb(0,0,0,0.12)]'} ${isText ? `rounded-2xl backdrop-blur-md border flex flex-col overflow-hidden ${isPrivate ? 'bg-purple-100/90 border-purple-300' : 'bg-yellow-100/90 border-yellow-300'}` : isField ? '' : (element.type === 'figure' || element.type === 'arrow' ? '' : 'rounded-[1rem]')}`}
+        className={`${baseClasses} ${dragClasses} ${typeClasses}`}
         onMouseDown={handleDragStart}
         onTouchStart={handleDragStart}
         style={{ perspective: isField ? 'none' : '1000px' }}
@@ -2097,11 +2245,11 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
           <div className="w-full h-full rounded-full shadow-inner border-2 border-white/80" style={{ backgroundColor: element.color }} />
         ) : element.type === 'arrow' ? (
           <div className="w-full h-full relative flex items-center justify-center">
-             <ArrowElementIcon color={element.color} className="w-full h-full" />
+             <ArrowElementIcon color={element.color} rotation={element.rotation} className="w-full h-full" />
           </div>
         ) : element.type === 'figure' ? (
           <div className="w-full h-full relative flex items-center justify-center">
-             <FigureIcon gender={element.gender} color={element.color} viewMode={globalFigureView} rotation={element.rotation} name={element.name} className="w-full h-full" />
+             <FigureIcon gender={element.gender} color={element.color} viewMode={globalFigureView} rotation={element.rotation} name={element.name} isLaying={element.isLaying} className="w-full h-full" />
           </div>
         ) : (
           <div className="relative w-full h-full" style={isField ? {} : { transformStyle: 'preserve-3d', transition: 'transform 0.6s ease', transform: element.isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
