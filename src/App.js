@@ -2208,7 +2208,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
 
       if (isDragging) {
         if (Math.sqrt(Math.pow(cx - initialMousePos.current.x, 2) + Math.pow(cy - initialMousePos.current.y, 2)) > 5) hasMoved.current = true;
-        onUpdate({ x: cx - startPos.current.x, y: cy - startPos.current.y });
+        onUpdate({ x: Math.max(0, cx - startPos.current.x), y: Math.max(0, cy - startPos.current.y) });
       } else if (isResizing) {
         const dx = cx - startPos.current.x;
         if (isText) {
@@ -2274,7 +2274,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       ref={elementRef}
       className={`absolute group ${canDrag ? 'touch-none' : ''} ${(isDragging || isRotating) ? 'z-[1000]' : ''}`}
       style={{
-        left: element.x, top: element.y,
+        left: Math.max(0, element.x), top: Math.max(0, element.y),
         width: element.width, height: isText ? 'auto' : element.height,
         zIndex: isField ? 0 : (element.zIndex || 1),
         transform: `rotate(${appliedRotation}deg)`,
@@ -2419,7 +2419,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
               suppressContentEditableWarning={true}
               onInput={handleTextInput}
               onBlur={() => { if (contentEditableRef.current) onUpdate({ text: contentEditableRef.current.innerHTML }); }}
-              className="rich-text flex-1 w-full p-4 bg-transparent outline-none text-[13px] text-gray-800 leading-relaxed min-h-[60px]"
+              className="rich-text flex-1 w-full p-4 bg-transparent outline-none text-[13px] text-gray-800 leading-relaxed min-h-[60px] max-h-[65vh] overflow-y-auto custom-scrollbar"
               data-placeholder="Заметка..."
             />
           </>
