@@ -257,7 +257,7 @@ const loadPlatformDecks = async () => {
 const COLORS = {
   plum: '#8B3252',
   forest: '#2D4A3E',
-  terra: '#C4714A',
+  terra: '#D26027', // Сделали более теплым, кирпично-оранжевым
   ink: '#1C1020',
   haze: '#F2EFF5'
 };
@@ -266,8 +266,8 @@ const TABLE_BACKGROUNDS = [
   { id: 'milky', name: 'Молочный', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#FDFAF6', opacity: 1 },
   { id: 'forest', name: 'Зеленый', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#2D4A3E', opacity: 1 },
   { id: 'plum', name: 'Сливовый', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#8B3252', opacity: 1 },
-  { id: 'purple', name: 'Фиолетовый', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#4A154B', opacity: 1 },
-  { id: 'terra', name: 'Терракотовый', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#C4714A', opacity: 1 }
+  { id: 'purple', name: 'Фиолетовый', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#4A148C', opacity: 1 },
+  { id: 'terra', name: 'Терракотовый', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#D26027', opacity: 1 } 
 ];
 
 if (typeof window !== 'undefined' && !document.getElementById('tailwind-script')) {
@@ -1342,6 +1342,7 @@ export default function App() {
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><RotateCw size={14} className="text-gray-500" /> Повернуть</div>
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><ArrowUpToLine size={14} className="text-gray-500" /> На передний план</div>
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Lock size={14} className="text-gray-500" /> Закрепить (от сдвигов)</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><EyeOff size={14} className="text-gray-500" /> Уложить/Разбудить (сон/смерть для фигур)</div>
                   </div>
                   <p className="mt-3 text-xs bg-gray-50 p-3 rounded-lg flex flex-col gap-2">
                     <span><Move size={14} className="inline text-plum"/> Чтобы <b>изменить размер</b>, потяните за правый нижний угол.</span>
@@ -1982,7 +1983,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
   const hasMoved = useRef(false);
   const clickTimestamp = useRef(0);
   
-  const COLORS = { plum: '#8B3252', forest: '#2D4A3E', terra: '#C4714A', ink: '#1C1020', haze: '#F2EFF5' };
+  const COLORS = { plum: '#8B3252', forest: '#2D4A3E', terra: '#C44D29', ink: '#1C1020', haze: '#F2EFF5' };
 
   const isField = element.type === 'field';
   const isText = element.type === 'text' || element.type === 'private-text';
@@ -2141,8 +2142,8 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
           
           {/* НОВАЯ КНОПКА ПОЛОЖИТЬ/ПОСТАВИТЬ (ТОЛЬКО ДЛЯ ФИГУР) */}
           {element.type === 'figure' && (
-            <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLaying: !element.isLaying }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title={element.isLaying ? "Поставить фигурку" : "Положить фигурку (сон/смерть)"}>
-              {element.isLaying ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+            <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLaying: !element.isLaying }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title={element.isLaying ? "Разбудить / Поставить фигурку" : "Уложить фигурку (сон/смерть)"}>
+              {element.isLaying ? <Eye size={16} /> : <EyeOff size={16} />}
             </button>
           )}
 
