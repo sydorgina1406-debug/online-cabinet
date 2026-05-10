@@ -511,7 +511,6 @@ export default function App() {
   const timerIntervalRef = useRef(null);
   const [undoStack, setUndoStack] = useState(null);
   
-  // Добавляем состояние для кастомных окон (замена prompt и confirm)
   const [customDialog, setCustomDialog] = useState(null);
 
   const notifyTimeoutRef = useRef(null);
@@ -643,6 +642,7 @@ export default function App() {
         setRoomId(roomParam);
         roomIdRef.current = roomParam;
         setIsClientMode(true);
+        window._isClientMode = true; // Глобальный флаг
       }
     };
     init();
@@ -695,6 +695,7 @@ export default function App() {
         else if (d.id === '_library_state') {
           const libraryData = d.data();
           if (libraryData.isOpen !== undefined && !window._isClientMode) setIsLibraryOpen(libraryData.isOpen);
+          // ВНИМАНИЕ: isFullscreen больше не синхронизируется насильно для клиента
           if (libraryData.isFullscreen !== undefined && !window._isClientMode) setIsLibraryFullscreen(libraryData.isFullscreen);
           if (libraryData.isFlipped !== undefined) setIsLibraryDeckFlipped(libraryData.isFlipped);
         }
@@ -767,7 +768,7 @@ export default function App() {
   const toggleFullscreen = () => {
     const newState = !isLibraryFullscreen;
     setIsLibraryFullscreen(newState);
-    syncLibraryUI({ isFullscreen: newState });
+    syncLibraryUI({ isFullscreen: newState }); // Это синхронизируется только если мы мастер
   };
 
   const toggleDeckFlip = () => {
@@ -809,7 +810,7 @@ export default function App() {
         roomIdRef.current = roomId;
       }
       setUserName(name + " (Мастер)");
-      setIsClientMode(false); setIsAuthorized(true); setInRoom(true); setShowKeyPrompt(false);
+      setIsClientMode(false); window._isClientMode = false; setIsAuthorized(true); setInRoom(true); setShowKeyPrompt(false);
       notify(`Привет, ${name}! Базовые колоды загружаются...`);
     };
     
@@ -1113,8 +1114,6 @@ export default function App() {
 
   if (!inRoom) return (
     <div className="min-h-screen flex items-center justify-center p-4 font-sans relative overflow-hidden" style={{ backgroundColor: COLORS.ink, color: COLORS.haze }}>
-      {/* Кнопка "Превью" теперь появится! Потому что я пишу правильный код! */}
-      
       {/* Рендеринг кастомных диалогов */}
       {customDialog && (
         <div className="fixed inset-0 z-[500] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
@@ -1517,7 +1516,6 @@ export default function App() {
         </div>
       )}
 
-      {}
       <header className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-3 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm gap-2" style={{ borderColor: `${COLORS.ink}10` }}>
         <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
           <div className="flex items-center gap-3">
@@ -1842,7 +1840,7 @@ export default function App() {
           </div>
         )}
 
-        {}
+        {/* НИЖНЯЯ ПАНЕЛЬ (БИБЛИОТЕКА) */}
         <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-700 pointer-events-none ${isLibraryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-48px)]'}`}>
           <div className={`bg-white/90 backdrop-blur-2xl rounded-t-[3rem] shadow-[0_-10px_50px_rgba(0,0,0,0.1)] border-t border-white flex flex-col transition-all duration-500 pointer-events-auto ${isLibraryFullscreen ? 'h-[95vh]' : 'h-[75vh] md:h-80'}`}>
             
