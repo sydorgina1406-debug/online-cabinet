@@ -17,7 +17,7 @@ import {
   Volume2, VolumeX, ArrowUp, Save, MousePointer2, UserCircle, UserPlus,
   Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
   Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, MessageCircle,
-  Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff
+  Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff, Dices
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -444,13 +444,16 @@ export default function App() {
   const [appLoading, setAppLoading] = useState(true);
   
   const [platformName, setPlatformName] = useState("ОНЛАЙН КАБИНЕТ");
-  const [roomMode, setRoomMode] = useState('consultation'); 
   
   const [videoLink, setVideoLink] = useState('');
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [isVideoActive, setIsVideoActive] = useState(false);
   const [tempVideoLink, setTempVideoLink] = useState('');
   
+  // Состояния для плашек
+  const [isDicePanelOpen, setIsDicePanelOpen] = useState(false);
+  const [isFiguresPanelOpen, setIsFiguresPanelOpen] = useState(false);
+
   const [figureColor, setFigureColor] = useState('#8B3252'); 
   const [figureName, setFigureName] = useState('');
   const [figureViewMode, setFigureViewMode] = useState('side');
@@ -575,7 +578,7 @@ export default function App() {
     if (isDbConnected && roomId) {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_timer_state'), data);
     }
-    notify(`Таймер запущен: ${minutes} минут  ⏱ `);
+    notify(`Таймер запущен: ${minutes} минут ⏱`);
   };
 
   const stopTimer = async () => {
@@ -642,7 +645,7 @@ export default function App() {
         setRoomId(roomParam);
         roomIdRef.current = roomParam;
         setIsClientMode(true);
-        window._isClientMode = true; // Глобальный флаг
+        window._isClientMode = true; 
       }
     };
     init();
@@ -684,7 +687,6 @@ export default function App() {
         else if (d.id === '_dice_type') setDiceType(d.data().type || 6);
         else if (d.id === '_settings') {
           if (d.data().platformName) setPlatformName(d.data().platformName);
-          if (d.data().roomMode) setRoomMode(d.data().roomMode);
           if (d.data().tableBg) setTableBg(d.data().tableBg);
           if (d.data().figureViewMode) setFigureViewMode(d.data().figureViewMode);
           if (d.data().videoLink !== undefined) {
@@ -695,7 +697,6 @@ export default function App() {
         else if (d.id === '_library_state') {
           const libraryData = d.data();
           if (libraryData.isOpen !== undefined && !window._isClientMode) setIsLibraryOpen(libraryData.isOpen);
-          // ВНИМАНИЕ: isFullscreen больше не синхронизируется насильно для клиента
           if (libraryData.isFullscreen !== undefined && !window._isClientMode) setIsLibraryFullscreen(libraryData.isFullscreen);
           if (libraryData.isFlipped !== undefined) setIsLibraryDeckFlipped(libraryData.isFlipped);
         }
@@ -741,12 +742,6 @@ export default function App() {
       }
     }
   };
-
-  const changeMode = async (mode) => {
-    if (!isDbConnected || !roomId) return;
-    setRoomMode(mode);
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { roomMode: mode }, { merge: true });
-  };
   
   const updateGlobalFigureView = async (mode) => {
     if (!isDbConnected || !roomId) return;
@@ -768,7 +763,7 @@ export default function App() {
   const toggleFullscreen = () => {
     const newState = !isLibraryFullscreen;
     setIsLibraryFullscreen(newState);
-    syncLibraryUI({ isFullscreen: newState }); // Это синхронизируется только если мы мастер
+    syncLibraryUI({ isFullscreen: newState });
   };
 
   const toggleDeckFlip = () => {
@@ -791,7 +786,7 @@ export default function App() {
         id: deck.id, name: deck.name, cards: deck.cards || [], backImage: deck.backImage || null
       });
       syncLibraryUI({ isFlipped: false });
-      notify(`Колода "${deck.name}" активирована  ✓ `);
+      notify(`Колода "${deck.name}" активирована ✓`);
     } catch(e) {
       notify("Ошибка синхронизации: " + e.message);
     }
@@ -1011,7 +1006,7 @@ export default function App() {
     if (!undoStack) return;
     clearTimeout(undoStack.timeoutId);
     setUndoStack(null);
-    notify("Восстановлено  ✓ ");
+    notify("Восстановлено ✓");
   };
 
   const confirmUpload = async () => {
@@ -1042,7 +1037,7 @@ export default function App() {
       const newDeck = { name: tempDeckName || "Колода", cards, backImage, createdAt: Date.now() };
       if (isDbConnected && user && !isClientMode) {
         await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_decks'), newDeck);
-        notify("Колода сохранена в Облако  ✓ ");
+        notify("Колода сохранена в Облако ✓");
       } else {
         setLocalDecks(p => [...p, { ...newDeck, id: Date.now().toString() }]);
         notify("Добавлено локально");
@@ -1081,7 +1076,7 @@ export default function App() {
         const newDeck = { name, cards, backImage: backImage || null, createdAt: Date.now() };
         if (isDbConnected && user && !isClientMode) {
           await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_decks'), newDeck);
-          notify(`Колода "${name}": ${cards.length} карт  ✓ `);
+          notify(`Колода "${name}": ${cards.length} карт ✓`);
           setActiveTab('cloud');
         } else {
           setLocalDecks(p => [...p, { ...newDeck, id: Date.now().toString() }]);
@@ -1097,7 +1092,7 @@ export default function App() {
       const newDeck = { name, cards: linkArray, backImage: null, createdAt: Date.now() };
       if (isDbConnected && user && !isClientMode) {
         await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_decks'), newDeck);
-        notify(`Колода "${name}" сохранена: ${linkArray.length} карт  ✓ `);
+        notify(`Колода "${name}" сохранена: ${linkArray.length} карт ✓`);
         setActiveTab('cloud');
       } else {
         setLocalDecks(p => [...p, { ...newDeck, id: Date.now().toString() }]);
@@ -1114,28 +1109,16 @@ export default function App() {
 
   if (!inRoom) return (
     <div className="min-h-screen flex items-center justify-center p-4 font-sans relative overflow-hidden" style={{ backgroundColor: COLORS.ink, color: COLORS.haze }}>
-      {/* Рендеринг кастомных диалогов */}
       {customDialog && (
         <div className="fixed inset-0 z-[500] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-lg font-black mb-4 text-center" style={{ color: COLORS.ink }}>{customDialog.title}</h3>
             {customDialog.type === 'prompt' && (
-              <input
-                autoFocus
-                defaultValue={customDialog.placeholder || ''}
-                id="dialog-input"
-                className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center"
-                style={{ borderColor: COLORS.haze }}
-                onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))}
-              />
+              <input autoFocus defaultValue={customDialog.placeholder || ''} id="dialog-input" className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center" style={{ borderColor: COLORS.haze }} onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))} />
             )}
             <div className="flex gap-3">
               <button onClick={() => { customDialog.onCancel(); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">Отмена</button>
-              <button onClick={() => {
-                const val = customDialog.type === 'prompt' ? document.getElementById('dialog-input').value : true;
-                customDialog.onOk(val);
-                setCustomDialog(null);
-              }} className="flex-1 py-3 font-bold rounded-xl text-white transition-colors" style={{ backgroundColor: COLORS.plum }}>Ок</button>
+              <button onClick={() => { const val = customDialog.type === 'prompt' ? document.getElementById('dialog-input').value : true; customDialog.onOk(val); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl text-white transition-colors" style={{ backgroundColor: COLORS.plum }}>Ок</button>
             </div>
           </div>
         </div>
@@ -1145,6 +1128,7 @@ export default function App() {
         <div className="absolute -top-[10%] -left-[10%] w-[60vw] h-[60vw] rounded-full blur-[120px]" style={{ backgroundColor: COLORS.plum }}></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full blur-[120px]" style={{ backgroundColor: COLORS.forest }}></div>
       </div>
+      
       <div className="max-w-md w-full bg-white rounded-[3rem] shadow-2xl p-10 space-y-8 relative z-10 text-center pb-12">
         <div className="relative" style={{ color: COLORS.ink }}>
           <div className="relative w-32 h-32 mx-auto mb-6 flex items-center justify-center">
@@ -1157,6 +1141,7 @@ export default function App() {
           <h1 className="text-3xl font-black uppercase italic mb-2 leading-none">ОНЛАЙН КАБИНЕТ</h1>
           <p className="font-bold text-[10px] tracking-[0.3em] uppercase" style={{ color: COLORS.forest }}>Платформа для сессий</p>
         </div>
+        
         <div className="space-y-4">
           {!isClientMode ? (
             !showKeyPrompt ? (
@@ -1186,149 +1171,148 @@ export default function App() {
           )}
         </div>
 
-        {/* --- ССЫЛКИ ДЛЯ СВЯЗИ С СОЗДАТЕЛЕМ (ОБНОВЛЕННЫЙ ДИЗАЙН) --- */}
         <div className="mt-8 pt-6 border-t-2 border-dashed flex flex-col items-center gap-4" style={{ borderColor: `${COLORS.ink}15` }}>
           <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-center" style={{ color: `${COLORS.ink}60` }}>
             Нужна помощь или есть вопросы по платформе?
           </span>
-          
           <div className="flex flex-col gap-3 w-full">
             <a href="https://t.me/psyplat" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2.5 w-full py-4 rounded-[1rem] text-[11px] font-black uppercase tracking-[0.15em] transition-all hover:scale-[1.02] shadow-sm border border-transparent hover:border-plum/20" style={{ backgroundColor: '#FDF7F9', color: COLORS.plum }}>
                <MessageCircle size={16} strokeWidth={2.5} /> TELEGRAM-КАНАЛ
             </a>
-            
             <a href="https://max.ru/join/kmLoxZy4ssavrneuneZhry22HKbI5hbe11kPGlQUXUg" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2.5 w-full py-4 rounded-[1rem] text-[11px] font-black uppercase tracking-[0.15em] transition-all hover:scale-[1.02] shadow-sm border border-transparent hover:border-forest/20" style={{ backgroundColor: '#F5FAF8', color: COLORS.forest }}>
                <MaxIcon size={16} color={COLORS.forest} /> СВЯЗЬ (МАКС)
             </a>
           </div>
         </div>
-
       </div>
     </div>
   );
 
   return (
     <div className="flex flex-col h-screen overflow-hidden font-sans select-none relative" style={{ backgroundColor: COLORS.haze }}>
+      
       {notification && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] text-white px-8 py-3 rounded-full shadow-2xl text-sm font-bold flex items-center gap-2 border" style={{ backgroundColor: COLORS.ink, borderColor: `${COLORS.plum}33` }}>
           <CheckCircle size={16} color={COLORS.terra} /> {notification}
         </div>
       )}
 
-      {/* Рендеринг кастомных диалогов (внутри комнаты) */}
       {customDialog && (
         <div className="fixed inset-0 z-[500] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-lg font-black mb-4 text-center" style={{ color: COLORS.ink }}>{customDialog.title}</h3>
             {customDialog.type === 'prompt' && (
-              <input
-                autoFocus
-                defaultValue={customDialog.placeholder || ''}
-                id="dialog-input"
-                className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center"
-                style={{ borderColor: COLORS.haze }}
-                onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))}
-              />
+              <input autoFocus defaultValue={customDialog.placeholder || ''} id="dialog-input" className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center" style={{ borderColor: COLORS.haze }} onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))} />
             )}
             <div className="flex gap-3">
               <button onClick={() => { customDialog.onCancel(); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">Отмена</button>
-              <button onClick={() => {
-                const val = customDialog.type === 'prompt' ? document.getElementById('dialog-input').value : true;
-                customDialog.onOk(val);
-                setCustomDialog(null);
-              }} className="flex-1 py-3 font-bold rounded-xl text-white transition-colors" style={{ backgroundColor: COLORS.plum }}>Ок</button>
+              <button onClick={() => { const val = customDialog.type === 'prompt' ? document.getElementById('dialog-input').value : true; customDialog.onOk(val); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl text-white transition-colors" style={{ backgroundColor: COLORS.plum }}>Ок</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ИНСТРУКЦИЯ / ПОМОЩЬ */}
+      {/* ИНСТРУКЦИЯ ПО ПЛАТФОРМЕ */}
       {isHelpOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }} onClick={() => setIsHelpOpen(false)}>
-          <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-4xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-5xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
             <button onClick={() => setIsHelpOpen(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
               <X size={24} style={{ color: COLORS.ink }} />
             </button>
-            <h2 className="text-2xl font-black uppercase mb-8 text-center" style={{ color: COLORS.ink }}>Как работать с платформой?</h2>
+            <h2 className="text-2xl font-black uppercase mb-8 text-center" style={{ color: COLORS.ink }}>Полное руководство</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Секция: Инструменты */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              
+              {/* КЛИЕНТ И ДОСТУП */}
               <div className="space-y-4">
-                <h3 className="text-[12px] font-bold uppercase tracking-widest" style={{ color: COLORS.plum }}>Инструменты Мастера</h3>
-                <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-2xl">
-                  <div className="p-2 bg-white rounded-xl shadow-sm text-plum"><Crosshair size={18} /></div>
-                  <div><strong className="text-sm">Лазерная указка:</strong> Включает красный лазер, чтобы показывать клиенту конкретные места на столе. Ваша обычная мышка для клиента невидима.</div>
-                </div>
-                <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-2xl">
-                  <div className="p-2 bg-purple-100 rounded-xl shadow-sm text-purple-600 relative"><Type size={18} /><EyeOff size={10} className="absolute bottom-1 right-1" /></div>
-                  <div><strong className="text-sm">Секретная заметка:</strong> Фиолетовая кнопка создает текст, который <b>видите только вы</b>. Клиенту этот стикер не передается. Желтая кнопка (<Type size={14} className="inline"/>) — обычный стикер, видимый всем.</div>
-                </div>
-                <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-2xl">
-                  <div className="p-2 bg-white rounded-xl shadow-sm text-forest"><LayoutGrid size={18} /></div>
-                  <div><strong className="text-sm">Оформление поля:</strong> Позволяет изменить фон стола (текстуры, цвет) или загрузить отдельную картинку как Игровое Поле (она ляжет на задний фон, и на нее можно будет класть карты).</div>
-                </div>
-                <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-2xl">
-                  <div className="p-2 bg-white rounded-xl shadow-sm text-terra"><Trash2 size={18} /></div>
-                  <div><strong className="text-sm">Очистить стол:</strong> Удаляет все не закрепленные объекты. У вас будет 10 секунд на отмену, если нажали случайно.</div>
+                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> Клиент и Доступ</h3>
+                <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
+                  <p>Нажмите <UserPlus size={14} className="inline text-plum"/> <b>«ССЫЛКА ДЛЯ КЛИЕНТА»</b> на верхней панели. Ссылка скопируется — отправьте её клиенту.</p>
+                  <p>Клиент переходит по ссылке, вводит своё имя и попадает за ваш стол. <b>Регистрация не нужна.</b></p>
+                  <p><b>Права клиента:</b> тянуть карты (если колода открыта), двигать их, писать в желтых заметках, бросать игровые кубики.</p>
+                  <p className="text-terra"><b>Клиент НЕ может:</b> видеть фиолетовые заметки, открывать библиотеку и менять колоды, удалять всё со стола, видеть лазерную указку (если она выключена у мастера).</p>
                 </div>
               </div>
 
-              {/* Секция: Взаимодействие с картами */}
+              {/* ИНСТРУМЕНТЫ ВЕРХНЕЙ ПАНЕЛИ */}
               <div className="space-y-4">
-                <h3 className="text-[12px] font-bold uppercase tracking-widest" style={{ color: COLORS.forest }}>Работа с картами на столе</h3>
-                <p className="text-sm text-gray-600 mb-2">Наведите курсор на любую карту, чтобы появилось меню действий:</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl text-sm">
-                    <RefreshCw size={16} className="text-gray-500" /> Перевернуть
+                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><LayoutGrid size={16}/> Панель инструментов</h3>
+                <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
+                  <div className="flex items-start gap-2"><Crosshair size={16} className="text-red-500 mt-0.5 shrink-0"/> <div><b>Лазерная указка:</b> Обычная мышка скрыта от клиента. Указка включает красную точку, которую видят все (удобно показывать детали).</div></div>
+                  <div className="flex items-start gap-2"><Camera size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Скриншот:</b> Делает качественный снимок всего рабочего стола и скачивает на ваше устройство.</div></div>
+                  <div className="flex items-start gap-2"><Save size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Сохранить сессию:</b> Сохраняет весь расклад в библиотеку (вкладка СЕССИИ), чтобы загрузить его на следующих встречах.</div></div>
+                  <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Настройки Поля:</b> Изменение фона стола (нейро-текстуры) или загрузка своего игрового поля (картинки, на которую можно класть карты).</div></div>
+                  <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Очистить стол:</b> Удаляет все незакрепленные объекты. Внизу появится кнопка отмены (действует 10 секунд).</div></div>
+                  <div className="flex items-start gap-2"><Timer size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Таймер:</b> Устанавливает общее время (60/90 мин). Синхронизирован с клиентом.</div></div>
+                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Видеосвязь:</b> Вставьте ссылку на Zoom/Skype/Телемост, чтобы у клиента появилась яркая кнопка для входа в звонок.</div></div>
+                </div>
+              </div>
+
+              {/* ЗАМЕТКИ */}
+              <div className="space-y-4">
+                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Type size={16}/> Работа с заметками</h3>
+                <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
+                  <div className="flex items-start gap-3 bg-yellow-50 p-3 rounded-xl border border-yellow-100">
+                    <div className="p-2 bg-white rounded-lg shadow-sm text-terra shrink-0"><Type size={16} /></div>
+                    <div><b>Желтая (Общая):</b> Видят оба. И вы, и клиент можете печатать в ней текст одновременно.</div>
                   </div>
-                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl text-sm">
-                    <Maximize2 size={16} className="text-gray-500" /> Увеличить
-                  </div>
-                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl text-sm">
-                    <Eye size={16} className="text-forest" /> Подсмотреть (в закрытую)
-                  </div>
-                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl text-sm">
-                    <Lock size={16} className="text-gray-500" /> Закрепить (от сдвигов)
-                  </div>
-                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl text-sm">
-                    <ArrowUp size={16} className="text-gray-500" /> На передний план
-                  </div>
-                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl text-sm">
-                    <RotateCw size={16} className="text-gray-500" /> Повернуть (90°)
-                  </div>
-                  <div className="flex items-center gap-2 col-span-2 bg-gray-50 p-2 rounded-xl text-sm">
-                    <Move size={16} className="text-plum" /> <i>Потяните за правый нижний угол карты для изменения размера.</i>
+                  <div className="flex items-start gap-3 bg-purple-50 p-3 rounded-xl border border-purple-100">
+                    <div className="p-2 bg-white rounded-lg shadow-sm text-purple-600 relative shrink-0"><Type size={16} /><EyeOff size={8} className="absolute bottom-1 right-1" /></div>
+                    <div><b className="text-purple-900">Фиолетовая (Секретная):</b> <b>Видите только вы</b>. На экране клиента её не существует. Идеально для ваших личных скрытых пометок.</div>
                   </div>
                 </div>
               </div>
 
-              {/* Секция: Режимы и Библиотека */}
-              <div className="space-y-4 md:col-span-2">
-                <h3 className="text-[12px] font-bold uppercase tracking-widest" style={{ color: COLORS.ink }}>Режимы и Библиотека</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-50 p-4 rounded-2xl">
-                    <h4 className="font-bold flex items-center gap-2 mb-2 text-plum"><Users size={16}/> Консультация</h4>
-                    <p className="text-xs text-gray-600">Стандартный режим чистого стола.</p>
+              {/* ПЛАВАЮЩИЕ ПАНЕЛИ */}
+              <div className="space-y-4">
+                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Layers size={16}/> Плавающие панели</h3>
+                <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
+                  <div className="flex items-start gap-3 bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                    <div className="p-2 bg-white rounded-lg shadow-sm text-emerald-700 shrink-0"><FigureIcon gender="male" color={COLORS.forest} isMenu={true} className="w-[18px] h-[18px] opacity-80" /></div>
+                    <div><b className="text-emerald-800">Фигурки для расстановок:</b> Кнопка с фигуркой вверху открывает панель. Вы можете выбирать цвет, указывать имя, добавлять мужские/женские фигурки и стрелки. Есть переключатель вида (Сбоку/Сверху).</div>
                   </div>
-                  <div className="bg-gray-50 p-4 rounded-2xl">
-                    <h4 className="font-bold flex items-center gap-2 mb-2 text-plum"><Gamepad2 size={16}/> Игра</h4>
-                    <p className="text-xs text-gray-600">Появляется панель с цветными фишками и кубиками (d6 и d10). Идеально для настольных игр.</p>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-2xl">
-                    <h4 className="font-bold flex items-center gap-2 mb-2 text-forest"><UserPlus size={16}/> Расстановка</h4>
-                    <p className="text-xs text-gray-600">Появляется панель с деревянными фигурками (М/Ж) и стрелками. Можно менять цвет, имя и вид (сверху/сбоку).</p>
+                  <div className="flex items-start gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
+                    <div className="p-2 bg-white rounded-lg shadow-sm text-blue-700 shrink-0"><Dices size={18} /></div>
+                    <div><b className="text-blue-800">Игровые кубики и фишки:</b> Кнопка с кубиками открывает панель. Доступны цветные маркеры и кубики (d6 и d10). Бросать кубик может и клиент.</div>
                   </div>
                 </div>
-                <div className="bg-blue-50 p-4 rounded-2xl mt-4">
-                  <h4 className="font-bold mb-2 flex items-center gap-2 text-blue-800"><Layers size={16}/> Библиотека (Нижняя панель)</h4>
-                  <ul className="text-sm space-y-1 text-blue-900/80 list-disc list-inside">
-                    <li><b>БАЗА:</b> Стандартные колоды, встроенные в платформу.</li>
-                    <li><b>ОБЛАКО:</b> Ваши личные колоды. Для загрузки нажмите "Свой фон" в меню поля, либо воспользуйтесь вкладкой МОИ.</li>
-                    <li><b>СЕССИИ:</b> Сохраненные столы (расклады клиентов). Для сохранения нажмите значок <Save size={14} className="inline"/> на верхней панели.</li>
-                    <li><b>ОТКРЫТЬ КОЛОДУ:</b> Кнопка (видна только вам), позволяющая развернуть все карты лицом вверх в библиотеке для выбора в открытую.</li>
+              </div>
+
+              {/* ДЕЙСТВИЯ С КАРТАМИ */}
+              <div className="space-y-4">
+                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><MousePointer2 size={16}/> Действия с объектами</h3>
+                <div className="text-sm text-gray-700 leading-relaxed px-2">
+                  <p className="mb-2">Наведите курсор на любую карту или фигурку на столе, чтобы появилось меню:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><RefreshCw size={14} className="text-gray-500" /> Перевернуть (лицо/рубашка)</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Eye size={14} className="text-forest" /> Подсмотреть (в закрытую)</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Maximize2 size={14} className="text-gray-500" /> Увеличить объект</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><RotateCw size={14} className="text-gray-500" /> Повернуть (на 90°)</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><ArrowUp size={14} className="text-gray-500" /> На передний план</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Lock size={14} className="text-gray-500" /> Закрепить (от сдвигов)</div>
+                  </div>
+                  <p className="mt-3 text-xs bg-gray-50 p-2 rounded-lg"><Move size={14} className="inline text-plum"/> Чтобы <b>изменить размер</b>, потяните за правый нижний угол объекта.</p>
+                </div>
+              </div>
+
+              {/* БИБЛИОТЕКА МАСТЕРА */}
+              <div className="space-y-4">
+                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><FolderOpen size={16}/> Библиотека Мастера</h3>
+                <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
+                  <p>Вызывается длинной кнопкой <b>«Библиотека Мастера»</b> в самом низу экрана.</p>
+                  <ul className="space-y-1 list-disc list-inside">
+                    <li><b>БАЗА:</b> Стандартные колоды, доступные всегда.</li>
+                    <li><b>ОБЛАКО:</b> Колоды, загруженные разработчиком специально для вас.</li>
+                    <li><b>МОИ:</b> Ваше личное пространство. Можно добавить колоды ссылкой с вашего Google Диска. Видите их только вы.</li>
+                    <li><b>СЕССИИ:</b> Сохраненные столы (история раскладов).</li>
                   </ul>
+                  <div className="bg-plum/10 p-2 rounded-lg border border-plum/20 mt-2">
+                    <p className="font-bold text-plum mb-1">Как вытаскивать карты?</p>
+                    <p className="text-xs">Выберите колоду в левом списке. Нажмите <b>«Наугад»</b> (вытащит случайную рубашкой вверх) или нажмите кнопку <b>«Открыть колоду»</b> справа вверху, чтобы увидеть все изображения и выбрать конкретную.</p>
+                  </div>
                 </div>
               </div>
+
             </div>
           </div>
         </div>
@@ -1340,10 +1324,10 @@ export default function App() {
           <div className="flex justify-between items-center bg-gray-100 px-3 py-2 border-b border-gray-200">
             <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest flex items-center gap-2"><Video size={12} /> Видеосвязь</span>
             <div className="flex items-center gap-2">
-               <a href={videoLink} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-plum transition-colors" title="Открыть в новой вкладке (если видео не грузится)">
+               <a href={videoLink} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-plum transition-colors" title="Открыть в новой вкладке">
                   <ExternalLink size={14} />
                </a>
-               <button onClick={() => setIsVideoActive(false)} className="text-gray-500 hover:text-terra transition-colors" title="Закрыть окно">
+               <button onClick={() => setIsVideoActive(false)} className="text-gray-500 hover:text-terra transition-colors" title="Закрыть">
                   <X size={16} />
                </button>
             </div>
@@ -1351,24 +1335,16 @@ export default function App() {
           <div className="flex-1 bg-black relative">
              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
                 <Video size={24} className="text-white/20 mb-2" />
-                <p className="text-[9px] text-white/50 uppercase font-bold tracking-widest">
-                  Если видео не появилось, сервис запрещает встраивание.
-                </p>
+                <p className="text-[9px] text-white/50 uppercase font-bold tracking-widest">Если видео не появилось, сервис запрещает встраивание.</p>
                 <a href={videoLink} target="_blank" rel="noopener noreferrer" className="mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[10px] font-black transition-colors">
                   Открыть в новой вкладке
                 </a>
              </div>
-             <iframe 
-               src={videoLink} 
-               title="Video Call"
-               allow="camera; microphone; fullscreen; display-capture; autoplay" 
-               className="absolute inset-0 w-full h-full border-0 z-10"
-             />
+             <iframe src={videoLink} title="Video Call" allow="camera; microphone; fullscreen; display-capture; autoplay" className="absolute inset-0 w-full h-full border-0 z-10" />
           </div>
         </div>
       )}
 
-      {/* МОДАЛКА ВИДЕОСВЯЗИ (НАСТРОЙКИ) */}
       {isVideoModalOpen && !isClientMode && (
         <div className="fixed inset-0 z-[160] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl relative">
@@ -1379,49 +1355,17 @@ export default function App() {
             <p className="text-[10px] text-center mb-6 font-medium leading-relaxed" style={{ color: `${COLORS.ink}99` }}>
               Вставьте ссылку на Яндекс.Телемост, Zoom, Google Meet или Skype. <br/>У клиента в кабинете появится яркая кнопка для подключения к вашему звонку.
             </p>
-            <input 
-              type="text" 
-              value={tempVideoLink} 
-              onChange={e => setTempVideoLink(e.target.value)} 
-              placeholder="https://telemost.yandex.ru/j/..." 
-              className="w-full px-4 py-3 rounded-xl border-2 mb-6 text-sm font-bold outline-none text-center" 
-              style={{ borderColor: COLORS.haze, color: COLORS.ink }} 
-            />
+            <input type="text" value={tempVideoLink} onChange={e => setTempVideoLink(e.target.value)} placeholder="https://telemost.yandex.ru/j/..." className="w-full px-4 py-3 rounded-xl border-2 mb-6 text-sm font-bold outline-none text-center" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
             <div className="flex gap-3">
               {videoLink && (
-                <button 
-                  onClick={async () => { 
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: '' }, { merge: true }); 
-                    setIsVideoModalOpen(false); 
-                    setIsVideoActive(false);
-                    notify("Ссылка на звонок удалена"); 
-                  }} 
-                  className="flex-1 py-3 font-bold rounded-xl text-[10px] uppercase tracking-widest transition-colors hover:opacity-80"
-                  style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}
-                >
-                  Удалить
-                </button>
+                <button onClick={async () => { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: '' }, { merge: true }); setIsVideoModalOpen(false); setIsVideoActive(false); notify("Ссылка удалена"); }} className="flex-1 py-3 font-bold rounded-xl text-[10px] uppercase tracking-widest transition-colors hover:opacity-80" style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}>Удалить</button>
               )}
-              <button 
-                onClick={async () => { 
-                  if (!tempVideoLink.trim()) return notify("Введите ссылку!");
-                  let linkToSave = tempVideoLink.trim();
-                  if (!linkToSave.startsWith('http')) linkToSave = 'https://' + linkToSave;
-                  await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: linkToSave }, { merge: true }); 
-                  setIsVideoModalOpen(false); 
-                  notify("Связь установлена! У клиента появилась кнопка."); 
-                }} 
-                className="flex-[2] py-3 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:scale-105" 
-                style={{ backgroundColor: COLORS.forest }}
-              >
-                Сохранить
-              </button>
+              <button onClick={async () => { if (!tempVideoLink.trim()) return notify("Введите ссылку!"); let linkToSave = tempVideoLink.trim(); if (!linkToSave.startsWith('http')) linkToSave = 'https://' + linkToSave; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: linkToSave }, { merge: true }); setIsVideoModalOpen(false); notify("Связь установлена!"); }} className="flex-[2] py-3 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:scale-105" style={{ backgroundColor: COLORS.forest }}>Сохранить</button>
             </div>
           </div>
         </div>
       )}
       
-      {/* MODAL: ТАБЛИЦА / ОФОРМЛЕНИЕ СТОЛА */}
       {isFieldModalOpen && !isClientMode && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-2xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
@@ -1441,12 +1385,7 @@ export default function App() {
                       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { tableBg: bg }, { merge: true });
                     }
                   }} className={`relative h-20 md:h-24 rounded-2xl overflow-hidden border-4 transition-all hover:scale-105 ${tableBg?.id === bg.id ? 'shadow-lg' : 'border-transparent shadow-sm'}`} style={{ backgroundColor: bg.bgColor, borderColor: tableBg?.id === bg.id ? COLORS.plum : 'transparent' }}>
-                    <div className="absolute inset-0 pointer-events-none" style={{
-                      backgroundColor: bg.blendMode ? bg.bgColor : 'transparent',
-                      backgroundImage: bg.value === 'none' ? 'none' : (bg.type === 'css' ? bg.value : `url('${bg.value}')`),
-                      backgroundSize: bg.bgSize, backgroundPosition: 'center', opacity: bg.opacity, backgroundRepeat: bg.repeat || 'repeat',
-                      backgroundBlendMode: bg.blendMode || 'normal'
-                    }}></div>
+                    <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: bg.blendMode ? bg.bgColor : 'transparent', backgroundImage: bg.value === 'none' ? 'none' : (bg.type === 'css' ? bg.value : `url('${bg.value}')`), backgroundSize: bg.bgSize, backgroundPosition: 'center', opacity: bg.opacity, backgroundRepeat: bg.repeat || 'repeat', backgroundBlendMode: bg.blendMode || 'normal' }}></div>
                     <div className="absolute inset-0 flex items-end p-2 md:p-3 bg-gradient-to-t from-black/50 to-transparent">
                       <span className="text-white text-[9px] md:text-[10px] font-bold leading-tight drop-shadow-md">{bg.name}</span>
                     </div>
@@ -1455,20 +1394,16 @@ export default function App() {
                 <label className="relative h-20 md:h-24 rounded-2xl overflow-hidden border-2 border-dashed flex flex-col items-center justify-center gap-1 cursor-pointer transition-all hover:bg-black/5" style={{ borderColor: `${COLORS.plum}4D`, color: COLORS.plum }}>
                   <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                     const f = e.target.files[0]; if (!f) return;
-                    setIsUploadingBg(true);
-                    notify("Загружаю фон...", 4000);
+                    setIsUploadingBg(true); notify("Загружаю фон...", 4000);
                     try {
                       const data = await new Promise(r => { const rd = new FileReader(); rd.onload = ev => r(ev.target.result); rd.readAsDataURL(f); });
                       let comp = await compressImage(data, 1920, 1920);
                       const url = await uploadImageToStorage(comp, `backgrounds/${user.uid}/${Date.now()}.jpg`);
                       const customBg = { id: 'custom', name: 'Свой фон', type: 'image', value: url, bgSize: 'cover', bgColor: COLORS.haze, opacity: 1, repeat: 'no-repeat', blendMode: 'normal' };
                       setTableBg(customBg);
-                      if (isDbConnected && roomId) {
-                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { tableBg: customBg }, { merge: true });
-                      }
-                      notify("Фон установлен!  ✓ ");
-                    } catch(err) { notify("Ошибка: " + err.message); }
-                    finally { setIsUploadingBg(false); e.target.value = ''; }
+                      if (isDbConnected && roomId) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { tableBg: customBg }, { merge: true });
+                      notify("Фон установлен! ✓");
+                    } catch(err) { notify("Ошибка: " + err.message); } finally { setIsUploadingBg(false); e.target.value = ''; }
                   }} />
                   {isUploadingBg ? <Loader2 size={20} className="animate-spin" /> : <ImageIcon size={20} />}
                   <span className="text-[9px] md:text-[10px] font-black uppercase text-center leading-tight">Свой<br/>Фон</span>
@@ -1487,26 +1422,16 @@ export default function App() {
                   setIsFieldModalOpen(false);
                   notify("Сжимаю изображение...", 5000);
                   try {
-                    const data = await new Promise(r => {
-                      const rd = new FileReader();
-                      rd.onload = (ev) => r(ev.target.result);
-                      rd.readAsDataURL(f);
-                    });
+                    const data = await new Promise(r => { const rd = new FileReader(); rd.onload = (ev) => r(ev.target.result); rd.readAsDataURL(f); });
                     let comp = await compressImage(data, 1200, 1200);
                     if (comp.length > 900000) comp = await compressImage(data, 900, 900);
                     if (comp.length > 900000) comp = await compressImage(data, 700, 700);
                     const sizeKB = Math.round(comp.length / 1024);
-                    if (comp.length > 900000) {
-                      return notify(`Файл слишком большой (${sizeKB}KB). Попробуйте другое изображение.`);
-                    }
+                    if (comp.length > 900000) return notify(`Файл слишком большой (${sizeKB}KB). Попробуйте другое изображение.`);
                     notify(`Размещаю поле на столе (${sizeKB}KB)...`, 4000);
                     await addElement('field', { img: comp });
-                    notify("Игровое поле появилось на столе!  ✓ ");
-                  } catch (err) {
-                    notify("Ошибка: " + err.message);
-                  } finally {
-                    e.target.value = '';
-                  }
+                    notify("Игровое поле появилось на столе! ✓");
+                  } catch (err) { notify("Ошибка: " + err.message); } finally { e.target.value = ''; }
                 }} />
                 <ImageIcon size={24} />
                 <span className="text-[10px] font-black uppercase tracking-widest">Загрузить поле для игры</span>
@@ -1516,7 +1441,8 @@ export default function App() {
         </div>
       )}
 
-      <header className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-3 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm gap-2" style={{ borderColor: `${COLORS.ink}10` }}>
+      {/* ШАПКА / HEADER */}
+      <header className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-3 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm gap-2 relative" style={{ borderColor: `${COLORS.ink}10` }}>
         <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.plum}, ${COLORS.forest})` }}>
@@ -1535,19 +1461,6 @@ export default function App() {
                 <span className="text-[8px] md:text-[9px] font-bold tracking-widest uppercase flex items-center gap-1" style={{ color: COLORS.plum }}>
                   СЕССИЯ: {roomId} <span className="opacity-50">|</span> ВЫ: {userName}
                 </span>
-                
-                {/* ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМОВ СТОЛА */}
-                <div className="flex bg-black/5 p-0.5 rounded-lg border shadow-inner" style={{ borderColor: `${COLORS.ink}10` }}>
-                  <button onClick={() => changeMode('consultation')} className={`px-2.5 md:px-3 py-1 rounded-[0.5rem] text-[8px] md:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all ${roomMode === 'consultation' ? 'bg-white shadow-sm' : 'hover:bg-black/5 opacity-60'}`} style={{ color: roomMode === 'consultation' ? COLORS.plum : COLORS.ink }}>
-                    <Users size={12} /> Конс.
-                  </button>
-                  <button onClick={() => changeMode('game')} className={`px-2.5 md:px-3 py-1 rounded-[0.5rem] text-[8px] md:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all ${roomMode === 'game' ? 'shadow-sm' : 'hover:bg-black/5 opacity-60'}`} style={{ backgroundColor: roomMode === 'game' ? COLORS.plum : 'transparent', color: roomMode === 'game' ? 'white' : COLORS.ink }}>
-                    <Gamepad2 size={12} /> Игра
-                  </button>
-                  <button onClick={() => changeMode('constellation')} className={`px-2.5 md:px-3 py-1 rounded-[0.5rem] text-[8px] md:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all ${roomMode === 'constellation' ? 'shadow-sm' : 'hover:bg-black/5 opacity-60'}`} style={{ backgroundColor: roomMode === 'constellation' ? COLORS.forest : 'transparent', color: roomMode === 'constellation' ? 'white' : COLORS.ink }}>
-                    <UserPlus size={12} /> Расстановка
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -1556,7 +1469,16 @@ export default function App() {
         {/* ИНСТРУМЕНТЫ ПРАВАЯ ЧАСТЬ */}
         <div className="flex items-center gap-2 flex-wrap justify-center md:justify-end w-full md:w-auto">
           
-          {/* --- КНОПКА ВИДЕОСВЯЗИ --- */}
+          {/* НОВЫЕ КНОПКИ ВЫЗОВА ПЛАШЕК */}
+          <div className="flex bg-black/5 p-1 rounded-2xl shadow-inner border border-ink/5 gap-1 mr-1">
+             <button onClick={() => setIsFiguresPanelOpen(!isFiguresPanelOpen)} className={`p-2 rounded-xl transition-all flex items-center justify-center ${isFiguresPanelOpen ? 'bg-white shadow-sm text-plum' : 'hover:bg-white text-ink/70'}`} title="Открыть фигурки и стрелки">
+                <FigureIcon gender="male" color={isFiguresPanelOpen ? COLORS.plum : 'currentColor'} isMenu={true} className="w-[18px] h-[18px] opacity-80" />
+             </button>
+             <button onClick={() => setIsDicePanelOpen(!isDicePanelOpen)} className={`p-2 rounded-xl transition-all flex items-center justify-center ${isDicePanelOpen ? 'bg-white shadow-sm text-forest' : 'hover:bg-white text-ink/70'}`} title="Открыть кубики и фишки">
+                <Dices size={18} />
+             </button>
+          </div>
+
           {!isClientMode ? (
             <div className="flex items-center gap-1 bg-white/50 p-1 rounded-[1rem] border shadow-sm" style={{ borderColor: `${COLORS.forest}30`, backgroundColor: `${COLORS.forest}10` }}>
               <button onClick={() => { setTempVideoLink(videoLink || ''); setIsVideoModalOpen(true); }} className="p-2 rounded-xl transition-all hover:bg-white text-forest" title="Настроить видеосвязь">
@@ -1605,36 +1527,22 @@ export default function App() {
             <button onClick={async () => {
               const url = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
               await copyToClipboard(url);
-              setCopyFeedback(true);
-              setTimeout(() => setCopyFeedback(false), 2000);
+              setCopyFeedback(true); setTimeout(() => setCopyFeedback(false), 2000);
             }} className="px-4 py-2.5 rounded-[1rem] text-[10px] font-black border flex items-center gap-2 shadow-sm transition-all hover:scale-105" style={{ backgroundColor: copyFeedback ? COLORS.forest : 'white', borderColor: copyFeedback ? COLORS.forest : `${COLORS.plum}30`, color: copyFeedback ? 'white' : COLORS.plum }}>
               {copyFeedback ? <CheckCircle size={14} /> : <UserPlus size={14} />}
               <span className="hidden sm:inline">{copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА ДЛЯ КЛИЕНТА"}</span>
             </button>
           )}
 
-          {/* НОВЫЕ ИНСТРУМЕНТЫ */}
           {!isClientMode && (
             <div className="flex bg-black/5 p-1 rounded-[1rem] gap-1 shadow-inner border border-ink/5">
-              <button 
-                onClick={() => setIsLaserMode(!isLaserMode)} 
-                className={`p-2 rounded-xl transition-all ${isLaserMode ? 'bg-white shadow-sm text-red-500' : 'hover:bg-white text-ink/70'}`} 
-                title={isLaserMode ? "Отключить указку" : "Лазерная указка (клиент видит точку)"}
-              >
+              <button onClick={() => setIsLaserMode(!isLaserMode)} className={`p-2 rounded-xl transition-all ${isLaserMode ? 'bg-white shadow-sm text-red-500' : 'hover:bg-white text-ink/70'}`} title={isLaserMode ? "Отключить указку" : "Лазерная указка (клиент видит точку)"}>
                 <Crosshair size={16} />
               </button>
-              <button 
-                onClick={takeScreenshot} 
-                className="p-2 rounded-xl transition-all hover:bg-white text-ink/70" 
-                title="Скриншот стола"
-              >
+              <button onClick={takeScreenshot} className="p-2 rounded-xl transition-all hover:bg-white text-ink/70" title="Скриншот стола">
                 <Camera size={16} />
               </button>
-              <button 
-                onClick={saveCurrentSession} 
-                className="p-2 rounded-xl transition-all hover:bg-white text-ink/70" 
-                title="Сохранить сессию"
-              >
+              <button onClick={saveCurrentSession} className="p-2 rounded-xl transition-all hover:bg-white text-ink/70" title="Сохранить сессию">
                 <Save size={16} />
               </button>
             </div>
@@ -1642,7 +1550,7 @@ export default function App() {
           
           {!isClientMode && (
             <>
-              {/* СЕКРЕТНАЯ ЗАМЕТКА */}
+              {/* ЗАМЕТКИ, ПОЛЕ, ОЧИСТКА */}
               <button onClick={() => addElement('private-text', { text: "" })} className="relative p-2.5 rounded-[1rem] transition-all hover:scale-105 shadow-sm border" style={{ backgroundColor: '#F3E8FF', color: '#9333EA', borderColor: '#D8B4FE' }} title="Скрытая заметка (не видна клиенту)">
                 <Type size={18} />
                 <EyeOff size={10} className="absolute bottom-1 right-1 opacity-70" />
@@ -1660,9 +1568,10 @@ export default function App() {
             </>
           )}
 
-          {/* КНОПКА ИНСТРУКЦИИ */}
-          <button onClick={() => setIsHelpOpen(true)} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5" style={{ color: COLORS.forest }} title="Инструкция">
-            <HelpCircle size={18} />
+          {/* НОВАЯ КНОПКА ИНСТРУКЦИИ */}
+          <button onClick={() => setIsHelpOpen(true)} className="px-3 py-2.5 rounded-[1rem] border transition-all hover:bg-black/5 hover:scale-105 flex items-center gap-2 shadow-sm" style={{ backgroundColor: 'white', color: COLORS.plum, borderColor: `${COLORS.plum}30` }} title="Инструкция">
+            <HelpCircle size={14} />
+            <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">ИНСТРУКЦИЯ</span>
           </button>
 
           <button onClick={() => window.location.reload()} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5" style={{ color: `${COLORS.ink}80` }} title="Выйти">
@@ -1672,12 +1581,16 @@ export default function App() {
       </header>
 
       <main className="flex-1 relative flex flex-col overflow-hidden pt-28 md:pt-24">
-        {/* ИГРОВОЙ РЕЖИМ (КУБИКИ И ФИШКИ) */}
-        {roomMode === 'game' && (
-          <div className="absolute top-2 right-4 md:right-8 z-40 flex flex-col items-center gap-2 md:gap-3 bg-white/70 backdrop-blur-xl p-3 md:p-4 rounded-[1.5rem] md:rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white transition-all pointer-events-auto">
-            <div className="flex gap-1.5 md:gap-2 p-1.5 md:p-2 rounded-[1rem] md:rounded-2xl border border-white" style={{ backgroundColor: `${COLORS.ink}10` }}>
+        
+        {/* ПЛАШКА: КУБИКИ И ФИШКИ */}
+        {isDicePanelOpen && (
+          <div className="absolute top-4 right-4 md:right-8 z-40 flex flex-col items-center gap-2 md:gap-3 bg-white/90 backdrop-blur-xl p-4 md:p-5 rounded-[1.5rem] md:rounded-[2.5rem] shadow-[0_10px_40px_rgb(0,0,0,0.15)] border border-white transition-all pointer-events-auto" style={{ animation: 'popup 0.2s ease-out' }}>
+            <button onClick={() => setIsDicePanelOpen(false)} className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-terra hover:bg-gray-100 rounded-full transition-colors">
+              <X size={14} />
+            </button>
+            <div className="flex gap-1.5 md:gap-2 p-1.5 md:p-2 rounded-[1rem] md:rounded-2xl border border-white mt-2" style={{ backgroundColor: `${COLORS.ink}10` }}>
               {['#8B3252', '#2D4A3E', '#C4714A', '#4A90E2', '#E2A94A'].map(color => (
-                <button key={color} onClick={() => addElement('token', { color })} className="w-4 h-4 md:w-5 md:h-5 rounded-full shadow-md border border-white/50 hover:scale-125 transition-transform" style={{ backgroundColor: color }} />
+                <button key={color} onClick={() => addElement('token', { color })} className="w-5 h-5 md:w-6 md:h-6 rounded-full shadow-md border border-white/50 hover:scale-125 transition-transform" style={{ backgroundColor: color }} />
               ))}
             </div>
             <div className="flex p-0.5 rounded-lg md:rounded-xl" style={{ backgroundColor: `${COLORS.ink}15` }}>
@@ -1691,12 +1604,12 @@ export default function App() {
               ))}
             </div>
             {diceType === 6 ? (
-              <div className={`w-10 h-10 md:w-14 md:h-14 bg-white rounded-xl md:rounded-2xl shadow-md flex items-center justify-center border transition-all ${isAnimating ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.plum}20` }}>
+              <div className={`w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl md:rounded-2xl shadow-md flex items-center justify-center border transition-all ${isAnimating ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.plum}20` }}>
                 {renderDiceFace(visualDice, COLORS.plum)}
               </div>
             ) : (
-              <div className={`w-10 h-10 md:w-14 md:h-14 bg-white rounded-xl md:rounded-2xl shadow-md flex items-center justify-center border transition-all ${isAnimatingD10 ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.forest}30` }}>
-                <span className="font-black text-xl md:text-2xl" style={{ color: COLORS.forest }}>{visualDiceD10}</span>
+              <div className={`w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl md:rounded-2xl shadow-md flex items-center justify-center border transition-all ${isAnimatingD10 ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.forest}30` }}>
+                <span className="font-black text-2xl md:text-3xl" style={{ color: COLORS.forest }}>{visualDiceD10}</span>
               </div>
             )}
             <button onClick={async () => {
@@ -1713,17 +1626,16 @@ export default function App() {
                 const v = (array[0] % 10) + 1;
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_d10_state'), { value: v, timestamp: Date.now() });
               }
-            }} disabled={diceType === 6 ? isAnimating : isAnimatingD10} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="px-3 py-1.5 md:px-5 md:py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-md hover:scale-105 transition-all disabled:opacity-50">
+            }} disabled={diceType === 6 ? isAnimating : isAnimatingD10} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="w-full py-2 rounded-xl text-[10px] font-black uppercase shadow-md hover:scale-105 transition-all disabled:opacity-50">
               Бросить
             </button>
           </div>
         )}
 
-        {/* РЕЖИМ РАССТАНОВКИ (ФИГУРЫ) - ГОРИЗОНТАЛЬНАЯ ПЛАВАЮЩАЯ ПАНЕЛЬ СВЕРХУ */}
-        {roomMode === 'constellation' && (
-          <div className="absolute top-2 md:top-4 left-1/2 -translate-x-1/2 z-40 flex flex-wrap md:flex-nowrap items-center justify-center gap-2 md:gap-4 bg-white/90 backdrop-blur-xl px-4 py-2 rounded-2xl md:rounded-full shadow-lg border border-white transition-all pointer-events-auto w-[95%] md:w-max">
+        {/* ПЛАШКА: ФИГУРЫ И СТРЕЛКИ */}
+        {isFiguresPanelOpen && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex flex-wrap md:flex-nowrap items-center justify-center gap-2 md:gap-4 bg-white/95 backdrop-blur-xl px-5 py-3 rounded-2xl md:rounded-full shadow-[0_10px_40px_rgb(0,0,0,0.15)] border border-white transition-all pointer-events-auto w-[95%] md:w-max" style={{ animation: 'popup 0.2s ease-out' }}>
             
-            {/* ГЛОБАЛЬНЫЙ Переключатель вида (Сверху / Сбоку) */}
             <div className="flex bg-[#F3F4F6] p-1 rounded-full">
               <button onClick={() => updateGlobalFigureView('side')} className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'side' ? 'bg-white shadow-sm text-plum' : 'text-gray-500'}`}>Сбоку</button>
               <button onClick={() => updateGlobalFigureView('top')} className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'top' ? 'bg-white shadow-sm text-plum' : 'text-gray-500'}`}>Сверху</button>
@@ -1731,21 +1643,11 @@ export default function App() {
 
             <div className="w-[1px] h-6 bg-gray-200 hidden md:block"></div>
 
-            {/* ПОЛЕ ВВОДА ИМЕНИ */}
-            <input 
-              type="text" 
-              value={figureName}
-              onChange={e => setFigureName(e.target.value)}
-              placeholder="Имя"
-              maxLength={12}
-              className="w-20 md:w-24 px-3 py-1.5 rounded-full border-2 text-[10px] font-bold outline-none text-center transition-colors"
-              style={{ borderColor: '#F3F4F6', color: COLORS.ink }}
-            />
+            <input type="text" value={figureName} onChange={e => setFigureName(e.target.value)} placeholder="Имя" maxLength={12} className="w-20 md:w-24 px-3 py-1.5 rounded-full border-2 text-[10px] font-bold outline-none text-center transition-colors focus:border-plum/30" style={{ borderColor: '#F3F4F6', color: COLORS.ink }} />
 
             <div className="w-[1px] h-6 bg-gray-200 hidden md:block"></div>
 
-            {/* ВЫБОР ЦВЕТА */}
-            <div className="flex gap-1.5 p-1 rounded-full bg-[#F3F4F6]">
+            <div className="flex gap-1.5 p-1.5 rounded-full bg-[#F3F4F6]">
               {['#8B3252', '#2D4A3E', '#C4714A', '#4A90E2', '#E2A94A', '#8E44AD', '#34495E', '#D35400'].map(color => (
                 <button key={color} onClick={() => setFigureColor(color)} className={`w-5 h-5 rounded-full shadow-sm border-2 hover:scale-110 transition-transform ${figureColor === color ? 'border-white scale-110' : 'border-transparent'}`} style={{ backgroundColor: color }} />
               ))}
@@ -1753,66 +1655,42 @@ export default function App() {
 
             <div className="w-[1px] h-6 bg-gray-200 hidden md:block"></div>
 
-            {/* КНОПКИ ДОБАВЛЕНИЯ ФИГУР */}
             <div className="flex gap-1.5">
-              <button onClick={() => { addElement('figure', { gender: 'male', color: figureColor, name: figureName }); setFigureName(''); }} className="px-3 py-1.5 bg-white rounded-full border border-gray-100 hover:border-plum/30 flex items-center gap-1.5 transition-all shadow-sm">
+              <button onClick={() => { addElement('figure', { gender: 'male', color: figureColor, name: figureName }); setFigureName(''); }} className="px-4 py-2 bg-white rounded-full border border-gray-100 hover:border-plum/30 flex items-center gap-2 transition-all shadow-sm hover:scale-105">
                 <FigureIcon gender="male" color={figureColor} isMenu={true} className="w-4 h-4" />
-                <span className="text-[9px] font-black uppercase text-gray-600 hidden lg:block">Муж</span>
+                <span className="text-[10px] font-black uppercase text-gray-600 hidden lg:block">Муж</span>
               </button>
-              <button onClick={() => { addElement('figure', { gender: 'female', color: figureColor, name: figureName }); setFigureName(''); }} className="px-3 py-1.5 bg-white rounded-full border border-gray-100 hover:border-plum/30 flex items-center gap-1.5 transition-all shadow-sm">
+              <button onClick={() => { addElement('figure', { gender: 'female', color: figureColor, name: figureName }); setFigureName(''); }} className="px-4 py-2 bg-white rounded-full border border-gray-100 hover:border-plum/30 flex items-center gap-2 transition-all shadow-sm hover:scale-105">
                 <FigureIcon gender="female" color={figureColor} isMenu={true} className="w-4 h-4" />
-                <span className="text-[9px] font-black uppercase text-gray-600 hidden lg:block">Жен</span>
+                <span className="text-[10px] font-black uppercase text-gray-600 hidden lg:block">Жен</span>
               </button>
-              <button onClick={() => addElement('arrow', { color: figureColor })} className="px-3 py-1.5 bg-white rounded-full border border-gray-100 hover:border-plum/30 flex items-center gap-1.5 transition-all shadow-sm">
+              <button onClick={() => addElement('arrow', { color: figureColor })} className="px-4 py-2 bg-white rounded-full border border-gray-100 hover:border-plum/30 flex items-center gap-2 transition-all shadow-sm hover:scale-105">
                 <ArrowElementIcon color={figureColor} className="w-4 h-4" />
-                <span className="text-[9px] font-black uppercase text-gray-600 hidden lg:block">Стрелка</span>
+                <span className="text-[10px] font-black uppercase text-gray-600 hidden lg:block">Стрелка</span>
               </button>
             </div>
+
+            <button onClick={() => setIsFiguresPanelOpen(false)} className="ml-1 p-2 text-gray-400 hover:text-terra hover:bg-gray-100 rounded-full transition-colors">
+              <X size={16} />
+            </button>
           </div>
         )}
 
+        {/* ИГРОВОЕ ПОЛЕ */}
         <div ref={scrollContainerRef} className="absolute inset-0 overflow-auto custom-scrollbar transition-colors duration-500" style={{ backgroundColor: tableBg.bgColor }}>
           <div ref={boardRef} className="relative min-w-[3000px] min-h-[3000px] bg-transparent" onMouseMove={handleMouseMove} onTouchMove={handleMouseMove}>
-            <div className="absolute inset-0 pointer-events-none transition-opacity duration-500" style={{ 
-              backgroundColor: tableBg.blendMode ? tableBg.bgColor : 'transparent',
-              backgroundImage: tableBg.value === 'none' ? 'none' : (tableBg.type === 'css' ? tableBg.value : `url('${tableBg.value}')`), 
-              backgroundSize: tableBg.bgSize, 
-              backgroundPosition: 'center', 
-              backgroundRepeat: tableBg.repeat || 'repeat',
-              backgroundBlendMode: tableBg.blendMode || 'normal',
-              opacity: tableBg.opacity 
-            }}></div>
+            <div className="absolute inset-0 pointer-events-none transition-opacity duration-500" style={{ backgroundColor: tableBg.blendMode ? tableBg.bgColor : 'transparent', backgroundImage: tableBg.value === 'none' ? 'none' : (tableBg.type === 'css' ? tableBg.value : `url('${tableBg.value}')`), backgroundSize: tableBg.bgSize, backgroundPosition: 'center', backgroundRepeat: tableBg.repeat || 'repeat', backgroundBlendMode: tableBg.blendMode || 'normal', opacity: tableBg.opacity }}></div>
             
             {cardsOnTable
               .filter(elem => !undoStack?.cards.some(c => c.id === elem.id))
               .filter(elem => !(isClientMode && elem.type === 'private-text')) // СКРЫВАЕМ ПРИВАТНЫЕ ЗАМЕТКИ ОТ КЛИЕНТА
               .map((elem) => (
-                <DraggableElement
-                  key={elem.id}
-                  element={elem}
-                  globalFigureView={figureViewMode}
-                  isClientMode={isClientMode}
-                  isMuted={isMuted}
-                  isLaserMode={isLaserMode}
-                  playSound={playSound}
-                  maxZIndex={Math.max(0, ...cardsOnTable.map(c => c.zIndex || 0))}
-                  onUpdate={(d) => updateDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, elem.id), d)}
-                  onRemove={() => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, elem.id))}
-                  onPreview={() => elem.type === 'card' && setPreviewCard(elem)}
-                  currentUser={user}
-                  currentUserName={userName}
-                  onNotify={notify}
-                  boardRef={boardRef}
-                />
+                <DraggableElement key={elem.id} element={elem} globalFigureView={figureViewMode} isClientMode={isClientMode} isMuted={isMuted} isLaserMode={isLaserMode} playSound={playSound} maxZIndex={Math.max(0, ...cardsOnTable.map(c => c.zIndex || 0))} onUpdate={(d) => updateDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, elem.id), d)} onRemove={() => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, elem.id))} onPreview={() => elem.type === 'card' && setPreviewCard(elem)} currentUser={user} currentUserName={userName} onNotify={notify} boardRef={boardRef} />
               ))}
             
             {Object.entries(cursors).map(([id, cur]) => {
-              // Если мы клиент, и это курсор Мастера, и это не лазерная указка -> СКРЫВАЕМ ЕГО
               const isMasterCursor = cur.name?.includes('(Мастер)');
-              if (isClientMode && isMasterCursor && !cur.isLaser) {
-                return null;
-              }
-
+              if (isClientMode && isMasterCursor && !cur.isLaser) return null;
               if (cur.isLaser) {
                 return (
                   <div key={id} className="absolute pointer-events-none z-[2000] transition-all duration-150 ease-out" style={{ left: cur.x, top: cur.y, transform: 'translate(-50%, -50%)' }}>
@@ -1844,7 +1722,6 @@ export default function App() {
         <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-700 pointer-events-none ${isLibraryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-48px)]'}`}>
           <div className={`bg-white/90 backdrop-blur-2xl rounded-t-[3rem] shadow-[0_-10px_50px_rgba(0,0,0,0.1)] border-t border-white flex flex-col transition-all duration-500 pointer-events-auto ${isLibraryFullscreen ? 'h-[95vh]' : 'h-[75vh] md:h-80'}`}>
             
-            {/* Кнопка открытия библиотеки */}
             <div className="relative w-full flex justify-center py-2 h-12">
               <button onClick={toggleLibrary} className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-black/5 transition-colors rounded-t-[3rem]">
                 <div className="w-12 h-1.5 bg-ink/10 rounded-full mb-1"></div>
@@ -1852,7 +1729,6 @@ export default function App() {
                   <Layers size={14} /> {isClientMode ? "Выбор карты" : "Библиотека Мастера"}
                 </span>
               </button>
-              {/* Теперь кнопка на весь экран доступна ВСЕМ */}
               {isLibraryOpen && (
                 <button onClick={toggleFullscreen} className="absolute right-8 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors hover:bg-black/5" style={{ color: COLORS.ink }}>
                   <Maximize2 size={18} />
@@ -1884,9 +1760,7 @@ export default function App() {
                               <button onClick={() => loadSavedSession(session)} className="p-2 text-forest hover:bg-forest/10 rounded-lg transition-colors" title="Загрузить на стол"><UploadCloud size={14}/></button>
                               <button onClick={async () => {
                                 const ok = await askConfirm('Удалить эту сессию навсегда?');
-                                if(ok) {
-                                  await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions', session.id));
-                                }
+                                if(ok) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions', session.id));
                               }} className="p-2 text-terra hover:bg-terra/10 rounded-lg transition-colors" title="Удалить сессию"><Trash2 size={14}/></button>
                            </div>
                         </div>
@@ -1902,7 +1776,7 @@ export default function App() {
                           <div>1. Откройте папку с картами на Google Диске</div>
                           <div>2. Правая кнопка → <b>"Открыть доступ"</b></div>
                           <div>3. Нажмите <b>"Все у кого есть ссылка"</b></div>
-                          <div>4. Скопируйте ссылку и вставьте ниже ↓</div>
+                          <div>4. Скопируйте ссылку и вставьте ниже</div>
                         </div>
                       </div>
                       <button onClick={addDeckByLinks} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black transition-all uppercase hover:opacity-80 shadow-sm" style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }}>
@@ -1991,14 +1865,12 @@ export default function App() {
         </div>
       </main>
 
-      {/* МОДАЛКА ИМЕНИ КОЛОДЫ */}
       {isNamingDeck && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center backdrop-blur-sm p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl border-4" style={{ borderColor: COLORS.haze }}>
             <h3 className="text-xl font-black mb-2 uppercase italic" style={{ color: COLORS.ink }}>ИМЯ КОЛОДЫ</h3>
             <p className="text-[10px] mb-6 font-medium" style={{ color: `${COLORS.ink}66` }}>Выбрано файлов: {pendingFiles.length}. Файл с "рубашка" в названии станет обложкой.</p>
             <input autoFocus value={tempDeckName} onChange={e => setTempDeckName(e.target.value)} onKeyDown={e => e.key === 'Enter' && confirmUpload()} placeholder="Напр: Эмоции" className="w-full px-6 py-4 rounded-2xl border-2 mb-8 outline-none font-bold text-base" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
-            
             {isUploading && (
               <div className="mb-6">
                 <div className="flex justify-between text-[10px] font-bold mb-2" style={{ color: `${COLORS.ink}66` }}>
@@ -2009,7 +1881,6 @@ export default function App() {
                 </div>
               </div>
             )}
-            
             <div className="flex gap-4">
               <button onClick={() => { setIsNamingDeck(false); setPendingFiles([]); }} disabled={isUploading} className="flex-1 font-bold uppercase text-xs hover:opacity-70 transition-colors disabled:opacity-30" style={{ color: `${COLORS.ink}66` }}>Отмена</button>
               <button onClick={confirmUpload} disabled={isUploading} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="flex-[2] py-4 rounded-2xl font-black shadow-lg uppercase text-xs disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-2">
@@ -2020,7 +1891,6 @@ export default function App() {
         </div>
       )}
 
-      {/* ПРОСМОТР КАРТЫ */}
       {previewCard && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}F2` }} onClick={() => setPreviewCard(null)}>
           <div className="absolute top-6 left-1/2 -translate-x-1/2 text-white font-black tracking-widest uppercase bg-black/50 px-6 py-2 rounded-full backdrop-blur-md text-xs text-center w-[90%] md:w-auto">
@@ -2039,6 +1909,7 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(139, 50, 82, 0.2); border-radius: 10px; }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
         @keyframes timerPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes popup { from { opacity: 0; transform: translateY(-10px) scale(0.95) translateX(-50%); } to { opacity: 1; transform: translateY(0) scale(1) translateX(-50%); } }
       `}</style>
     </div>
   );
@@ -2129,7 +2000,6 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
   }, [isDragging, isResizing, element, onUpdate, playSound, isMuted, isLocked, isText, isLaserMode, isClientMode]);
 
   const canDrag = !isLocked && !(isField && isClientMode) && !(isLaserMode && !isClientMode);
-
   const appliedRotation = (element.type === 'figure' && globalFigureView === 'side') ? 0 : element.rotation;
 
   return (
@@ -2144,8 +2014,6 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         transition: (isDragging || isResizing) ? 'none' : 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
       }}
     >
-
-      {/* МЕНЮ ДЕЙСТВИЙ */}
       {!(isLaserMode && !isClientMode) && (
         <div className="absolute -top-14 left-1/2 -translate-x-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all bg-white/80 backdrop-blur-xl rounded-full px-2 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-20 border border-white">
           {!isField && <button onClick={(e) => { e.stopPropagation(); onUpdate({ zIndex: maxZIndex + 1 }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="На передний план"><ArrowUp size={16} /></button>}
@@ -2159,7 +2027,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
               } else if (element.owner === currentUser?.uid || !isClientMode) {
                 onPreview();
               } else {
-                onNotify(`Эта карта принадлежит: ${element.ownerName}. Подсматривать нельзя!  🤫 `);
+                onNotify(`Эта карта принадлежит: ${element.ownerName}. Подсматривать нельзя! 🤫`);
               }
             }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 bg-forest/10 text-forest" title="Подсмотреть карту">
               <Eye size={16} />
@@ -2170,11 +2038,9 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
             <button onClick={(e) => {
               e.stopPropagation();
               if (element.owner && element.owner !== currentUser?.uid && isClientMode) {
-                onNotify(`Только ${element.ownerName} или Психолог могут перевернуть карту`);
-                return;
+                onNotify(`Только ${element.ownerName} или Психолог могут перевернуть карту`); return;
               }
-              playSound('flip', isMuted);
-              onUpdate({ isFlipped: !element.isFlipped });
+              playSound('flip', isMuted); onUpdate({ isFlipped: !element.isFlipped });
             }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="Перевернуть">
               <RefreshCw size={16} />
             </button>
@@ -2185,15 +2051,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
           )}
           
           {(!isClientMode || !isField) && (
-            <button 
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                const step = element.type === 'arrow' ? 22.5 : (element.type === 'figure' ? 45 : 90);
-                onUpdate({ rotation: (element.rotation + step) % 360 }); 
-              }} 
-              className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" 
-              title={`Повернуть на ${element.type === 'arrow' ? 22.5 : (element.type === 'figure' ? 45 : 90)}°`}
-            >
+            <button onClick={(e) => { e.stopPropagation(); const step = element.type === 'arrow' ? 22.5 : (element.type === 'figure' ? 45 : 90); onUpdate({ rotation: (element.rotation + step) % 360 }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title={`Повернуть на ${element.type === 'arrow' ? 22.5 : (element.type === 'figure' ? 45 : 90)}°`}>
               <RotateCw size={16} />
             </button>
           )}
@@ -2212,15 +2070,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
 
       {!isClientMode && isField && !(isLaserMode && !isClientMode) && (
         <div className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all z-20" style={{ left: 'calc(100% + 12px)' }}>
-          <button
-            onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }}
-            className="p-3 rounded-full transition-colors hover:opacity-80 shadow-xl border bg-white/90 backdrop-blur-md"
-            style={{
-              color: isLocked ? COLORS.terra : `${COLORS.ink}80`,
-              borderColor: isLocked ? COLORS.terra : `${COLORS.ink}20`
-            }}
-            title={isLocked ? "Открепить поле" : "Закрепить поле"}
-          >
+          <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }} className="p-3 rounded-full transition-colors hover:opacity-80 shadow-xl border bg-white/90 backdrop-blur-md" style={{ color: isLocked ? COLORS.terra : `${COLORS.ink}80`, borderColor: isLocked ? COLORS.terra : `${COLORS.ink}20` }} title={isLocked ? "Открепить поле" : "Закрепить поле"}>
             {isLocked ? <Lock size={20} /> : <Unlock size={20} />}
           </button>
         </div>
@@ -2251,14 +2101,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
           </div>
         ) : element.type === 'figure' ? (
           <div className="w-full h-full relative flex items-center justify-center">
-             <FigureIcon 
-                gender={element.gender} 
-                color={element.color} 
-                viewMode={globalFigureView} 
-                rotation={element.rotation}
-                name={element.name}
-                className="w-full h-full" 
-             />
+             <FigureIcon gender={element.gender} color={element.color} viewMode={globalFigureView} rotation={element.rotation} name={element.name} className="w-full h-full" />
           </div>
         ) : (
           <div className="relative w-full h-full" style={isField ? {} : { transformStyle: 'preserve-3d', transition: 'transform 0.6s ease', transform: element.isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
