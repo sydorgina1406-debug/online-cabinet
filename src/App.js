@@ -14,7 +14,7 @@ import {
   Plus, Layers, RotateCw, RotateCcw, Trash2, Maximize2, Minimize2, X, ChevronUp,
   FolderOpen, LayoutGrid, Move, Cloud, Copy, CheckCircle,
   Users, LogOut, AlertCircle, ExternalLink, Image as ImageIcon,
-  Volume2, VolumeX, ArrowUp, ArrowDown, Save, MousePointer2, UserCircle, UserPlus,
+  Volume2, VolumeX, ArrowUp, ArrowDown, ArrowUpToLine, Save, MousePointer2, UserCircle, UserPlus,
   Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
   Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, MessageCircle,
   Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff, Dices, UserMinus
@@ -263,11 +263,11 @@ const COLORS = {
 };
 
 const TABLE_BACKGROUNDS = [
-  { id: 'milky', name: 'Молочный', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#FDFAF6', opacity: 1, repeat: 'repeat' },
-  { id: 'bg1', name: 'Текстура 1', type: 'image', value: 'https://i.postimg.cc/sDNKJxG0/a85b84b3-a69d-4d8d-bca4-a8fa16a64d92.png', bgSize: 'cover', bgColor: '#EBE5DC', opacity: 1, repeat: 'no-repeat' },
-  { id: 'bg2', name: 'Текстура 2', type: 'image', value: 'https://i.postimg.cc/W350bYMC/c67e9c05-4f71-49d6-89f0-a5cb92c1a2dd.png', bgSize: 'cover', bgColor: '#EBE5DC', opacity: 1, repeat: 'no-repeat' },
-  { id: 'bg3', name: 'Текстура 3', type: 'image', value: 'https://i.postimg.cc/02TDQwwj/e153412f-7934-4f95-8ebd-899e3701722a.png', bgSize: 'cover', bgColor: '#EBE5DC', opacity: 1, repeat: 'no-repeat' },
-  { id: 'bg4', name: 'Текстура 4', type: 'image', value: 'https://i.postimg.cc/tJ1nRqRx/f2726b05-f79d-45d7-a544-c622ba678d80.png', bgSize: 'cover', bgColor: '#EBE5DC', opacity: 1, repeat: 'no-repeat' }
+  { id: 'milky', name: 'Молочный', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#FDFAF6', opacity: 1 },
+  { id: 'forest', name: 'Зеленый', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#2D4A3E', opacity: 1 },
+  { id: 'plum', name: 'Сливовый', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#8B3252', opacity: 1 },
+  { id: 'purple', name: 'Фиолетовый', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#4A154B', opacity: 1 },
+  { id: 'terra', name: 'Терракотовый', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#C4714A', opacity: 1 }
 ];
 
 if (typeof window !== 'undefined' && !document.getElementById('tailwind-script')) {
@@ -1340,7 +1340,7 @@ export default function App() {
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Eye size={14} className="text-forest" /> Подсмотреть (только если закрыта)</div>
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Maximize2 size={14} className="text-gray-500" /> Увеличить объект</div>
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><RotateCw size={14} className="text-gray-500" /> Повернуть</div>
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><ArrowUp size={14} className="text-gray-500" /> На передний план</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><ArrowUpToLine size={14} className="text-gray-500" /> На передний план</div>
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Lock size={14} className="text-gray-500" /> Закрепить (от сдвигов)</div>
                   </div>
                   <p className="mt-3 text-xs bg-gray-50 p-3 rounded-lg flex flex-col gap-2">
@@ -2137,7 +2137,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       {/* МЕНЮ БЫСТРЫХ ДЕЙСТВИЙ */}
       {!(isLaserMode && !isClientMode) && (
         <div className="absolute -top-16 left-1/2 -translate-x-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all bg-white/80 backdrop-blur-xl rounded-full px-2 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-20 border border-white">
-          {!isField && <button onClick={(e) => { e.stopPropagation(); onUpdate({ zIndex: maxZIndex + 1 }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="На передний план"><ArrowUp size={16} /></button>}
+          {!isField && <button onClick={(e) => { e.stopPropagation(); onUpdate({ zIndex: maxZIndex + 1 }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="На передний план"><ArrowUpToLine size={16} /></button>}
           
           {/* НОВАЯ КНОПКА ПОЛОЖИТЬ/ПОСТАВИТЬ (ТОЛЬКО ДЛЯ ФИГУР) */}
           {element.type === 'figure' && (
