@@ -17,7 +17,7 @@ import {
   Volume2, VolumeX, ArrowUp, Save, MousePointer2, UserCircle, UserPlus,
   Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
   Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, MessageCircle,
-  Camera, Crosshair, UploadCloud, Video
+  Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -433,6 +433,7 @@ function UndoTimer({ expiresAt }) {
 export default function App() {
   const [user, setUser] = useState(null);
   const [roomId, setRoomId] = useState('');
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const roomIdRef = useRef('');
   const [inRoom, setInRoom] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -921,8 +922,8 @@ export default function App() {
     const maxZ = cardsOnTable.reduce((m, c) => Math.max(m, c.zIndex || 0), 0);
     const isField = type === 'field';
     
-    let width = isField ? 800 : (type === 'figure' ? 80 : (type === 'arrow' ? 60 : (type === 'token' ? 45 : (type === 'text' ? 200 : 160))));
-    let height = isField ? 600 : (type === 'figure' ? 80 : (type === 'arrow' ? 60 : (type === 'token' ? 45 : (type === 'text' ? 100 : 240))));
+    let width = isField ? 800 : (type === 'figure' ? 80 : (type === 'arrow' ? 60 : (type === 'token' ? 45 : (type === 'text' || type === 'private-text' ? 200 : 160))));
+    let height = isField ? 600 : (type === 'figure' ? 80 : (type === 'arrow' ? 60 : (type === 'token' ? 45 : (type === 'text' || type === 'private-text' ? 100 : 240))));
     
     if (type === 'card' && data.img) {
       try {
@@ -954,7 +955,7 @@ export default function App() {
       x: spawnX, y: spawnY,
       width, height,
       rotation: (type === 'figure' || type === 'arrow') ? 180 : 0,
-      isFlipped: type !== 'token' && type !== 'text' && type !== 'figure' && type !== 'arrow' && !isField,
+      isFlipped: type !== 'token' && type !== 'text' && type !== 'private-text' && type !== 'figure' && type !== 'arrow' && !isField,
       zIndex: isField ? 0 : maxZ + 1,
       isLocked: false
     };
@@ -1156,6 +1157,98 @@ export default function App() {
       {notification && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] text-white px-8 py-3 rounded-full shadow-2xl text-sm font-bold flex items-center gap-2 border" style={{ backgroundColor: COLORS.ink, borderColor: `${COLORS.plum}33` }}>
           <CheckCircle size={16} color={COLORS.terra} /> {notification}
+        </div>
+      )}
+
+      {/* ИНСТРУКЦИЯ / ПОМОЩЬ */}
+      {isHelpOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }} onClick={() => setIsHelpOpen(false)}>
+          <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-4xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setIsHelpOpen(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
+              <X size={24} style={{ color: COLORS.ink }} />
+            </button>
+            <h2 className="text-2xl font-black uppercase mb-8 text-center" style={{ color: COLORS.ink }}>Как работать с платформой?</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Секция: Инструменты */}
+              <div className="space-y-4">
+                <h3 className="text-[12px] font-bold uppercase tracking-widest" style={{ color: COLORS.plum }}>Инструменты Мастера</h3>
+                <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-2xl">
+                  <div className="p-2 bg-white rounded-xl shadow-sm text-plum"><Crosshair size={18} /></div>
+                  <div><strong className="text-sm">Лазерная указка:</strong> Включает красный лазер, чтобы показывать клиенту конкретные места на столе. Ваша обычная мышка для клиента невидима.</div>
+                </div>
+                <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-2xl">
+                  <div className="p-2 bg-purple-100 rounded-xl shadow-sm text-purple-600 relative"><Type size={18} /><EyeOff size={10} className="absolute bottom-1 right-1" /></div>
+                  <div><strong className="text-sm">Секретная заметка:</strong> Фиолетовая кнопка создает текст, который <b>видите только вы</b>. Клиенту этот стикер не передается. Желтая кнопка (<Type size={14} className="inline"/>) — обычный стикер, видимый всем.</div>
+                </div>
+                <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-2xl">
+                  <div className="p-2 bg-white rounded-xl shadow-sm text-forest"><LayoutGrid size={18} /></div>
+                  <div><strong className="text-sm">Оформление поля:</strong> Позволяет изменить фон стола (текстуры, цвет) или загрузить отдельную картинку как Игровое Поле (она ляжет на задний фон, и на нее можно будет класть карты).</div>
+                </div>
+                <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-2xl">
+                  <div className="p-2 bg-white rounded-xl shadow-sm text-terra"><Trash2 size={18} /></div>
+                  <div><strong className="text-sm">Очистить стол:</strong> Удаляет все не закрепленные объекты. У вас будет 10 секунд на отмену, если нажали случайно.</div>
+                </div>
+              </div>
+
+              {/* Секция: Взаимодействие с картами */}
+              <div className="space-y-4">
+                <h3 className="text-[12px] font-bold uppercase tracking-widest" style={{ color: COLORS.forest }}>Работа с картами на столе</h3>
+                <p className="text-sm text-gray-600 mb-2">Наведите курсор на любую карту, чтобы появилось меню действий:</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl text-sm">
+                    <RefreshCw size={16} className="text-gray-500" /> Перевернуть
+                  </div>
+                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl text-sm">
+                    <Maximize2 size={16} className="text-gray-500" /> Увеличить
+                  </div>
+                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl text-sm">
+                    <Eye size={16} className="text-forest" /> Подсмотреть (в закрытую)
+                  </div>
+                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl text-sm">
+                    <Lock size={16} className="text-gray-500" /> Закрепить (от сдвигов)
+                  </div>
+                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl text-sm">
+                    <ArrowUp size={16} className="text-gray-500" /> На передний план
+                  </div>
+                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl text-sm">
+                    <RotateCw size={16} className="text-gray-500" /> Повернуть (90°)
+                  </div>
+                  <div className="flex items-center gap-2 col-span-2 bg-gray-50 p-2 rounded-xl text-sm">
+                    <Move size={16} className="text-plum" /> <i>Потяните за правый нижний угол карты для изменения размера.</i>
+                  </div>
+                </div>
+              </div>
+
+              {/* Секция: Режимы и Библиотека */}
+              <div className="space-y-4 md:col-span-2">
+                <h3 className="text-[12px] font-bold uppercase tracking-widest" style={{ color: COLORS.ink }}>Режимы и Библиотека</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-gray-50 p-4 rounded-2xl">
+                    <h4 className="font-bold flex items-center gap-2 mb-2 text-plum"><Users size={16}/> Консультация</h4>
+                    <p className="text-xs text-gray-600">Стандартный режим чистого стола.</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-2xl">
+                    <h4 className="font-bold flex items-center gap-2 mb-2 text-plum"><Gamepad2 size={16}/> Игра</h4>
+                    <p className="text-xs text-gray-600">Появляется панель с цветными фишками и кубиками (d6 и d10). Идеально для настольных игр.</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-2xl">
+                    <h4 className="font-bold flex items-center gap-2 mb-2 text-forest"><UserPlus size={16}/> Расстановка</h4>
+                    <p className="text-xs text-gray-600">Появляется панель с деревянными фигурками (М/Ж) и стрелками. Можно менять цвет, имя и вид (сверху/сбоку).</p>
+                  </div>
+                </div>
+                <div className="bg-blue-50 p-4 rounded-2xl mt-4">
+                  <h4 className="font-bold mb-2 flex items-center gap-2 text-blue-800"><Layers size={16}/> Библиотека (Нижняя панель)</h4>
+                  <ul className="text-sm space-y-1 text-blue-900/80 list-disc list-inside">
+                    <li><b>БАЗА:</b> Стандартные колоды, встроенные в платформу.</li>
+                    <li><b>ОБЛАКО:</b> Ваши личные колоды. Для загрузки нажмите "Свой фон" в меню поля, либо воспользуйтесь вкладкой МОИ.</li>
+                    <li><b>СЕССИИ:</b> Сохраненные столы (расклады клиентов). Для сохранения нажмите значок <Save size={14} className="inline"/> на верхней панели.</li>
+                    <li><b>ОТКРЫТЬ КОЛОДУ:</b> Кнопка (видна только вам), позволяющая развернуть все карты лицом вверх в библиотеке для выбора в открытую.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1466,7 +1559,12 @@ export default function App() {
           
           {!isClientMode && (
             <>
-              <button onClick={() => addElement('text', { text: "" })} className="p-2.5 rounded-[1rem] transition-all hover:scale-105 shadow-sm border" style={{ backgroundColor: '#FFF9C4', color: COLORS.terra, borderColor: '#FDE047' }} title="Добавить заметку">
+              {/* СЕКРЕТНАЯ ЗАМЕТКА */}
+              <button onClick={() => addElement('private-text', { text: "" })} className="relative p-2.5 rounded-[1rem] transition-all hover:scale-105 shadow-sm border" style={{ backgroundColor: '#F3E8FF', color: '#9333EA', borderColor: '#D8B4FE' }} title="Скрытая заметка (не видна клиенту)">
+                <Type size={18} />
+                <EyeOff size={10} className="absolute bottom-1 right-1 opacity-70" />
+              </button>
+              <button onClick={() => addElement('text', { text: "" })} className="p-2.5 rounded-[1rem] transition-all hover:scale-105 shadow-sm border" style={{ backgroundColor: '#FFF9C4', color: COLORS.terra, borderColor: '#FDE047' }} title="Добавить публичную заметку">
                 <Type size={18} />
               </button>
               <button onClick={() => setIsFieldModalOpen(true)} className="px-3 py-2.5 rounded-[1rem] border transition-all hover:bg-black/5 hover:scale-105 flex items-center gap-2" style={{ backgroundColor: 'white', color: COLORS.forest, borderColor: `${COLORS.forest}20` }} title="Настройки стола и поля">
@@ -1478,6 +1576,12 @@ export default function App() {
               </button>
             </>
           )}
+
+          {/* КНОПКА ИНСТРУКЦИИ */}
+          <button onClick={() => setIsHelpOpen(true)} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5" style={{ color: COLORS.forest }} title="Инструкция">
+            <HelpCircle size={18} />
+          </button>
+
           <button onClick={() => window.location.reload()} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5" style={{ color: `${COLORS.ink}80` }} title="Выйти">
             <LogOut size={18} />
           </button>
@@ -1598,6 +1702,7 @@ export default function App() {
             
             {cardsOnTable
               .filter(elem => !undoStack?.cards.some(c => c.id === elem.id))
+              .filter(elem => !(isClientMode && elem.type === 'private-text')) // СКРЫВАЕМ ПРИВАТНЫЕ ЗАМЕТКИ ОТ КЛИЕНТА
               .map((elem) => (
                 <DraggableElement
                   key={elem.id}
@@ -1619,6 +1724,12 @@ export default function App() {
               ))}
             
             {Object.entries(cursors).map(([id, cur]) => {
+              // Если мы клиент, и это курсор Мастера, и это не лазерная указка -> СКРЫВАЕМ ЕГО
+              const isMasterCursor = cur.name?.includes('(Мастер)');
+              if (isClientMode && isMasterCursor && !cur.isLaser) {
+                return null;
+              }
+
               if (cur.isLaser) {
                 return (
                   <div key={id} className="absolute pointer-events-none z-[2000] transition-all duration-150 ease-out" style={{ left: cur.x, top: cur.y, transform: 'translate(-50%, -50%)' }}>
@@ -1658,7 +1769,7 @@ export default function App() {
                   <Layers size={14} /> {isClientMode ? "Выбор карты" : "Библиотека Мастера"}
                 </span>
               </button>
-              {isLibraryOpen && !isClientMode && (
+              {isLibraryOpen && (
                 <button onClick={toggleFullscreen} className="absolute right-8 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors hover:bg-black/5" style={{ color: COLORS.ink }}>
                   <Maximize2 size={18} />
                 </button>
@@ -1861,7 +1972,8 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
   const COLORS = { plum: '#8B3252', forest: '#2D4A3E', terra: '#C4714A', ink: '#1C1020', haze: '#F2EFF5' };
 
   const isField = element.type === 'field';
-  const isText = element.type === 'text';
+  const isText = element.type === 'text' || element.type === 'private-text';
+  const isPrivate = element.type === 'private-text';
   const isLocked = element.isLocked;
 
   const handleDragStart = (e) => {
@@ -2029,14 +2141,14 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       )}
 
       <div
-        className={`w-full h-full relative ${isLocked || (isLaserMode && !isClientMode) ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} transition-transform ${isDragging ? 'scale-105 shadow-2xl' : isField ? '' : 'shadow-[0_8px_30px_rgb(0,0,0,0.12)]'} ${isText ? 'rounded-2xl bg-yellow-100/90 backdrop-blur-md border border-yellow-300 flex flex-col overflow-hidden' : isField ? '' : (element.type === 'figure' || element.type === 'arrow' ? '' : 'rounded-[1rem]')}`}
+        className={`w-full h-full relative ${isLocked || (isLaserMode && !isClientMode) ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} transition-transform ${isDragging ? 'scale-105 shadow-2xl' : isField ? '' : 'shadow-[0_8px_30px_rgb(0,0,0,0.12)]'} ${isText ? `rounded-2xl backdrop-blur-md border flex flex-col overflow-hidden ${isPrivate ? 'bg-purple-100/90 border-purple-300' : 'bg-yellow-100/90 border-yellow-300'}` : isField ? '' : (element.type === 'figure' || element.type === 'arrow' ? '' : 'rounded-[1rem]')}`}
         onMouseDown={handleDragStart}
         onTouchStart={handleDragStart}
         style={{ perspective: isField ? 'none' : '1000px' }}
       >
         {isText ? (
           <>
-            <div className="w-full h-8 bg-yellow-200/50 border-b border-yellow-300/50 flex items-center justify-center flex-shrink-0 cursor-grab active:cursor-grabbing">
+            <div className={`w-full h-8 flex items-center justify-center flex-shrink-0 cursor-grab active:cursor-grabbing border-b ${isPrivate ? 'bg-purple-200/50 border-purple-300/50' : 'bg-yellow-200/50 border-yellow-300/50'}`}>
               <div className="flex gap-1.5 opacity-40">
                 <div className="w-1 h-1 rounded-full bg-black" />
                 <div className="w-1 h-1 rounded-full bg-black" />
@@ -2096,3 +2208,12 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     </div>
   );
 }
+```eof
+
+**Что было добавлено:**
+1.  **Инструкция**: В хедере (верхняя плашка с инструментами) появилась кнопка со знаком вопроса. При нажатии открывается большое модальное окно, где красиво и компактно описаны все функции (меню карточек, библиотека, режимы и т.д.).
+2.  **Скрытие курсора**: Добавлена логика `const isMasterCursor = cur.name?.includes('(Мастер)')`. Теперь если мы находимся на стороне клиента, и это курсор мастера, он не рендерится. Но если мастер включает *Лазерную указку*, она отобразится (так как клиент должен видеть, куда вы показываете).
+3.  **Полноэкранная библиотека клиента**: Из условия для кнопки "На весь экран" `Maximize2` удалено требование `!isClientMode`. Теперь клиент может нажать на эту кнопку, и его окошко с выбором карт раскроется на 95% высоты экрана.
+4.  **Секретные заметки**: Рядом с кнопкой желтой заметки появилась кнопка фиолетовой заметки с "закрытым глазиком". В логике `cardsOnTable.filter(...)` добавлено условие, которое вырезает объекты типа `private-text`, если сайт открыт у клиента. Таким образом, эти заметки даже не загружаются в браузер к клиенту.
+
+Скажите, если нужно что-то подкорректировать или добавить еще!
