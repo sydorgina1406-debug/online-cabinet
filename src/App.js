@@ -483,6 +483,7 @@ export default function App() {
   // Состояния для собственной видеосвязи (WebRTC)
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteStreamRef = useRef(null); // Новая переменная для чистого потока WebRTC
   const pcRef = useRef(null);
   const processedCandidates = useRef(new Set());
   const [isVideoActive, setIsVideoActive] = useState(false);
@@ -490,6 +491,57 @@ export default function App() {
   const [isVideoCallReady, setIsVideoCallReady] = useState(false);
   const [callStatus, setCallStatus] = useState('');
   
+  // Логика перемещения окна видеосвязи
+  const videoDragRef = useRef({ isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 });
+  const [videoPos, setVideoPos] = useState({ x: 20, y: 20 });
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Инициализируем окно видеосвязи справа внизу
+      setVideoPos({ 
+         x: Math.max(20, window.innerWidth - 340), 
+         y: Math.max(20, window.innerHeight - 440) 
+      });
+    }
+  }, []);
+
+  const handleVideoPointerDown = (e) => {
+    videoDragRef.current.isDragging = true;
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    videoDragRef.current.startX = cx;
+    videoDragRef.current.startY = cy;
+    videoDragRef.current.initialX = videoPos.x;
+    videoDragRef.current.initialY = videoPos.y;
+  };
+
+  useEffect(() => {
+    const handleMove = (e) => {
+      if (!videoDragRef.current.isDragging) return;
+      const cx = e.touches ? e.touches[0].clientX : e.clientX;
+      const cy = e.touches ? e.touches[0].clientY : e.clientY;
+      const dx = cx - videoDragRef.current.startX;
+      const dy = cy - videoDragRef.current.startY;
+      setVideoPos({
+        x: videoDragRef.current.initialX + dx,
+        y: videoDragRef.current.initialY + dy
+      });
+    };
+    const handleUp = () => { videoDragRef.current.isDragging = false; };
+    
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', handleUp);
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchmove', handleUp);
+    };
+  }, []);
+
   // Состояния для плашек
   const [isDicePanelOpen, setIsDicePanelOpen] = useState(false);
   const [isFiguresPanelOpen, setIsFiguresPanelOpen] = useState(false);
@@ -776,13 +828,23 @@ export default function App() {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-      const pc = new RTCPeerConnection({ iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] });
+      const pc = new RTCPeerConnection({ 
+         iceServers: [
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' }
+         ] 
+      });
       pcRef.current = pc;
+
+      remoteStreamRef.current = new MediaStream();
+      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStreamRef.current;
 
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
       pc.ontrack = (event) => {
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
+        event.streams[0].getTracks().forEach(track => {
+           remoteStreamRef.current.addTrack(track);
+        });
         setCallStatus(''); 
       };
 
@@ -804,10 +866,13 @@ export default function App() {
 
       onSnapshot(callDoc, async (snap) => {
         const data = snap.data();
-        if (data?.answer && !pc.currentRemoteDescription) {
+        if (!data) return;
+
+        if (data.answer && !pc.currentRemoteDescription) {
           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
         }
-        if (pc.currentRemoteDescription && data?.answerCandidates) {
+
+        if (data.answerCandidates && pc.currentRemoteDescription) {
           data.answerCandidates.forEach(c => {
             const candString = JSON.stringify(c);
             if (!processedCandidates.current.has(candString)) {
@@ -834,13 +899,23 @@ export default function App() {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-      const pc = new RTCPeerConnection({ iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] });
+      const pc = new RTCPeerConnection({ 
+         iceServers: [
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' }
+         ] 
+      });
       pcRef.current = pc;
+
+      remoteStreamRef.current = new MediaStream();
+      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStreamRef.current;
 
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
       pc.ontrack = (event) => {
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
+        event.streams[0].getTracks().forEach(track => {
+           remoteStreamRef.current.addTrack(track);
+        });
         setCallStatus('');
       };
 
@@ -866,7 +941,9 @@ export default function App() {
 
       onSnapshot(callDoc, (snap) => {
         const data = snap.data();
-        if (pc.currentRemoteDescription && data?.offerCandidates) {
+        if (!data) return;
+
+        if (pc.currentRemoteDescription && data.offerCandidates) {
           data.offerCandidates.forEach(c => {
             const candString = JSON.stringify(c);
             if (!processedCandidates.current.has(candString)) {
@@ -896,6 +973,11 @@ export default function App() {
     if (remoteVideoRef.current?.srcObject) {
       remoteVideoRef.current.srcObject = null;
     }
+    if (remoteStreamRef.current) {
+      remoteStreamRef.current.getTracks().forEach(t => t.stop());
+      remoteStreamRef.current = null;
+    }
+
     setIsVideoActive(false);
     setCallStatus('');
     if (!isClientMode) {
@@ -1693,17 +1775,29 @@ export default function App() {
 
       {/* ПЛАВАЮЩЕЕ ОКНО НАШЕЙ ВИДЕОСВЯЗИ (WEBRTC) */}
       {isVideoActive && (
-        <div className="fixed bottom-24 right-4 md:right-8 z-[200] w-[280px] h-[380px] md:w-[320px] md:h-[420px] bg-ink rounded-[2rem] shadow-2xl overflow-hidden flex flex-col border border-white/20 cursor-move">
-          <div className="absolute top-4 right-4 z-50">
-            <button onClick={() => {
-              if (isClientMode) {
-                 setIsVideoActive(false);
-                 if (pcRef.current) pcRef.current.close();
-                 if (localVideoRef.current?.srcObject) localVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
-              } else {
-                 endNativeCall();
-              }
-            }} className="bg-red-500/80 p-2 rounded-full text-white hover:bg-red-600 backdrop-blur-md shadow-lg transition-colors">
+        <div 
+           className="fixed z-[200] w-[280px] h-[380px] md:w-[320px] md:h-[420px] bg-ink rounded-[2rem] shadow-2xl overflow-hidden flex flex-col border border-white/20"
+           style={{ left: videoPos.x, top: videoPos.y, touchAction: 'none' }}
+        >
+          <div 
+             onMouseDown={handleVideoPointerDown}
+             onTouchStart={handleVideoPointerDown}
+             className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/60 to-transparent z-[60] cursor-move flex items-start justify-end p-4"
+          >
+            <button 
+               onMouseDown={e => e.stopPropagation()} 
+               onTouchStart={e => e.stopPropagation()} 
+               onClick={() => {
+                 if (isClientMode) {
+                    setIsVideoActive(false);
+                    if (pcRef.current) pcRef.current.close();
+                    if (localVideoRef.current?.srcObject) localVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
+                 } else {
+                    endNativeCall();
+                 }
+               }} 
+               className="bg-red-500/80 p-2 rounded-full text-white hover:bg-red-600 backdrop-blur-md shadow-lg transition-colors pointer-events-auto"
+            >
                <X size={16} />
             </button>
           </div>
