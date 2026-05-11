@@ -364,6 +364,10 @@ const loadBaseDecks = async (notifyCb) => {
 let globalAudioCtx = null;
 const playSound = (type, isMuted) => {
   if (isMuted) return;
+  // Отключение звуков на мобильных устройствах
+  if (typeof window !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+    return;
+  }
   try {
     if (!globalAudioCtx) globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
@@ -479,7 +483,6 @@ export default function App() {
   const [videoLink, setVideoLink] = useState('');
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [isVideoActive, setIsVideoActive] = useState(false);
-  const [tempVideoLink, setTempVideoLink] = useState('');
   
   // Состояния для плашек
   const [isDicePanelOpen, setIsDicePanelOpen] = useState(false);
@@ -925,14 +928,6 @@ export default function App() {
 
   const shareLinkToClient = async () => {
     const url = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
-    if (navigator.share && /Mobi|Android|iPhone/i.test(navigator.userAgent)) {
-      try {
-        await navigator.share({ title: 'Онлайн Кабинет', url: url });
-        return;
-      } catch (e) {
-        console.log('Поделиться отменено');
-      }
-    }
     await copyToClipboard(url);
     setCopyFeedback(true); setTimeout(() => setCopyFeedback(false), 2000);
   };
@@ -1459,7 +1454,7 @@ export default function App() {
                   <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Настройки Поля:</b> Изменение фона стола (нейро-текстуры) или загрузка своего игрового поля (картинки, на которую можно класть карты).</div></div>
                   <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Очистить стол:</b> Удаляет все незакрепленные объекты. Внизу появится кнопка отмены (действует 10 секунд).</div></div>
                   <div className="flex items-start gap-2"><Timer size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Таймер:</b> Устанавливает общее время (60/90 мин). Синхронизирован с клиентом.</div></div>
-                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Видеосвязь:</b> Создайте встроенный звонок прямо на платформе (появится плавающее окошко) или вставьте свою ссылку на Zoom/Skype.</div></div>
+                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Видеосвязь:</b> Создайте встроенный звонок прямо на платформе (появится плавающее окошко).</div></div>
                 </div>
               </div>
 
@@ -1584,6 +1579,9 @@ export default function App() {
             <h2 className="text-xl font-black uppercase mb-4 text-center" style={{ color: COLORS.ink }}>Видеосвязь</h2>
             
             <div className="flex flex-col gap-4 mb-6">
+              <p className="text-[10px] text-center font-medium leading-relaxed" style={{ color: `${COLORS.ink}99` }}>
+                Создайте приватную комнату для встроенного звонка. Она появится в плавающем окошке у вас и клиента.
+              </p>
               <button onClick={async () => { 
                   const linkToSave = `https://meet.jit.si/MakSpace_${roomId}`; 
                   await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: linkToSave }, { merge: true }); 
@@ -1592,28 +1590,14 @@ export default function App() {
                   notify("Встроенная видеосвязь запущена!"); 
                 }} 
                 className="w-full py-4 rounded-xl text-white font-black uppercase tracking-widest shadow-md transition-all hover:scale-[1.02] flex items-center justify-center gap-2" style={{ backgroundColor: COLORS.forest }}>
-                <Video size={18} /> Встроенный звонок
+                <Video size={18} /> Запустить звонок
               </button>
-              
-              <div className="flex items-center gap-2 opacity-30 my-2">
-                 <div className="h-px bg-current flex-1"></div>
-                 <span className="text-[10px] font-black uppercase">ИЛИ СВОЯ ССЫЛКА</span>
-                 <div className="h-px bg-current flex-1"></div>
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-[10px] text-center font-medium leading-relaxed" style={{ color: `${COLORS.ink}99` }}>
-                  Вставьте ссылку на сторонний сервис (Zoom, Skype, Яндекс.Телемост).
-                </p>
-                <input type="text" value={tempVideoLink} onChange={e => setTempVideoLink(e.target.value)} placeholder="https://..." className="w-full px-4 py-3 rounded-xl border-2 text-sm font-bold outline-none text-center" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
-              </div>
             </div>
 
             <div className="flex gap-3">
               {videoLink && (
-                <button onClick={async () => { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: '' }, { merge: true }); setIsVideoModalOpen(false); setIsVideoActive(false); notify("Связь удалена"); }} className="flex-1 py-3 font-bold rounded-xl text-[10px] uppercase tracking-widest transition-colors hover:opacity-80" style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}>Отключить</button>
+                <button onClick={async () => { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: '' }, { merge: true }); setIsVideoModalOpen(false); setIsVideoActive(false); notify("Связь удалена"); }} className="w-full py-3 font-bold rounded-xl text-[10px] uppercase tracking-widest transition-colors hover:opacity-80" style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}>Завершить звонок (Удалить)</button>
               )}
-              <button onClick={async () => { if (!tempVideoLink.trim()) return notify("Введите ссылку!"); let linkToSave = tempVideoLink.trim(); if (!linkToSave.startsWith('http')) linkToSave = 'https://' + linkToSave; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: linkToSave }, { merge: true }); setIsVideoModalOpen(false); notify("Связь установлена!"); }} className="flex-[2] py-3 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:scale-105" style={{ backgroundColor: COLORS.plum }}>Сохранить свою</button>
             </div>
           </div>
         </div>
@@ -1734,7 +1718,7 @@ export default function App() {
 
           {!isClientMode ? (
             <div className="flex items-center gap-1 bg-white/50 p-1 rounded-[1rem] border shadow-sm" style={{ borderColor: `${COLORS.forest}30`, backgroundColor: `${COLORS.forest}10` }}>
-              <button onClick={() => { setTempVideoLink(videoLink || ''); setIsVideoModalOpen(true); }} className="p-2 rounded-xl transition-all hover:bg-white text-forest" title="Настроить видеосвязь">
+              <button onClick={() => { setIsVideoModalOpen(true); }} className="p-2 rounded-xl transition-all hover:bg-white text-forest" title="Настроить видеосвязь">
                 <Video size={16} />
               </button>
               {videoLink && (
@@ -1777,9 +1761,9 @@ export default function App() {
           </button>
           
           {!isClientMode && (
-            <button onClick={shareLinkToClient} className="px-3 md:px-4 py-2.5 rounded-[1rem] text-[10px] font-black border flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-105 min-w-[40px]" style={{ backgroundColor: copyFeedback ? COLORS.forest : 'white', borderColor: copyFeedback ? COLORS.forest : `${COLORS.plum}30`, color: copyFeedback ? 'white' : COLORS.plum }} title="Поделиться ссылкой с клиентом">
+            <button onClick={shareLinkToClient} className="px-4 py-2.5 rounded-[1rem] text-[10px] font-black border flex items-center gap-2 shadow-sm transition-all hover:scale-105" style={{ backgroundColor: copyFeedback ? COLORS.forest : 'white', borderColor: copyFeedback ? COLORS.forest : `${COLORS.plum}30`, color: copyFeedback ? 'white' : COLORS.plum }} title="Поделиться ссылкой с клиентом">
               {copyFeedback ? <CheckCircle size={14} /> : <UserPlus size={14} />}
-              <span className="ml-1 text-[9px] md:text-[10px] whitespace-nowrap">{copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА"}</span>
+              <span className="hidden sm:inline">{copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА ДЛЯ КЛИЕНТА"}</span>
             </button>
           )}
 
