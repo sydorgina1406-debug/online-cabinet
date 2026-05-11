@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import {
   getFirestore, doc, onSnapshot, setDoc, getDoc,
-  updateDoc, collection, deleteDoc, addDoc, writeBatch, getDocs
+  updateDoc, collection, deleteDoc, addDoc, writeBatch, arrayUnion
 } from 'firebase/firestore';
 import {
   getAuth, signInAnonymously, onAuthStateChanged
 } from 'firebase/auth';
 import {
-  getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject
+  getStorage, ref as storageRef, uploadString, getDownloadURL
 } from 'firebase/storage';
 import {
   Plus, Layers, RotateCw, RotateCcw, Trash2, Maximize2, Minimize2, X, ChevronUp,
@@ -69,7 +69,7 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
     );
   }
 
-  const isSide = viewMode === 'side';
+  const isSide = viewMode === 'side' && !isLaying;
   const rot = ((rotation % 360) + 360) % 360;
 
   let dir = 'up';
@@ -364,6 +364,10 @@ const loadBaseDecks = async (notifyCb) => {
 let globalAudioCtx = null;
 const playSound = (type, isMuted) => {
   if (isMuted) return;
+  // Отключение звуков на мобильных устройствах
+  if (typeof window !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+    return;
+  }
   try {
     if (!globalAudioCtx) globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
@@ -476,11 +480,92 @@ export default function App() {
   
   const [platformName, setPlatformName] = useState("ОНЛАЙН КАБИНЕТ");
   
-  const [videoLink, setVideoLink] = useState('');
-  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  // Состояния для собственной видеосвязи (WebRTC)
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+  const pcRef = useRef(null);
+  const processedCandidates = useRef(new Set());
   const [isVideoActive, setIsVideoActive] = useState(false);
-  const [tempVideoLink, setTempVideoLink] = useState('');
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [isVideoCallReady, setIsVideoCallReady] = useState(false);
+  const [callStatus, setCallStatus] = useState('');
   
+  // Логика перемещения и изменения размера окна видеосвязи
+  const videoDragRef = useRef({ isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 });
+  const videoResizeRef = useRef({ isResizing: false, startX: 0, startY: 0, startW: 320, startH: 420 });
+  const [videoPos, setVideoPos] = useState({ x: 20, y: 20 });
+  const [videoDim, setVideoDim] = useState({ w: 320, h: 420 });
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Инициализируем окно видеосвязи справа внизу
+      setVideoPos({ 
+         x: Math.max(20, window.innerWidth - 340), 
+         y: Math.max(20, window.innerHeight - 440) 
+      });
+    }
+  }, []);
+
+  const handleVideoPointerDown = (e) => {
+    videoDragRef.current.isDragging = true;
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    videoDragRef.current.startX = cx;
+    videoDragRef.current.startY = cy;
+    videoDragRef.current.initialX = videoPos.x;
+    videoDragRef.current.initialY = videoPos.y;
+  };
+
+  const handleVideoResizePointerDown = (e) => {
+    e.stopPropagation();
+    videoResizeRef.current.isResizing = true;
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    videoResizeRef.current.startX = cx;
+    videoResizeRef.current.startY = cy;
+    videoResizeRef.current.startW = videoDim.w;
+    videoResizeRef.current.startH = videoDim.h;
+  };
+
+  useEffect(() => {
+    const handleMove = (e) => {
+      const cx = e.touches ? e.touches[0].clientX : e.clientX;
+      const cy = e.touches ? e.touches[0].clientY : e.clientY;
+
+      if (videoDragRef.current.isDragging) {
+        const dx = cx - videoDragRef.current.startX;
+        const dy = cy - videoDragRef.current.startY;
+        setVideoPos({
+          x: videoDragRef.current.initialX + dx,
+          y: videoDragRef.current.initialY + dy
+        });
+      } else if (videoResizeRef.current.isResizing) {
+        const dx = cx - videoResizeRef.current.startX;
+        const dy = cy - videoResizeRef.current.startY;
+        setVideoDim({
+          w: Math.max(240, videoResizeRef.current.startW + dx),
+          h: Math.max(300, videoResizeRef.current.startH + dy)
+        });
+      }
+    };
+    const handleUp = () => { 
+      videoDragRef.current.isDragging = false; 
+      videoResizeRef.current.isResizing = false;
+    };
+    
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', handleUp);
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchmove', handleUp);
+    };
+  }, [videoPos, videoDim]);
+
   // Состояния для плашек
   const [isDicePanelOpen, setIsDicePanelOpen] = useState(false);
   const [isFiguresPanelOpen, setIsFiguresPanelOpen] = useState(false);
@@ -587,6 +672,166 @@ export default function App() {
       });
     });
   };
+
+  const rtcConfig = {
+    iceServers: [
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
+    ]
+  };
+
+  const startNativeCall = async () => {
+    try {
+      setIsVideoActive(true);
+      setCallStatus('Доступ к камере...');
+      processedCandidates.current.clear();
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+
+      const pc = new RTCPeerConnection(rtcConfig);
+      pcRef.current = pc;
+
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+      pc.ontrack = (event) => {
+        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
+        setCallStatus('');
+      };
+
+      const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
+      await setDoc(callDoc, { offerCandidates: [], answerCandidates: [] });
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: true }, { merge: true });
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          updateDoc(callDoc, { offerCandidates: arrayUnion(event.candidate.toJSON()) });
+        }
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await updateDoc(callDoc, { offer: { type: offer.type, sdp: offer.sdp } });
+
+      setCallStatus('Ожидание клиента...');
+
+      onSnapshot(callDoc, async (snap) => {
+        const data = snap.data();
+        if (data?.answer && !pc.currentRemoteDescription) {
+          await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        }
+        if (pc.currentRemoteDescription && data?.answerCandidates) {
+          data.answerCandidates.forEach(c => {
+            const candString = JSON.stringify(c);
+            if (!processedCandidates.current.has(candString)) {
+               pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
+               processedCandidates.current.add(candString);
+            }
+          });
+        }
+      });
+    } catch (err) {
+      setCallStatus('');
+      setIsVideoActive(false);
+      notify("Ошибка: " + err.name + " / " + err.message, 8000);
+      console.error("Детали ошибки WebRTC:", err);
+    }
+  };
+
+  const joinNativeCall = async () => {
+    try {
+      setIsVideoActive(true);
+      setCallStatus('Доступ к камере...');
+      processedCandidates.current.clear();
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+
+      const pc = new RTCPeerConnection(rtcConfig);
+      pcRef.current = pc;
+
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+      pc.ontrack = (event) => {
+        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
+        setCallStatus('');
+      };
+
+      const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          updateDoc(callDoc, { answerCandidates: arrayUnion(event.candidate.toJSON()) });
+        }
+      };
+
+      const callData = (await getDoc(callDoc)).data();
+      if (!callData?.offer) {
+        setCallStatus('Ожидание психолога...');
+        return;
+      }
+
+      setCallStatus('Соединение...');
+      await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await updateDoc(callDoc, { answer: { type: answer.type, sdp: answer.sdp } });
+
+      onSnapshot(callDoc, (snap) => {
+        const data = snap.data();
+        if (pc.currentRemoteDescription && data?.offerCandidates) {
+          data.offerCandidates.forEach(c => {
+            const candString = JSON.stringify(c);
+            if (!processedCandidates.current.has(candString)) {
+               pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
+               processedCandidates.current.add(candString);
+            }
+          });
+        }
+      });
+    } catch (err) {
+      setCallStatus('');
+      setIsVideoActive(false);
+      notify("Ошибка: " + err.name + " / " + err.message, 8000);
+      console.error("Детали ошибки WebRTC:", err);
+    }
+  };
+
+  const endNativeCall = async () => {
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    if (localVideoRef.current?.srcObject) {
+      localVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
+      localVideoRef.current.srcObject = null;
+    }
+    if (remoteVideoRef.current?.srcObject) {
+      remoteVideoRef.current.srcObject = null;
+    }
+    setIsVideoActive(false);
+    setCallStatus('');
+    if (!isClientMode) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: false }, { merge: true });
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc'));
+    }
+  };
+
+  // Слушатель завершения звонка для клиента
+  useEffect(() => {
+     if (isVideoActive && isClientMode && roomId) {
+       const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
+       const unsub = onSnapshot(callDoc, (docSnap) => {
+          if (!docSnap.exists() && isVideoActive) {
+             endNativeCall();
+             notify('Психолог завершил звонок', 5000);
+          }
+       });
+       return () => unsub();
+     }
+  }, [isVideoActive, isClientMode, roomId]);
 
   useEffect(() => {
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -732,12 +977,9 @@ export default function App() {
         else if (d.id === '_dice_type') setDiceType(d.data().type || 6);
         else if (d.id === '_settings') {
           if (d.data().platformName) setPlatformName(d.data().platformName);
-          if (d.data().tableBg) setTableBg(d.data().tableBg);
+          if (d.data().tableBg && typeof d.data().tableBg === 'object') setTableBg(d.data().tableBg);
           if (d.data().figureViewMode) setFigureViewMode(d.data().figureViewMode);
-          if (d.data().videoLink !== undefined) {
-             setVideoLink(d.data().videoLink);
-             if (!d.data().videoLink) setIsVideoActive(false);
-          }
+          if (d.data().isVideoCallReady !== undefined) setIsVideoCallReady(d.data().isVideoCallReady);
         }
         else if (d.id === '_library_state') {
           const libraryData = d.data();
@@ -747,7 +989,8 @@ export default function App() {
         }
         else if (d.id === '_active_deck') { setActiveDeckData(d.data()); }
         else if (d.id === '_timer_state') { setSessionTimer(d.data()); }
-        else cards.push({ id: d.id, ...d.data() });
+        // Игнорируем технические файлы при выводе на стол
+        else if (!d.id.startsWith('_')) cards.push({ id: d.id, ...d.data() });
       });
       setCardsOnTable(cards);
     });
@@ -925,14 +1168,6 @@ export default function App() {
 
   const shareLinkToClient = async () => {
     const url = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
-    if (navigator.share && /Mobi|Android|iPhone/i.test(navigator.userAgent)) {
-      try {
-        await navigator.share({ title: 'Онлайн Кабинет', url: url });
-        return;
-      } catch (e) {
-        console.log('Поделиться отменено');
-      }
-    }
     await copyToClipboard(url);
     setCopyFeedback(true); setTimeout(() => setCopyFeedback(false), 2000);
   };
@@ -1008,7 +1243,7 @@ export default function App() {
         document.body.appendChild(script);
         await new Promise(resolve => script.onload = resolve);
       }
-      const canvas = await window.html2canvas(boardRef.current, { useCORS: true, backgroundColor: tableBg.bgColor });
+      const canvas = await window.html2canvas(boardRef.current, { useCORS: true, backgroundColor: tableBg?.bgColor || '#FDFAF6' });
       const link = document.createElement('a');
       link.download = `session_${new Date().toLocaleDateString()}.png`;
       link.href = canvas.toDataURL();
@@ -1361,9 +1596,9 @@ export default function App() {
                     className="rich-text w-full px-4 py-3 rounded-b-xl border-2 outline-none text-sm custom-scrollbar min-h-[200px] shadow-inner leading-relaxed bg-white"
                     style={{ borderColor: COLORS.haze, color: COLORS.ink }}
                     data-placeholder="Текст техники, алгоритм или вопросы... Выделите текст и используйте кнопки сверху 👆"
-                  />
+                 />
                   
-                  <div className="flex gap-3 mt-4">
+                 <div className="flex gap-3 mt-4">
                     <button onClick={() => { setIsCreatingNote(false); setEditingNoteId(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors text-xs uppercase tracking-widest text-gray-600">Отмена</button>
                     <button onClick={async () => {
                       const finalHtml = notebookEditorRef.current ? notebookEditorRef.current.innerHTML : '';
@@ -1429,11 +1664,11 @@ export default function App() {
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> Клиент и Доступ</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
                   <p>Нажмите <UserPlus size={14} className="inline text-plum"/> <b>«ССЫЛКА ДЛЯ КЛИЕНТА»</b> на верхней панели. Ссылка скопируется — отправьте её клиенту.</p>
-                  <p>Клиент переходит по ссылке, вводит своё имя и попадает за ваш стол. <b>Регистрация не нужна.</b></p>
-                  <p><b>Права клиента:</b> тянуть карты (если колода открыта), двигать их, писать в желтых заметках, бросать игровые кубики.</p>
-                  <p className="text-terra"><b>Клиент НЕ может:</b> видеть фиолетовые заметки, открывать библиотеку и менять колоды, удалять всё со стола, видеть лазерную указку (если она выключена у мастера).</p>
-                </div>
-              </div>
+                 <p>Клиент переходит по ссылке, вводит своё имя и попадает за ваш стол. <b>Регистрация не нужна.</b></p>
+                 <p><b>Права клиента:</b> тянуть карты (если колода открыта), двигать их, писать в желтых заметках, бросать игровые кубики.</p>
+                 <p className="text-terra"><b>Клиент НЕ может:</b> видеть фиолетовые заметки, открывать библиотеку и менять колоды, удалять всё со стола, видеть лазерную указку (если она выключена у мастера).</p>
+               </div>
+             </div>
 
               {/* ГРУППОВЫЕ ИГРЫ И ПРИВАТНОСТЬ КАРТ */}
               <div className="space-y-4">
@@ -1444,24 +1679,24 @@ export default function App() {
                     <li>Когда участник (клиент) нажимает <b><Eye size={14} className="inline text-forest" /> Подсмотреть</b> на ничьей закрытой карте, она <b>закрепляется за ним</b>.</li>
                     <li>Под картой появляется его имя (например, <UserCircle size={12} className="inline" /> Анна).</li>
                     <li><b>Важно:</b> Никто другой из участников больше не сможет ни подсмотреть, ни перевернуть эту карту.</li>
-                    <li>Вы (Психолог) имеете полный контроль: вы в любой момент можете подсмотреть или перевернуть любую карту любого участника, а также отвязать владельца.</li>
-                  </ul>
-                </div>
-              </div>
+                   <li>Вы (Психолог) имеете полный контроль: вы в любой момент можете подсмотреть или перевернуть любую карту любого участника, а также отвязать владельца.</li>
+                 </ul>
+               </div>
+             </div>
 
               {/* ИНСТРУМЕНТЫ ВЕРХНЕЙ ПАНЕЛИ */}
               <div className="space-y-4">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><LayoutGrid size={16}/> Панель инструментов</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
                   <div className="flex items-start gap-2"><Crosshair size={16} className="text-red-500 mt-0.5 shrink-0"/> <div><b>Лазерная указка:</b> Обычная мышка скрыта от клиента. Указка включает красную точку, которую видят все (удобно показывать детали).</div></div>
-                  <div className="flex items-start gap-2"><Camera size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Скриншот:</b> Делает качественный снимок всего рабочего стола и скачивает на ваше устройство.</div></div>
-                  <div className="flex items-start gap-2"><Save size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Сохранить сессию:</b> Сохраняет весь расклад в библиотеку (вкладка СЕССИИ), чтобы загрузить его на следующих встречах.</div></div>
-                  <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Настройки Поля:</b> Изменение фона стола (нейро-текстуры) или загрузка своего игрового поля (картинки, на которую можно класть карты).</div></div>
-                  <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Очистить стол:</b> Удаляет все незакрепленные объекты. Внизу появится кнопка отмены (действует 10 секунд).</div></div>
-                  <div className="flex items-start gap-2"><Timer size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Таймер:</b> Устанавливает общее время (60/90 мин). Синхронизирован с клиентом.</div></div>
-                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Видеосвязь:</b> Вставьте ссылку на Zoom/Skype/Телемост, чтобы у клиента появилась яркая кнопка для входа в звонок.</div></div>
-                </div>
-              </div>
+                 <div className="flex items-start gap-2"><Camera size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Скриншот:</b> Делает качественный снимок всего рабочего стола и скачивает на ваше устройство.</div></div>
+                 <div className="flex items-start gap-2"><Save size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Сохранить сессию:</b> Сохраняет весь расклад в библиотеку (вкладка СЕССИИ), чтобы загрузить его на следующих встречах.</div></div>
+                 <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Настройки Поля:</b> Изменение фона стола (нейро-текстуры) или загрузка своего игрового поля (картинки, на которую можно класть карты).</div></div>
+                 <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Очистить стол:</b> Удаляет все незакрепленные объекты. Внизу появится кнопка отмены (действует 10 секунд).</div></div>
+                 <div className="flex items-start gap-2"><Timer size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Таймер:</b> Устанавливает общее время (60/90 мин). Синхронизирован с клиентом.</div></div>
+                 <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Видеосвязь:</b> Встроенная прямо в кабинет. Окно видео можно перемещать и растягивать.</div></div>
+               </div>
+             </div>
 
               {/* ЗАМЕТКИ И ТЕХНИКИ */}
               <div className="space-y-4">
@@ -1478,9 +1713,9 @@ export default function App() {
                   <div className="flex items-start gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-blue-600 shrink-0"><BookOpen size={16} /></div>
                     <div><b className="text-blue-900">Мои Техники:</b> Записная книжка Психолога. Запишите в неё свои скрипты до сессии. В один клик текст из неё выкладывается на стол в виде Секретной заметки!</div>
-                  </div>
-                </div>
-              </div>
+                 </div>
+               </div>
+             </div>
 
               {/* ПЛАВАЮЩИЕ ПАНЕЛИ */}
               <div className="space-y-4">
@@ -1493,9 +1728,9 @@ export default function App() {
                   <div className="flex items-start gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-blue-700 shrink-0"><Dices size={18} /></div>
                     <div><b className="text-blue-800">Игровые кубики и фишки:</b> Кнопка с кубиками открывает панель. Доступны цветные маркеры и кубики (d6 и d10). Бросать кубик может и клиент.</div>
-                  </div>
-                </div>
-              </div>
+                 </div>
+               </div>
+             </div>
 
               {/* ДЕЙСТВИЯ С КАРТАМИ */}
               <div className="space-y-4">
@@ -1514,7 +1749,7 @@ export default function App() {
                   <p className="mt-3 text-xs bg-gray-50 p-3 rounded-lg flex flex-col gap-2">
                     <span><Move size={14} className="inline text-plum"/> Чтобы <b>изменить размер</b>, потяните за правый нижний угол.</span>
                     <span><RotateCw size={14} className="inline text-plum"/> Чтобы <b>свободно вращать фигурку</b>, наведите на неё и нажмите на появившийся <b>круг компаса</b> вокруг неё. Для карт используйте кнопки Влево/Вправо в меню.</span>
-                  </p>
+                 </p>
                 </div>
               </div>
 
@@ -1525,45 +1760,74 @@ export default function App() {
                   <p>Вызывается длинной кнопкой <b>«Библиотека Мастера»</b> в самом низу экрана.</p>
                   <ul className="space-y-1 list-disc list-inside grid grid-cols-1 md:grid-cols-2">
                     <li><b>БАЗА:</b> Стандартные колоды, доступные всегда.</li>
-                    <li><b>ОБЛАКО:</b> Колоды, загруженные разработчиком специально для вас.</li>
-                    <li><b>МОИ:</b> Ваше личное пространство. Можно добавить колоды ссылкой с вашего Google Диска. Видите их только вы.</li>
-                    <li><b>СЕССИИ:</b> Сохраненные столы (история раскладов).</li>
+                   <li><b>ОБЛАКО:</b> Колоды, загруженные разработчиком специально для вас.</li>
+                   <li><b>МОИ:</b> Ваше личное пространство. Можно добавить колоды ссылкой с вашего Google Диска. Видите их только вы.</li>
+                   <li><b>СЕССИИ:</b> Сохраненные столы (история раскладов).</li>
                   </ul>
                   <div className="bg-plum/10 p-3 rounded-lg border border-plum/20 mt-2">
                     <p className="font-bold text-plum mb-1">Как вытаскивать карты?</p>
                     <p className="text-xs">Выберите колоду в левом списке. Нажмите <b>«Наугад»</b> (вытащит случайную рубашкой вверх) или нажмите кнопку <b>«Открыть колоду»</b> справа вверху, чтобы увидеть все изображения и выбрать конкретную.</p>
-                  </div>
-                </div>
-              </div>
+                 </div>
+               </div>
+             </div>
 
-            </div>
+           </div>
           </div>
         </div>
       )}
 
       {/* ПЛАВАЮЩЕЕ ОКНО ВИДЕОСВЯЗИ */}
-      {isVideoActive && videoLink && (
-        <div className="fixed bottom-24 right-4 md:right-8 z-[200] w-72 md:w-80 h-52 md:h-60 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col resize overflow-auto" style={{ minWidth: '240px', minHeight: '180px' }}>
-          <div className="flex justify-between items-center bg-gray-100 px-3 py-2 border-b border-gray-200">
-            <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest flex items-center gap-2"><Video size={12} /> Видеосвязь</span>
-            <div className="flex items-center gap-2">
-               <a href={videoLink} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-plum transition-colors" title="Открыть в новой вкладке">
-                  <ExternalLink size={14} />
-               </a>
-               <button onClick={() => setIsVideoActive(false)} className="text-gray-500 hover:text-terra transition-colors" title="Закрыть">
-                  <X size={16} />
-               </button>
-            </div>
+      {isVideoActive && (
+        <div
+           className="fixed z-[200] bg-ink rounded-[2rem] shadow-2xl overflow-hidden flex flex-col border border-white/20"
+           style={{ left: videoPos.x, top: videoPos.y, width: videoDim.w, height: videoDim.h, touchAction: 'none' }}
+        >
+          {/* Заголовок для перемещения */}
+          <div
+             onMouseDown={handleVideoPointerDown}
+             onTouchStart={handleVideoPointerDown}
+             className="absolute top-0 left-0 right-0 h-14 bg-gradient-to-b from-black/60 to-transparent z-[60] cursor-move flex items-center justify-between px-6"
+          >
+            <span className="text-white text-[10px] font-black uppercase tracking-widest opacity-80 pointer-events-none">Видеосвязь</span>
+            <button
+               onMouseDown={e => e.stopPropagation()}
+               onTouchStart={e => e.stopPropagation()}
+               onClick={() => {
+                 if (isClientMode) {
+                    setIsVideoActive(false);
+                    if (pcRef.current) pcRef.current.close();
+                    if (localVideoRef.current?.srcObject) localVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
+                 } else {
+                    endNativeCall();
+                 }
+               }}
+               className="bg-red-500/80 p-1.5 rounded-full text-white hover:bg-red-600 transition-colors pointer-events-auto"
+            >
+               <X size={14} />
+            </button>
           </div>
+
           <div className="flex-1 bg-black relative">
-             <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-                <Video size={24} className="text-white/20 mb-2" />
-                <p className="text-[9px] text-white/50 uppercase font-bold tracking-widest">Если видео не появилось, сервис запрещает встраивание.</p>
-                <a href={videoLink} target="_blank" rel="noopener noreferrer" className="mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[10px] font-black transition-colors">
-                  Открыть в новой вкладке
-                </a>
-             </div>
-             <iframe src={videoLink} title="Video Call" allow="camera; microphone; fullscreen; display-capture; autoplay" className="absolute inset-0 w-full h-full border-0 z-10" />
+             {callStatus && (
+               <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/90 z-40 text-center px-4">
+                  <Loader2 className="animate-spin text-plum mb-3" size={32} />
+                  <span className="text-white text-[10px] font-black tracking-widest uppercase opacity-80">{callStatus}</span>
+               </div>
+             )}
+             <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+          </div>
+
+          <div className="absolute bottom-4 left-4 w-24 h-32 bg-gray-800 rounded-xl overflow-hidden shadow-2xl border border-white/20 z-50 pointer-events-none">
+             <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100" />
+          </div>
+
+          {/* Хэндл для изменения размера */}
+          <div
+             onMouseDown={handleVideoResizePointerDown}
+             onTouchStart={handleVideoResizePointerDown}
+             className="absolute bottom-0 right-0 w-8 h-8 cursor-nwse-resize z-[70] flex items-center justify-center text-white/40 hover:text-white"
+          >
+            <Maximize2 size={16} className="rotate-90 pointer-events-none" />
           </div>
         </div>
       )}
@@ -1574,16 +1838,23 @@ export default function App() {
             <button onClick={() => setIsVideoModalOpen(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
               <X size={20} style={{ color: COLORS.ink }} />
             </button>
-            <h2 className="text-xl font-black uppercase mb-3 text-center" style={{ color: COLORS.ink }}>Видеосвязь</h2>
+            <h2 className="text-xl font-black uppercase mb-4 text-center" style={{ color: COLORS.ink }}>Видеосвязь</h2>
             <p className="text-[10px] text-center mb-6 font-medium leading-relaxed" style={{ color: `${COLORS.ink}99` }}>
-              Вставьте ссылку на Яндекс.Телемост, Zoom, Google Meet или Skype. <br/>У клиента в кабинете появится яркая кнопка для подключения к вашему звонку.
+              Создайте приватную комнату для встроенного звонка. Она появится в плавающем окошке у вас и клиента.
             </p>
-            <input type="text" value={tempVideoLink} onChange={e => setTempVideoLink(e.target.value)} placeholder="https://telemost.yandex.ru/j/..." className="w-full px-4 py-3 rounded-xl border-2 mb-6 text-sm font-bold outline-none text-center" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
-            <div className="flex gap-3">
-              {videoLink && (
-                <button onClick={async () => { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: '' }, { merge: true }); setIsVideoModalOpen(false); setIsVideoActive(false); notify("Ссылка удалена"); }} className="flex-1 py-3 font-bold rounded-xl text-[10px] uppercase tracking-widest transition-colors hover:opacity-80" style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}>Удалить</button>
+            <button onClick={async () => {
+                setIsVideoModalOpen(false);
+                startNativeCall();
+                notify("Встроенная видеосвязь запущена!");
+              }}
+              className="w-full py-4 rounded-xl text-white font-black uppercase tracking-widest shadow-md transition-all hover:scale-[1.02] flex items-center justify-center gap-2" style={{ backgroundColor: COLORS.forest }}>
+              <Video size={18} /> Запустить звонок
+            </button>
+
+            <div className="flex gap-3 mt-3">
+              {isVideoCallReady && (
+                <button onClick={async () => { endNativeCall(); setIsVideoModalOpen(false); notify("Связь удалена"); }} className="w-full py-3 font-bold rounded-xl text-[10px] uppercase tracking-widest transition-colors hover:opacity-80" style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}>Завершить звонок (Удалить)</button>
               )}
-              <button onClick={async () => { if (!tempVideoLink.trim()) return notify("Введите ссылку!"); let linkToSave = tempVideoLink.trim(); if (!linkToSave.startsWith('http')) linkToSave = 'https://' + linkToSave; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: linkToSave }, { merge: true }); setIsVideoModalOpen(false); notify("Связь установлена!"); }} className="flex-[2] py-3 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:scale-105" style={{ backgroundColor: COLORS.forest }}>Сохранить</button>
             </div>
           </div>
         </div>
@@ -1704,20 +1975,15 @@ export default function App() {
 
           {!isClientMode ? (
             <div className="flex items-center gap-1 bg-white/50 p-1 rounded-[1rem] border shadow-sm" style={{ borderColor: `${COLORS.forest}30`, backgroundColor: `${COLORS.forest}10` }}>
-              <button onClick={() => { setTempVideoLink(videoLink || ''); setIsVideoModalOpen(true); }} className="p-2 rounded-xl transition-all hover:bg-white text-forest" title="Настроить видеосвязь">
+              <button onClick={() => { setIsVideoModalOpen(true); }} className="p-2 rounded-xl transition-all hover:bg-white text-forest" title="Настроить видеосвязь">
                 <Video size={16} />
               </button>
-              {videoLink && (
-                <button onClick={() => setIsVideoActive(true)} className="px-3 py-1.5 rounded-xl text-[10px] font-black transition-all bg-white text-forest hover:scale-105 shadow-sm uppercase">
-                  Войти в звонок
-                </button>
-              )}
-            </div>
+           </div>
           ) : (
-            videoLink && (
-              <button onClick={() => setIsVideoActive(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black text-white shadow-[0_0_15px_rgba(45,74,62,0.4)] transition-all hover:scale-105 uppercase animate-pulse" style={{ backgroundColor: COLORS.forest }}>
+            isVideoCallReady && (
+              <button onClick={joinNativeCall} className="flex items-center gap-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black text-white shadow-[0_0_15px_rgba(45,74,62,0.4)] transition-all hover:scale-105 uppercase animate-pulse" style={{ backgroundColor: COLORS.forest }}>
                 <Video size={14} /> Подключиться к видео
-              </button>
+             </button>
             )
           )}
 
@@ -2192,7 +2458,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
 
     setIsDragging(true); hasMoved.current = false; clickTimestamp.current = Date.now();
     initialMousePos.current = { x: cx, y: cy };
-    startPos.current = { x: cx - element.x, y: cy - element.y };
+    startPos.current = { x: (cx - (element.x || 0)), y: (cy - (element.y || 0)) };
     if (!isField) onUpdate({ zIndex: maxZIndex + 1 });
   };
 
@@ -2220,8 +2486,8 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     const boardRect = boardRef.current.getBoundingClientRect();
     const cx = e.touches ? e.touches[0].clientX : e.clientX;
     const cy = e.touches ? e.touches[0].clientY : e.clientY;
-    const centerX = boardRect.left + element.x + element.width / 2;
-    const centerY = boardRect.top + element.y + element.height / 2;
+    const centerX = boardRect.left + (element.x || 0) + element.width / 2;
+    const centerY = boardRect.top + (element.y || 0) + element.height / 2;
 
     const angleRad = Math.atan2(cy - centerY, cx - centerX);
     let angleDeg = angleRad * (180 / Math.PI) + 90;
@@ -2239,7 +2505,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
   useEffect(() => {
     if (isText && contentEditableRef.current && document.activeElement !== contentEditableRef.current) {
       if (contentEditableRef.current.innerHTML !== (element.text || '')) {
-        contentEditableRef.current.innerHTML = element.text || '';
+        contentEditableRef.current.innerHTML = String(element.text || '');
       }
     }
   }, [element.text, isText]);
@@ -2258,7 +2524,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         const dx = cx - startPos.current.x;
         if (isText) {
           const nw = Math.max(150, startDim.current.w + dx);
-          onUpdate({ width: nw }); // Высота у текста теперь автоматическая
+          onUpdate({ width: nw }); 
         } else {
           const ratio = startDim.current.w / startDim.current.h;
           const nw = Math.max(element.type === 'token' ? 25 : (element.type === 'arrow' ? 30 : 80), startDim.current.w + dx);
@@ -2267,8 +2533,8 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       } else if (isRotating) {
         if (!boardRef.current) return;
         const boardRect = boardRef.current.getBoundingClientRect();
-        const centerX = boardRect.left + element.x + element.width / 2;
-        const centerY = boardRect.top + element.y + element.height / 2;
+        const centerX = boardRect.left + (element.x || 0) + element.width / 2;
+        const centerY = boardRect.top + (element.y || 0) + element.height / 2;
         
         const angleRad = Math.atan2(cy - centerY, cx - centerX);
         let angleDeg = angleRad * (180 / Math.PI) + 90;
@@ -2319,10 +2585,10 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       ref={elementRef}
       className={`absolute group ${canDrag ? 'touch-none' : ''} ${(isDragging || isRotating) ? 'z-[1000]' : ''}`}
       style={{
-        left: Math.max(0, element.x), top: Math.max(0, element.y),
+        left: Math.max(0, element.x || 0), top: Math.max(0, element.y || 0),
         width: element.width, height: isText ? 'auto' : element.height,
         zIndex: isField ? 0 : (element.zIndex || 1),
-        transform: `rotate(${appliedRotation}deg)`,
+        transform: `rotate(${appliedRotation || 0}deg)`,
         transition: (isDragging || isResizing || isRotating) ? 'none' : 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
       }}
     >
@@ -2476,7 +2742,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
           </div>
         ) : element.type === 'figure' ? (
           <div className="w-full h-full relative flex items-center justify-center" onMouseDown={handleDragStart} onTouchStart={handleDragStart}>
-             <FigureIcon gender={element.gender} color={element.color} viewMode={globalFigureView} rotation={element.rotation} name={element.name} isLaying={element.isLaying} className="w-full h-full" />
+             <FigureIcon gender={element.gender} color={element.color} viewMode={globalFigureView} rotation={element.rotation} name={String(element.name || '')} isLaying={element.isLaying} className="w-full h-full" />
           </div>
         ) : (
           <div className="relative w-full h-full" style={isField ? {} : { transformStyle: 'preserve-3d', transition: 'transform 0.6s ease', transform: element.isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }} onMouseDown={handleDragStart} onTouchStart={handleDragStart}>
