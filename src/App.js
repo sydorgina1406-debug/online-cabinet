@@ -700,6 +700,7 @@ export default function App() {
       pc.ontrack = (event) => {
         if (remoteVideoRef.current && event.streams[0]) {
            remoteVideoRef.current.srcObject = event.streams[0];
+           remoteVideoRef.current.play().catch(e => console.error("Play error:", e));
         }
         setCallStatus(''); 
       };
@@ -769,6 +770,7 @@ export default function App() {
       pc.ontrack = (event) => {
         if (remoteVideoRef.current && event.streams[0]) {
            remoteVideoRef.current.srcObject = event.streams[0];
+           remoteVideoRef.current.play().catch(e => console.error("Play error:", e));
         }
         setCallStatus('');
       };
@@ -843,32 +845,31 @@ export default function App() {
      }
   }, [isVideoActive, isClientMode, roomId]);
 
-  // Остальная часть логики...
   useEffect(() => {
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    if (!sessionTimer?.running) {
-      setTimerDisplay('');
-      setTimerIsWarning(false);
-      return;
-    }
-    const tick = () => {
-      const elapsed = Date.now() - sessionTimer.startedAt;
-      const remaining = sessionTimer.duration - elapsed;
-      if (remaining <= 0) {
-        setTimerDisplay('00:00');
-        setTimerIsWarning(true);
-        clearInterval(timerIntervalRef.current);
-        return;
+    const init = async () => {
+      try {
+        await signInAnonymously(auth);
+        onAuthStateChanged(auth, (u) => {
+          setUser(u);
+          if (u) setIsDbConnected(true);
+          setAppLoading(false);
+        });
+      } catch (e) {
+        console.error("Auth init error:", e);
+        setAppLoading(false);
       }
-      const m = Math.floor(remaining / 60000);
-      const s = Math.floor((remaining % 60000) / 1000);
-      setTimerDisplay(`${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
-      setTimerIsWarning(remaining < 5 * 60 * 1000);
+      
+      const params = new URLSearchParams(window.location.search);
+      const roomParam = params.get('room');
+      if (roomParam) {
+        setRoomId(roomParam);
+        roomIdRef.current = roomParam;
+        setIsClientMode(true);
+        window._isClientMode = true; 
+      }
     };
-    tick();
-    timerIntervalRef.current = setInterval(tick, 1000);
-    return () => clearInterval(timerIntervalRef.current);
-  }, [sessionTimer]);
+    init();
+  }, []);
 
   const handleLogin = async () => {
     if (!emailInput || !passwordInput) return notify("Введите Email и Пароль");
