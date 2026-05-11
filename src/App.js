@@ -486,6 +486,7 @@ export default function App() {
   const pcRef = useRef(null);
   const processedCandidates = useRef(new Set());
   const [isVideoActive, setIsVideoActive] = useState(false);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [isVideoCallReady, setIsVideoCallReady] = useState(false);
   const [callStatus, setCallStatus] = useState('');
   
@@ -784,7 +785,7 @@ export default function App() {
         setCallStatus(''); 
       };
 
-      const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_webrtc`);
+      const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
       await setDoc(callDoc, { offerCandidates: [], answerCandidates: [] });
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: true }, { merge: true });
 
@@ -802,7 +803,7 @@ export default function App() {
 
       onSnapshot(callDoc, async (snap) => {
         const data = snap.data();
-        if (!pc.currentRemoteDescription && data?.answer) {
+        if (data?.answer && !pc.currentRemoteDescription) {
           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
         }
         if (pc.currentRemoteDescription && data?.answerCandidates) {
@@ -840,7 +841,7 @@ export default function App() {
         setCallStatus('');
       };
 
-      const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_webrtc`);
+      const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
       
       pc.onicecandidate = (event) => {
         if (event.candidate) {
@@ -894,14 +895,14 @@ export default function App() {
     setCallStatus('');
     if (!isClientMode) {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: false }, { merge: true });
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_webrtc`));
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc'));
     }
   };
 
   // Слушатель завершения звонка для клиента
   useEffect(() => {
      if (isVideoActive && isClientMode && roomId) {
-        const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_webrtc`);
+        const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
         const unsub = onSnapshot(callDoc, (docSnap) => {
            if (!docSnap.exists() && isVideoActive) {
               endNativeCall();
@@ -1833,7 +1834,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         const dx = cx - startPos.current.x;
         if (isText) {
           const nw = Math.max(150, startDim.current.w + dx);
-          onUpdate({ width: nw }); // Высота у текста теперь автоматическая
+          onUpdate({ width: nw }); 
         } else {
           const ratio = startDim.current.w / startDim.current.h;
           const nw = Math.max(element.type === 'token' ? 25 : (element.type === 'arrow' ? 30 : 80), startDim.current.w + dx);
