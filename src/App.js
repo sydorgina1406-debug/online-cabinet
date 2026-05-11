@@ -69,7 +69,8 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
     );
   }
 
-  const isSide = viewMode === 'side' && !isLaying;
+  // ИСПРАВЛЕНИЕ: Теперь вид сбоку сохраняется даже если глаза закрыты (isLaying)
+  const isSide = viewMode === 'side';
   const rot = ((rotation % 360) + 360) % 360;
 
   let dir = 'up';
@@ -85,8 +86,8 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
     if (isLaying) {
       return (
         <g>
-          <path d={`M ${cx1-2},${cy1} Q ${cx1},${cy1+2} ${cx1+2},${cy1}`} stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <path d={`M ${cx2-2},${cy2} Q ${cx2},${cy2+2} ${cx2+2},${cy2}`} stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+          <path d={`M ${cx1-3},${cy1} Q ${cx1},${cy1+3} ${cx1+3},${cy1}`} stroke="#333" strokeWidth="2" fill="none" strokeLinecap="round" />
+          <path d={`M ${cx2-3},${cy2} Q ${cx2},${cy2+3} ${cx2+3},${cy2}`} stroke="#333" strokeWidth="2" fill="none" strokeLinecap="round" />
         </g>
       );
     }
@@ -100,7 +101,7 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
 
   const drawProfileEye = (cx, cy, r) => {
     if (isLaying) {
-      return <path d={`M ${cx-2},${cy} Q ${cx},${cy+2} ${cx+2},${cy}`} stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />;
+      return <path d={`M ${cx-3},${cy} Q ${cx},${cy+3} ${cx+3},${cy}`} stroke="#333" strokeWidth="2" fill="none" strokeLinecap="round" />;
     }
     return <circle cx={cx} cy={cy} r={r} fill="#222" />;
   };
@@ -1963,7 +1964,7 @@ export default function App() {
         {/* ИНСТРУМЕНТЫ ПРАВАЯ ЧАСТЬ */}
         <div className="flex items-center gap-2 flex-wrap justify-center md:justify-end w-full md:w-auto">
           
-          {/* НОВЫЕ КНОПКИ ВЫЗОВА ПЛАШЕК */}
+          {/* КНОПКИ ВЫЗОВА ПЛАШЕК */}
           <div className="flex bg-black/5 p-1 rounded-2xl shadow-inner border border-ink/5 gap-1 mr-1">
              <button onClick={() => setIsFiguresPanelOpen(!isFiguresPanelOpen)} className={`p-2 rounded-xl transition-all flex items-center justify-center ${isFiguresPanelOpen ? 'bg-white shadow-sm text-plum' : 'hover:bg-white text-ink/70'}`} title="Открыть фигурки и стрелки">
                 <FigureIcon gender="male" color={isFiguresPanelOpen ? COLORS.plum : 'currentColor'} isMenu={true} className="w-[18px] h-[18px] opacity-80" />
@@ -2056,7 +2057,7 @@ export default function App() {
             </>
           )}
 
-          {/* НОВАЯ КНОПКА ИНСТРУКЦИИ */}
+          {/* КНОПКА ИНСТРУКЦИИ */}
           <button onClick={() => setIsHelpOpen(true)} className="px-3 py-2.5 rounded-[1rem] border transition-all hover:bg-black/5 hover:scale-105 flex items-center gap-2 shadow-sm" style={{ backgroundColor: 'white', color: COLORS.plum, borderColor: `${COLORS.plum}30` }} title="Инструкция">
             <HelpCircle size={14} />
             <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">ИНСТРУКЦИЯ</span>
@@ -2617,8 +2618,15 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
           
           {/* НОВАЯ КНОПКА ПОЛОЖИТЬ/ПОСТАВИТЬ (ТОЛЬКО ДЛЯ ФИГУР) */}
           {element.type === 'figure' && (
-            <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLaying: !element.isLaying }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title={element.isLaying ? "Разбудить / Поставить фигурку" : "Уложить фигурку (сон/смерть)"}>
+            <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLaying: !element.isLaying }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title={element.isLaying ? "Открыть глаза / Поднять фигурку" : "Закрыть глаза (сон/смерть)"}>
               {element.isLaying ? <Eye size={16} /> : <EyeOff size={16} />}
+            </button>
+          )}
+
+          {/* КНОПКА УПАСТЬ (ТОЛЬКО ДЛЯ ФИГУР) */}
+          {element.type === 'figure' && (
+            <button onClick={(e) => { e.stopPropagation(); onUpdate({ isFallen: !element.isFallen }); }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 ${element.isFallen ? 'bg-terra/10 text-terra' : 'hover:bg-black/5 text-ink/70'}`} title={element.isFallen ? "Поднять фигурку" : "Уронить на пол"}>
+              <UserMinus size={16} />
             </button>
           )}
 
@@ -2702,7 +2710,12 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
 
       <div
         className={`${baseClasses} ${dragClasses} ${typeClasses}`}
-        style={{ perspective: isField ? 'none' : '1000px', height: isText ? 'auto' : '100%' }}
+        style={{ 
+          perspective: isField ? 'none' : '1000px', 
+          height: isText ? 'auto' : '100%',
+          transform: element.isFallen ? 'rotate(90deg)' : 'none', // ПЛАВНОЕ ПАДЕНИЕ
+          transition: (isDragging || isResizing || isRotating) ? 'none' : 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        }}
       >
         {isText ? (
           <>
