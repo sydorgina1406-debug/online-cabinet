@@ -69,7 +69,7 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
     );
   }
 
-  const isSide = viewMode === 'side';
+  const isSide = viewMode === 'side' && !isLaying;
   const rot = ((rotation % 360) + 360) % 360;
 
   let dir = 'up';
@@ -1459,7 +1459,7 @@ export default function App() {
                   <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Настройки Поля:</b> Изменение фона стола (нейро-текстуры) или загрузка своего игрового поля (картинки, на которую можно класть карты).</div></div>
                   <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Очистить стол:</b> Удаляет все незакрепленные объекты. Внизу появится кнопка отмены (действует 10 секунд).</div></div>
                   <div className="flex items-start gap-2"><Timer size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Таймер:</b> Устанавливает общее время (60/90 мин). Синхронизирован с клиентом.</div></div>
-                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Видеосвязь:</b> Вставьте ссылку на Zoom/Skype/Телемост, чтобы у клиента появилась яркая кнопка для входа в звонок.</div></div>
+                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Видеосвязь:</b> Создайте встроенный звонок прямо на платформе (появится плавающее окошко) или вставьте свою ссылку на Zoom/Skype.</div></div>
                 </div>
               </div>
 
@@ -1556,14 +1556,21 @@ export default function App() {
             </div>
           </div>
           <div className="flex-1 bg-black relative">
-             <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-                <Video size={24} className="text-white/20 mb-2" />
-                <p className="text-[9px] text-white/50 uppercase font-bold tracking-widest">Если видео не появилось, сервис запрещает встраивание.</p>
-                <a href={videoLink} target="_blank" rel="noopener noreferrer" className="mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[10px] font-black transition-colors">
-                  Открыть в новой вкладке
-                </a>
-             </div>
-             <iframe src={videoLink} title="Video Call" allow="camera; microphone; fullscreen; display-capture; autoplay" className="absolute inset-0 w-full h-full border-0 z-10" />
+             {!videoLink.includes('meet.jit.si') && (
+               <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <Video size={24} className="text-white/20 mb-2" />
+                  <p className="text-[9px] text-white/50 uppercase font-bold tracking-widest">Если видео не появилось, сервис запрещает встраивание.</p>
+                  <a href={videoLink} target="_blank" rel="noopener noreferrer" className="mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[10px] font-black transition-colors">
+                    Открыть в новой вкладке
+                  </a>
+               </div>
+             )}
+             {videoLink.includes('meet.jit.si') && (
+               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                 <Loader2 className="animate-spin text-white/30" size={24} />
+               </div>
+             )}
+             <iframe src={videoLink.includes('meet.jit.si') ? `${videoLink}#config.prejoinPageEnabled=false&userInfo.displayName=${encodeURIComponent('"' + userName + '"')}` : videoLink} title="Video Call" allow="camera; microphone; fullscreen; display-capture; autoplay" className="absolute inset-0 w-full h-full border-0 z-10 bg-transparent" />
           </div>
         </div>
       )}
@@ -1574,16 +1581,39 @@ export default function App() {
             <button onClick={() => setIsVideoModalOpen(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
               <X size={20} style={{ color: COLORS.ink }} />
             </button>
-            <h2 className="text-xl font-black uppercase mb-3 text-center" style={{ color: COLORS.ink }}>Видеосвязь</h2>
-            <p className="text-[10px] text-center mb-6 font-medium leading-relaxed" style={{ color: `${COLORS.ink}99` }}>
-              Вставьте ссылку на Яндекс.Телемост, Zoom, Google Meet или Skype. <br/>У клиента в кабинете появится яркая кнопка для подключения к вашему звонку.
-            </p>
-            <input type="text" value={tempVideoLink} onChange={e => setTempVideoLink(e.target.value)} placeholder="https://telemost.yandex.ru/j/..." className="w-full px-4 py-3 rounded-xl border-2 mb-6 text-sm font-bold outline-none text-center" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
+            <h2 className="text-xl font-black uppercase mb-4 text-center" style={{ color: COLORS.ink }}>Видеосвязь</h2>
+            
+            <div className="flex flex-col gap-4 mb-6">
+              <button onClick={async () => { 
+                  const linkToSave = `https://meet.jit.si/MakSpace_${roomId}`; 
+                  await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: linkToSave }, { merge: true }); 
+                  setIsVideoModalOpen(false); 
+                  setIsVideoActive(true);
+                  notify("Встроенная видеосвязь запущена!"); 
+                }} 
+                className="w-full py-4 rounded-xl text-white font-black uppercase tracking-widest shadow-md transition-all hover:scale-[1.02] flex items-center justify-center gap-2" style={{ backgroundColor: COLORS.forest }}>
+                <Video size={18} /> Встроенный звонок
+              </button>
+              
+              <div className="flex items-center gap-2 opacity-30 my-2">
+                 <div className="h-px bg-current flex-1"></div>
+                 <span className="text-[10px] font-black uppercase">ИЛИ СВОЯ ССЫЛКА</span>
+                 <div className="h-px bg-current flex-1"></div>
+              </div>
+              
+              <div className="space-y-2">
+                <p className="text-[10px] text-center font-medium leading-relaxed" style={{ color: `${COLORS.ink}99` }}>
+                  Вставьте ссылку на сторонний сервис (Zoom, Skype, Яндекс.Телемост).
+                </p>
+                <input type="text" value={tempVideoLink} onChange={e => setTempVideoLink(e.target.value)} placeholder="https://..." className="w-full px-4 py-3 rounded-xl border-2 text-sm font-bold outline-none text-center" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
+              </div>
+            </div>
+
             <div className="flex gap-3">
               {videoLink && (
-                <button onClick={async () => { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: '' }, { merge: true }); setIsVideoModalOpen(false); setIsVideoActive(false); notify("Ссылка удалена"); }} className="flex-1 py-3 font-bold rounded-xl text-[10px] uppercase tracking-widest transition-colors hover:opacity-80" style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}>Удалить</button>
+                <button onClick={async () => { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: '' }, { merge: true }); setIsVideoModalOpen(false); setIsVideoActive(false); notify("Связь удалена"); }} className="flex-1 py-3 font-bold rounded-xl text-[10px] uppercase tracking-widest transition-colors hover:opacity-80" style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}>Отключить</button>
               )}
-              <button onClick={async () => { if (!tempVideoLink.trim()) return notify("Введите ссылку!"); let linkToSave = tempVideoLink.trim(); if (!linkToSave.startsWith('http')) linkToSave = 'https://' + linkToSave; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: linkToSave }, { merge: true }); setIsVideoModalOpen(false); notify("Связь установлена!"); }} className="flex-[2] py-3 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:scale-105" style={{ backgroundColor: COLORS.forest }}>Сохранить</button>
+              <button onClick={async () => { if (!tempVideoLink.trim()) return notify("Введите ссылку!"); let linkToSave = tempVideoLink.trim(); if (!linkToSave.startsWith('http')) linkToSave = 'https://' + linkToSave; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: linkToSave }, { merge: true }); setIsVideoModalOpen(false); notify("Связь установлена!"); }} className="flex-[2] py-3 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:scale-105" style={{ backgroundColor: COLORS.plum }}>Сохранить свою</button>
             </div>
           </div>
         </div>
