@@ -786,7 +786,7 @@ export default function App() {
         setCallStatus(''); 
       };
 
-      const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_webrtc`);
+      const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
       await setDoc(callDoc, { offerCandidates: [], answerCandidates: [] });
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: true }, { merge: true });
 
@@ -844,7 +844,7 @@ export default function App() {
         setCallStatus('');
       };
 
-      const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_webrtc`);
+      const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
       
       pc.onicecandidate = (event) => {
         if (event.candidate) {
@@ -900,14 +900,14 @@ export default function App() {
     setCallStatus('');
     if (!isClientMode) {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: false }, { merge: true });
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_webrtc`));
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc'));
     }
   };
 
   // Слушатель завершения звонка для клиента
   useEffect(() => {
      if (isVideoActive && isClientMode && roomId) {
-       const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_webrtc`);
+       const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
        const unsub = onSnapshot(callDoc, (docSnap) => {
           if (!docSnap.exists() && isVideoActive) {
              endNativeCall();
