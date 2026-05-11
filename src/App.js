@@ -484,6 +484,10 @@ export default function App() {
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [isVideoActive, setIsVideoActive] = useState(false);
   
+  // Рефы для Jitsi API
+  const jitsiContainerRef = useRef(null);
+  const jitsiApiRef = useRef(null);
+  
   // Состояния для плашек
   const [isDicePanelOpen, setIsDicePanelOpen] = useState(false);
   const [isFiguresPanelOpen, setIsFiguresPanelOpen] = useState(false);
@@ -761,6 +765,43 @@ export default function App() {
     });
     return () => { tUnsub(); cUnsub(); };
   }, [user, isAuthorized, roomId, isDbConnected, isClientMode]);
+
+  // Эффект для инициализации Jitsi API
+  useEffect(() => {
+    if (isVideoActive && videoLink && videoLink.includes('meet.jit.si')) {
+      const initJitsi = () => {
+        if (jitsiContainerRef.current) {
+          jitsiContainerRef.current.innerHTML = '';
+          const roomName = videoLink.split('/').pop().replace(/#.*/, '');
+          jitsiApiRef.current = new window.JitsiMeetExternalAPI('meet.jit.si', {
+            roomName: roomName,
+            width: '100%',
+            height: '100%',
+            parentNode: jitsiContainerRef.current,
+            userInfo: { displayName: userName },
+            configOverwrite: { prejoinPageEnabled: false }
+          });
+        }
+      };
+
+      if (!window.JitsiMeetExternalAPI) {
+        const script = document.createElement('script');
+        script.src = 'https://meet.jit.si/external_api.js';
+        script.async = true;
+        script.onload = initJitsi;
+        document.body.appendChild(script);
+      } else {
+        initJitsi();
+      }
+    }
+    
+    return () => {
+      if (jitsiApiRef.current) {
+        jitsiApiRef.current.dispose();
+        jitsiApiRef.current = null;
+      }
+    };
+  }, [isVideoActive, videoLink, userName]);
 
   const handleMouseMove = (e) => {
     if (!isAuthorized || !isDbConnected || !user || !roomId) return;
@@ -1542,30 +1583,13 @@ export default function App() {
           <div className="flex justify-between items-center bg-gray-100 px-3 py-2 border-b border-gray-200">
             <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest flex items-center gap-2"><Video size={12} /> Видеосвязь</span>
             <div className="flex items-center gap-2">
-               <a href={videoLink} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-plum transition-colors" title="Открыть в новой вкладке">
-                  <ExternalLink size={14} />
-               </a>
                <button onClick={() => setIsVideoActive(false)} className="text-gray-500 hover:text-terra transition-colors" title="Закрыть">
                   <X size={16} />
                </button>
             </div>
           </div>
-          <div className="flex-1 bg-black relative">
-             {!videoLink.includes('meet.jit.si') && (
-               <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-                  <Video size={24} className="text-white/20 mb-2" />
-                  <p className="text-[9px] text-white/50 uppercase font-bold tracking-widest">Если видео не появилось, сервис запрещает встраивание.</p>
-                  <a href={videoLink} target="_blank" rel="noopener noreferrer" className="mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[10px] font-black transition-colors">
-                    Открыть в новой вкладке
-                  </a>
-               </div>
-             )}
-             {videoLink.includes('meet.jit.si') && (
-               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                 <Loader2 className="animate-spin text-white/30" size={24} />
-               </div>
-             )}
-             <iframe src={videoLink.includes('meet.jit.si') ? `${videoLink}#config.prejoinPageEnabled=false&userInfo.displayName=${encodeURIComponent('"' + userName + '"')}` : videoLink} title="Video Call" allow="camera; microphone; fullscreen; display-capture; autoplay" className="absolute inset-0 w-full h-full border-0 z-10 bg-transparent" />
+          <div className="flex-1 bg-black relative" ref={jitsiContainerRef}>
+             {/* Контейнер для Jitsi. Iframe удален, так как Jitsi подхватывает этот div напрямую через API */}
           </div>
         </div>
       )}
@@ -1761,9 +1785,9 @@ export default function App() {
           </button>
           
           {!isClientMode && (
-            <button onClick={shareLinkToClient} className="px-4 py-2.5 rounded-[1rem] text-[10px] font-black border flex items-center gap-2 shadow-sm transition-all hover:scale-105" style={{ backgroundColor: copyFeedback ? COLORS.forest : 'white', borderColor: copyFeedback ? COLORS.forest : `${COLORS.plum}30`, color: copyFeedback ? 'white' : COLORS.plum }} title="Поделиться ссылкой с клиентом">
+            <button onClick={shareLinkToClient} className="px-3 md:px-4 py-2.5 rounded-[1rem] text-[10px] font-black border flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-105 min-w-[40px]" style={{ backgroundColor: copyFeedback ? COLORS.forest : 'white', borderColor: copyFeedback ? COLORS.forest : `${COLORS.plum}30`, color: copyFeedback ? 'white' : COLORS.plum }} title="Поделиться ссылкой с клиентом">
               {copyFeedback ? <CheckCircle size={14} /> : <UserPlus size={14} />}
-              <span className="hidden sm:inline">{copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА ДЛЯ КЛИЕНТА"}</span>
+              <span className="ml-1 text-[9px] md:text-[10px] whitespace-nowrap">{copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА"}</span>
             </button>
           )}
 
