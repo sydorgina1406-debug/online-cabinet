@@ -907,14 +907,14 @@ export default function App() {
   // Слушатель завершения звонка для клиента
   useEffect(() => {
      if (isVideoActive && isClientMode && roomId) {
-        const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_webrtc`);
-        const unsub = onSnapshot(callDoc, (docSnap) => {
-           if (!docSnap.exists() && isVideoActive) {
-              endNativeCall();
-              notify('Психолог завершил звонок', 5000);
-           }
-        });
-        return () => unsub();
+       const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_webrtc`);
+       const unsub = onSnapshot(callDoc, (docSnap) => {
+          if (!docSnap.exists() && isVideoActive) {
+             endNativeCall();
+             notify('Психолог завершил звонок', 5000);
+          }
+       });
+       return () => unsub();
      }
   }, [isVideoActive, isClientMode, roomId]);
 
