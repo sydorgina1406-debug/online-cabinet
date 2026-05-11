@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import {
   getFirestore, doc, onSnapshot, setDoc, getDoc,
-  updateDoc, collection, deleteDoc, addDoc, writeBatch, getDocs
+  updateDoc, collection, deleteDoc, addDoc, writeBatch, arrayUnion
 } from 'firebase/firestore';
 import {
   getAuth, signInAnonymously, onAuthStateChanged
 } from 'firebase/auth';
 import {
-  getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject
+  getStorage, ref as storageRef, uploadString, getDownloadURL
 } from 'firebase/storage';
 import {
   Plus, Layers, RotateCw, RotateCcw, Trash2, Maximize2, Minimize2, X, ChevronUp,
@@ -69,7 +69,7 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
     );
   }
 
-  const isSide = viewMode === 'side';
+  const isSide = viewMode === 'side' && !isLaying;
   const rot = ((rotation % 360) + 360) % 360;
 
   let dir = 'up';
@@ -364,6 +364,10 @@ const loadBaseDecks = async (notifyCb) => {
 let globalAudioCtx = null;
 const playSound = (type, isMuted) => {
   if (isMuted) return;
+  // Отключение звуков на мобильных устройствах
+  if (typeof window !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+    return;
+  }
   try {
     if (!globalAudioCtx) globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
@@ -476,10 +480,15 @@ export default function App() {
   
   const [platformName, setPlatformName] = useState("ОНЛАЙН КАБИНЕТ");
   
-  const [videoLink, setVideoLink] = useState('');
-  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  // Состояния для собственной видеосвязи (WebRTC)
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+  const pcRef = useRef(null);
+  const processedCandidates = useRef(new Set());
   const [isVideoActive, setIsVideoActive] = useState(false);
-  const [tempVideoLink, setTempVideoLink] = useState('');
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [isVideoCallReady, setIsVideoCallReady] = useState(false);
+  const [callStatus, setCallStatus] = useState('');
   
   // Состояния для плашек
   const [isDicePanelOpen, setIsDicePanelOpen] = useState(false);
@@ -732,12 +741,9 @@ export default function App() {
         else if (d.id === '_dice_type') setDiceType(d.data().type || 6);
         else if (d.id === '_settings') {
           if (d.data().platformName) setPlatformName(d.data().platformName);
-          if (d.data().tableBg) setTableBg(d.data().tableBg);
+          if (d.data().tableBg && typeof d.data().tableBg === 'object') setTableBg(d.data().tableBg);
           if (d.data().figureViewMode) setFigureViewMode(d.data().figureViewMode);
-          if (d.data().videoLink !== undefined) {
-             setVideoLink(d.data().videoLink);
-             if (!d.data().videoLink) setIsVideoActive(false);
-          }
+          if (d.data().isVideoCallReady !== undefined) setIsVideoCallReady(d.data().isVideoCallReady);
         }
         else if (d.id === '_library_state') {
           const libraryData = d.data();
@@ -747,7 +753,8 @@ export default function App() {
         }
         else if (d.id === '_active_deck') { setActiveDeckData(d.data()); }
         else if (d.id === '_timer_state') { setSessionTimer(d.data()); }
-        else cards.push({ id: d.id, ...d.data() });
+        // Игнорируем технические файлы при выводе на стол
+        else if (!d.id.startsWith('_')) cards.push({ id: d.id, ...d.data() });
       });
       setCardsOnTable(cards);
     });
@@ -758,6 +765,156 @@ export default function App() {
     });
     return () => { tUnsub(); cUnsub(); };
   }, [user, isAuthorized, roomId, isDbConnected, isClientMode]);
+
+  // НАШ СОБСТВЕННЫЙ ВИДЕОЗВОНОК (WEBRTC)
+  const startNativeCall = async () => {
+    try {
+      setIsVideoActive(true);
+      setCallStatus('Доступ к камере...');
+      processedCandidates.current.clear();
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+
+      const pc = new RTCPeerConnection({ iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] });
+      pcRef.current = pc;
+
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+      pc.ontrack = (event) => {
+        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
+        setCallStatus(''); 
+      };
+
+      const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_webrtc`);
+      await setDoc(callDoc, { offerCandidates: [], answerCandidates: [] });
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: true }, { merge: true });
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          updateDoc(callDoc, { offerCandidates: arrayUnion(event.candidate.toJSON()) });
+        }
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await updateDoc(callDoc, { offer: { type: offer.type, sdp: offer.sdp } });
+      
+      setCallStatus('Ожидание клиента...');
+
+      onSnapshot(callDoc, async (snap) => {
+        const data = snap.data();
+        if (data?.answer && !pc.currentRemoteDescription) {
+          await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        }
+        if (pc.currentRemoteDescription && data?.answerCandidates) {
+          data.answerCandidates.forEach(c => {
+            const candString = JSON.stringify(c);
+            if (!processedCandidates.current.has(candString)) {
+               pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
+               processedCandidates.current.add(candString);
+            }
+          });
+        }
+      });
+    } catch (err) {
+      setCallStatus('');
+      setIsVideoActive(false);
+      notify("Не удалось получить доступ к камере или микрофону. Проверьте разрешения браузера.");
+    }
+  };
+
+  const joinNativeCall = async () => {
+    try {
+      setIsVideoActive(true);
+      setCallStatus('Доступ к камере...');
+      processedCandidates.current.clear();
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+
+      const pc = new RTCPeerConnection({ iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] });
+      pcRef.current = pc;
+
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+      pc.ontrack = (event) => {
+        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
+        setCallStatus('');
+      };
+
+      const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_webrtc`);
+      
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          updateDoc(callDoc, { answerCandidates: arrayUnion(event.candidate.toJSON()) });
+        }
+      };
+
+      const callData = (await getDoc(callDoc)).data();
+      if (!callData?.offer) {
+        setCallStatus('Ожидание психолога...');
+        return;
+      }
+
+      setCallStatus('Соединение...');
+      await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await updateDoc(callDoc, { answer: { type: answer.type, sdp: answer.sdp } });
+
+      onSnapshot(callDoc, (snap) => {
+        const data = snap.data();
+        if (pc.currentRemoteDescription && data?.offerCandidates) {
+          data.offerCandidates.forEach(c => {
+            const candString = JSON.stringify(c);
+            if (!processedCandidates.current.has(candString)) {
+               pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
+               processedCandidates.current.add(candString);
+            }
+          });
+        }
+      });
+    } catch (err) {
+      setCallStatus('');
+      setIsVideoActive(false);
+      notify("Не удалось получить доступ к камере или микрофону. Проверьте разрешения браузера.");
+    }
+  };
+
+  const endNativeCall = async () => {
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    if (localVideoRef.current?.srcObject) {
+      localVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
+      localVideoRef.current.srcObject = null;
+    }
+    if (remoteVideoRef.current?.srcObject) {
+      remoteVideoRef.current.srcObject = null;
+    }
+    setIsVideoActive(false);
+    setCallStatus('');
+    if (!isClientMode) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: false }, { merge: true });
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_webrtc`));
+    }
+  };
+
+  // Слушатель завершения звонка для клиента
+  useEffect(() => {
+     if (isVideoActive && isClientMode && roomId) {
+        const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_webrtc`);
+        const unsub = onSnapshot(callDoc, (docSnap) => {
+           if (!docSnap.exists() && isVideoActive) {
+              endNativeCall();
+              notify('Психолог завершил звонок', 5000);
+           }
+        });
+        return () => unsub();
+     }
+  }, [isVideoActive, isClientMode, roomId]);
 
   const handleMouseMove = (e) => {
     if (!isAuthorized || !isDbConnected || !user || !roomId) return;
@@ -925,14 +1082,6 @@ export default function App() {
 
   const shareLinkToClient = async () => {
     const url = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
-    if (navigator.share && /Mobi|Android|iPhone/i.test(navigator.userAgent)) {
-      try {
-        await navigator.share({ title: 'Онлайн Кабинет', url: url });
-        return;
-      } catch (e) {
-        console.log('Поделиться отменено');
-      }
-    }
     await copyToClipboard(url);
     setCopyFeedback(true); setTimeout(() => setCopyFeedback(false), 2000);
   };
@@ -1008,7 +1157,7 @@ export default function App() {
         document.body.appendChild(script);
         await new Promise(resolve => script.onload = resolve);
       }
-      const canvas = await window.html2canvas(boardRef.current, { useCORS: true, backgroundColor: tableBg.bgColor });
+      const canvas = await window.html2canvas(boardRef.current, { useCORS: true, backgroundColor: tableBg?.bgColor || '#FDFAF6' });
       const link = document.createElement('a');
       link.download = `session_${new Date().toLocaleDateString()}.png`;
       link.href = canvas.toDataURL();
@@ -1269,16 +1418,17 @@ export default function App() {
     </div>
   );
 
+  // ГЛАВНЫЙ ЭКРАН ПЛАТФОРМЫ ПОСЛЕ ВХОДА
   return (
     <div className="flex flex-col h-screen overflow-hidden font-sans select-none relative" style={{ backgroundColor: COLORS.haze }}>
       
+      {/* УВЕДОМЛЕНИЯ И МОДАЛКИ */}
       {notification && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] text-white px-8 py-3 rounded-full shadow-2xl text-sm font-bold flex items-center gap-2 border" style={{ backgroundColor: COLORS.ink, borderColor: `${COLORS.plum}33` }}>
           <CheckCircle size={16} color={COLORS.terra} /> {notification}
         </div>
       )}
 
-      {/* ПЛАВАЮЩЕЕ ОКНО: ЗАПИСНАЯ КНИЖКА (МОИ ТЕХНИКИ) */}
       {isNotebookOpen && !isClientMode && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-2xl w-full shadow-2xl relative max-h-[90vh] flex flex-col">
@@ -1324,7 +1474,7 @@ export default function App() {
                           </button>
                         </div>
                       </div>
-                      <div className="text-xs text-gray-500 whitespace-pre-wrap rich-text max-h-[150px] overflow-hidden" dangerouslySetInnerHTML={{ __html: note.text }}></div>
+                      <div className="text-xs text-gray-500 whitespace-pre-wrap rich-text max-h-[150px] overflow-hidden" dangerouslySetInnerHTML={{ __html: note.text || '' }}></div>
                       <button onClick={() => {
                         addElement('private-text', { text: note.text });
                         setIsNotebookOpen(false);
@@ -1423,7 +1573,6 @@ export default function App() {
             <h2 className="text-2xl font-black uppercase mb-8 text-center" style={{ color: COLORS.ink }}>Полное руководство</h2>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              
               {/* КЛИЕНТ И ДОСТУП */}
               <div className="space-y-4">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> Клиент и Доступ</h3>
@@ -1459,7 +1608,7 @@ export default function App() {
                   <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Настройки Поля:</b> Изменение фона стола (нейро-текстуры) или загрузка своего игрового поля (картинки, на которую можно класть карты).</div></div>
                   <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Очистить стол:</b> Удаляет все незакрепленные объекты. Внизу появится кнопка отмены (действует 10 секунд).</div></div>
                   <div className="flex items-start gap-2"><Timer size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Таймер:</b> Устанавливает общее время (60/90 мин). Синхронизирован с клиентом.</div></div>
-                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Видеосвязь:</b> Вставьте ссылку на Zoom/Skype/Телемост, чтобы у клиента появилась яркая кнопка для входа в звонок.</div></div>
+                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Видеосвязь:</b> Вы и клиент можете звонить друг другу напрямую (без сторонних сервисов). Нажмите кнопку запуска на панели, и видео откроется прямо поверх стола.</div></div>
                 </div>
               </div>
 
@@ -1535,60 +1684,76 @@ export default function App() {
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
       )}
 
-      {/* ПЛАВАЮЩЕЕ ОКНО ВИДЕОСВЯЗИ */}
-      {isVideoActive && videoLink && (
-        <div className="fixed bottom-24 right-4 md:right-8 z-[200] w-72 md:w-80 h-52 md:h-60 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col resize overflow-auto" style={{ minWidth: '240px', minHeight: '180px' }}>
-          <div className="flex justify-between items-center bg-gray-100 px-3 py-2 border-b border-gray-200">
-            <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest flex items-center gap-2"><Video size={12} /> Видеосвязь</span>
-            <div className="flex items-center gap-2">
-               <a href={videoLink} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-plum transition-colors" title="Открыть в новой вкладке">
-                  <ExternalLink size={14} />
-               </a>
-               <button onClick={() => setIsVideoActive(false)} className="text-gray-500 hover:text-terra transition-colors" title="Закрыть">
-                  <X size={16} />
-               </button>
-            </div>
+      {/* ПЛАВАЮЩЕЕ ОКНО НАШЕЙ ВИДЕОСВЯЗИ (WEBRTC) */}
+      {isVideoActive && (
+        <div className="fixed bottom-24 right-4 md:right-8 z-[200] w-[280px] h-[380px] md:w-[320px] md:h-[420px] bg-ink rounded-[2rem] shadow-2xl overflow-hidden flex flex-col border border-white/20 cursor-move">
+          <div className="absolute top-4 right-4 z-50">
+            <button onClick={() => {
+              if (isClientMode) {
+                 setIsVideoActive(false);
+                 if (pcRef.current) pcRef.current.close();
+                 if (localVideoRef.current?.srcObject) localVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
+              } else {
+                 endNativeCall();
+              }
+            }} className="bg-red-500/80 p-2 rounded-full text-white hover:bg-red-600 backdrop-blur-md shadow-lg transition-colors">
+               <X size={16} />
+            </button>
           </div>
+          
           <div className="flex-1 bg-black relative">
-             <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-                <Video size={24} className="text-white/20 mb-2" />
-                <p className="text-[9px] text-white/50 uppercase font-bold tracking-widest">Если видео не появилось, сервис запрещает встраивание.</p>
-                <a href={videoLink} target="_blank" rel="noopener noreferrer" className="mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[10px] font-black transition-colors">
-                  Открыть в новой вкладке
-                </a>
-             </div>
-             <iframe src={videoLink} title="Video Call" allow="camera; microphone; fullscreen; display-capture; autoplay" className="absolute inset-0 w-full h-full border-0 z-10" />
+             {callStatus && (
+               <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/90 z-40 text-center px-4">
+                  <Loader2 className="animate-spin text-plum mb-3" size={32} />
+                  <span className="text-white text-[10px] font-black tracking-widest uppercase opacity-80">{callStatus}</span>
+               </div>
+             )}
+             <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+          </div>
+          
+          <div className="absolute bottom-4 left-4 w-24 h-32 bg-gray-800 rounded-xl overflow-hidden shadow-2xl border border-white/20 z-50">
+             <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100" />
           </div>
         </div>
       )}
 
+      {/* МОДАЛКА ЗАПУСКА ВИДЕО */}
       {isVideoModalOpen && !isClientMode && (
         <div className="fixed inset-0 z-[160] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl relative">
             <button onClick={() => setIsVideoModalOpen(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
               <X size={20} style={{ color: COLORS.ink }} />
             </button>
-            <h2 className="text-xl font-black uppercase mb-3 text-center" style={{ color: COLORS.ink }}>Видеосвязь</h2>
-            <p className="text-[10px] text-center mb-6 font-medium leading-relaxed" style={{ color: `${COLORS.ink}99` }}>
-              Вставьте ссылку на Яндекс.Телемост, Zoom, Google Meet или Skype. <br/>У клиента в кабинете появится яркая кнопка для подключения к вашему звонку.
-            </p>
-            <input type="text" value={tempVideoLink} onChange={e => setTempVideoLink(e.target.value)} placeholder="https://telemost.yandex.ru/j/..." className="w-full px-4 py-3 rounded-xl border-2 mb-6 text-sm font-bold outline-none text-center" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
+            <h2 className="text-xl font-black uppercase mb-4 text-center" style={{ color: COLORS.ink }}>Видеосвязь</h2>
+            
+            <div className="flex flex-col gap-4 mb-6">
+              <p className="text-[10px] text-center font-medium leading-relaxed" style={{ color: `${COLORS.ink}99` }}>
+                Создайте приватную комнату для встроенного звонка. Она появится в плавающем окошке у вас и клиента.
+              </p>
+              <button onClick={async () => { 
+                  setIsVideoModalOpen(false); 
+                  startNativeCall();
+                  notify("Встроенная видеосвязь запущена!"); 
+                }} 
+                className="w-full py-4 rounded-xl text-white font-black uppercase tracking-widest shadow-md transition-all hover:scale-[1.02] flex items-center justify-center gap-2" style={{ backgroundColor: COLORS.forest }}>
+                <Video size={18} /> Запустить звонок
+              </button>
+            </div>
+
             <div className="flex gap-3">
-              {videoLink && (
-                <button onClick={async () => { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: '' }, { merge: true }); setIsVideoModalOpen(false); setIsVideoActive(false); notify("Ссылка удалена"); }} className="flex-1 py-3 font-bold rounded-xl text-[10px] uppercase tracking-widest transition-colors hover:opacity-80" style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}>Удалить</button>
+              {isVideoCallReady && (
+                <button onClick={async () => { endNativeCall(); setIsVideoModalOpen(false); notify("Связь удалена"); }} className="w-full py-3 font-bold rounded-xl text-[10px] uppercase tracking-widest transition-colors hover:opacity-80" style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}>Завершить звонок (Удалить)</button>
               )}
-              <button onClick={async () => { if (!tempVideoLink.trim()) return notify("Введите ссылку!"); let linkToSave = tempVideoLink.trim(); if (!linkToSave.startsWith('http')) linkToSave = 'https://' + linkToSave; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { videoLink: linkToSave }, { merge: true }); setIsVideoModalOpen(false); notify("Связь установлена!"); }} className="flex-[2] py-3 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:scale-105" style={{ backgroundColor: COLORS.forest }}>Сохранить</button>
             </div>
           </div>
         </div>
       )}
-      
+
       {isFieldModalOpen && !isClientMode && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-2xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
@@ -1664,7 +1829,45 @@ export default function App() {
         </div>
       )}
 
-      {/* ШАПКА / HEADER */}
+      {isNamingDeck && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center backdrop-blur-sm p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
+          <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl border-4" style={{ borderColor: COLORS.haze }}>
+            <h3 className="text-xl font-black mb-2 uppercase italic" style={{ color: COLORS.ink }}>ИМЯ КОЛОДЫ</h3>
+            <p className="text-[10px] mb-6 font-medium" style={{ color: `${COLORS.ink}66` }}>Выбрано файлов: {pendingFiles.length}. Файл с "рубашка" в названии станет обложкой.</p>
+            <input autoFocus value={tempDeckName} onChange={e => setTempDeckName(e.target.value)} onKeyDown={e => e.key === 'Enter' && confirmUpload()} placeholder="Напр: Эмоции" className="w-full px-6 py-4 rounded-2xl border-2 mb-8 outline-none font-bold text-base" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
+            {isUploading && (
+              <div className="mb-6">
+                <div className="flex justify-between text-[10px] font-bold mb-2" style={{ color: `${COLORS.ink}66` }}>
+                  <span>Загрузка в облако...</span><span>{uploadProgress}%</span>
+                </div>
+                <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${COLORS.ink}10` }}>
+                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%`, backgroundColor: COLORS.plum }} />
+                </div>
+              </div>
+            )}
+            <div className="flex gap-4">
+              <button onClick={() => { setIsNamingDeck(false); setPendingFiles([]); }} disabled={isUploading} className="flex-1 font-bold uppercase text-xs hover:opacity-70 transition-colors disabled:opacity-30" style={{ color: `${COLORS.ink}66` }}>Отмена</button>
+              <button onClick={confirmUpload} disabled={isUploading} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="flex-[2] py-4 rounded-2xl font-black shadow-lg uppercase text-xs disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-2">
+                {isUploading ? <><Loader2 size={14} className="animate-spin" /> Загрузка {uploadProgress}%</> : "Готово"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {previewCard && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}F2` }} onClick={() => setPreviewCard(null)}>
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 text-white font-black tracking-widest uppercase bg-black/50 px-6 py-2 rounded-full backdrop-blur-md text-xs text-center w-[90%] md:w-auto">
+            {previewCard.isFlipped ? "Эту карту сейчас видите только вы" : "Эта карта открыта для всех"}
+          </div>
+          <button className="absolute top-6 right-6 text-white p-2 rounded-full transition-all hover:opacity-70" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+            <X size={40} />
+          </button>
+          <img src={previewCard.img} className="max-h-[85vh] max-w-[90vw] h-auto w-auto rounded-2xl shadow-2xl bg-white object-contain" style={{ animation: 'scaleIn 0.2s ease-out' }} alt="Карта" />
+        </div>
+      )}
+
+      {/* ВЕРХНЯЯ ШАПКА / HEADER */}
       <header className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-3 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm gap-2 relative" style={{ borderColor: `${COLORS.ink}10` }}>
         <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
           <div className="flex items-center gap-3">
@@ -1692,7 +1895,6 @@ export default function App() {
         {/* ИНСТРУМЕНТЫ ПРАВАЯ ЧАСТЬ */}
         <div className="flex items-center gap-2 flex-wrap justify-center md:justify-end w-full md:w-auto">
           
-          {/* НОВЫЕ КНОПКИ ВЫЗОВА ПЛАШЕК */}
           <div className="flex bg-black/5 p-1 rounded-2xl shadow-inner border border-ink/5 gap-1 mr-1">
              <button onClick={() => setIsFiguresPanelOpen(!isFiguresPanelOpen)} className={`p-2 rounded-xl transition-all flex items-center justify-center ${isFiguresPanelOpen ? 'bg-white shadow-sm text-plum' : 'hover:bg-white text-ink/70'}`} title="Открыть фигурки и стрелки">
                 <FigureIcon gender="male" color={isFiguresPanelOpen ? COLORS.plum : 'currentColor'} isMenu={true} className="w-[18px] h-[18px] opacity-80" />
@@ -1704,18 +1906,13 @@ export default function App() {
 
           {!isClientMode ? (
             <div className="flex items-center gap-1 bg-white/50 p-1 rounded-[1rem] border shadow-sm" style={{ borderColor: `${COLORS.forest}30`, backgroundColor: `${COLORS.forest}10` }}>
-              <button onClick={() => { setTempVideoLink(videoLink || ''); setIsVideoModalOpen(true); }} className="p-2 rounded-xl transition-all hover:bg-white text-forest" title="Настроить видеосвязь">
+              <button onClick={() => { setIsVideoModalOpen(true); }} className="p-2 rounded-xl transition-all hover:bg-white text-forest" title="Настроить видеосвязь">
                 <Video size={16} />
               </button>
-              {videoLink && (
-                <button onClick={() => setIsVideoActive(true)} className="px-3 py-1.5 rounded-xl text-[10px] font-black transition-all bg-white text-forest hover:scale-105 shadow-sm uppercase">
-                  Войти в звонок
-                </button>
-              )}
             </div>
           ) : (
-            videoLink && (
-              <button onClick={() => setIsVideoActive(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black text-white shadow-[0_0_15px_rgba(45,74,62,0.4)] transition-all hover:scale-105 uppercase animate-pulse" style={{ backgroundColor: COLORS.forest }}>
+            isVideoCallReady && (
+              <button onClick={joinNativeCall} className="flex items-center gap-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black text-white shadow-[0_0_15px_rgba(45,74,62,0.4)] transition-all hover:scale-105 uppercase animate-pulse" style={{ backgroundColor: COLORS.forest }}>
                 <Video size={14} /> Подключиться к видео
               </button>
             )
@@ -1790,7 +1987,7 @@ export default function App() {
             </>
           )}
 
-          {/* НОВАЯ КНОПКА ИНСТРУКЦИИ */}
+          {/* КНОПКА ИНСТРУКЦИИ */}
           <button onClick={() => setIsHelpOpen(true)} className="px-3 py-2.5 rounded-[1rem] border transition-all hover:bg-black/5 hover:scale-105 flex items-center gap-2 shadow-sm" style={{ backgroundColor: 'white', color: COLORS.plum, borderColor: `${COLORS.plum}30` }} title="Инструкция">
             <HelpCircle size={14} />
             <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">ИНСТРУКЦИЯ</span>
@@ -1802,6 +1999,7 @@ export default function App() {
         </div>
       </header>
 
+      {/* ОСНОВНОЕ ИГРОВОЕ ПОЛЕ (ХОЛСТ) */}
       <main className="flex-1 relative flex flex-col overflow-hidden pt-28 md:pt-24">
         
         {/* ПЛАШКА: КУБИКИ И ФИШКИ */}
@@ -1898,14 +2096,14 @@ export default function App() {
           </div>
         )}
 
-        {/* ИГРОВОЕ ПОЛЕ */}
+        {/* ХОЛСТ */}
         <div ref={scrollContainerRef} className="absolute inset-0 overflow-auto custom-scrollbar transition-colors duration-500" style={{ backgroundColor: tableBg.bgColor }}>
           <div ref={boardRef} className="relative min-w-[3000px] min-h-[3000px] bg-transparent" onMouseMove={handleMouseMove} onTouchMove={handleMouseMove}>
             <div className="absolute inset-0 pointer-events-none transition-opacity duration-500" style={{ backgroundColor: tableBg.blendMode ? tableBg.bgColor : 'transparent', backgroundImage: tableBg.value === 'none' ? 'none' : (tableBg.type === 'css' ? tableBg.value : `url('${tableBg.value}')`), backgroundSize: tableBg.bgSize, backgroundPosition: 'center', backgroundRepeat: tableBg.repeat || 'repeat', backgroundBlendMode: tableBg.blendMode || 'normal', opacity: tableBg.opacity }}></div>
             
             {cardsOnTable
               .filter(elem => !undoStack?.cards.some(c => c.id === elem.id))
-              .filter(elem => !(isClientMode && elem.type === 'private-text')) // СКРЫВАЕМ ПРИВАТНЫЕ ЗАМЕТКИ ОТ КЛИЕНТА
+              .filter(elem => !(isClientMode && elem.type === 'private-text')) 
               .map((elem) => (
                 <DraggableElement key={elem.id} element={elem} globalFigureView={figureViewMode} isClientMode={isClientMode} isMuted={isMuted} isLaserMode={isLaserMode} playSound={playSound} maxZIndex={Math.max(0, ...cardsOnTable.map(c => c.zIndex || 0))} onUpdate={(d) => updateDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, elem.id), d)} onRemove={() => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, elem.id))} onPreview={() => elem.type === 'card' && setPreviewCard(elem)} currentUser={user} currentUserName={userName} onNotify={notify} boardRef={boardRef} />
               ))}
@@ -1930,212 +2128,175 @@ export default function App() {
             })}
           </div>
         </div>
-
-        {undoStack && (
-          <div className="fixed z-[110] flex items-center gap-3 px-5 py-3 rounded-3xl shadow-[0_10px_40px_rgb(0,0,0,0.2)] border" style={{ bottom: isLibraryOpen ? '320px' : '80px', left: '50%', transform: 'translateX(-50%)', backgroundColor: COLORS.ink, borderColor: `${COLORS.terra}40`, transition: 'bottom 0.4s ease' }}>
-            <Undo2 size={16} color={COLORS.terra} />
-            <span className="text-white text-sm font-bold whitespace-nowrap">{undoStack.cards.length} {undoStack.cards.length === 1 ? 'объект' : 'объектов'} удалено</span>
-            <button onClick={undoClear} className="px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:opacity-80 transition-all" style={{ backgroundColor: COLORS.plum, color: 'white' }}>ОТМЕНА</button>
-            <UndoTimer expiresAt={undoStack.expiresAt} />
-          </div>
-        )}
-
-        {/* НИЖНЯЯ ПАНЕЛЬ (БИБЛИОТЕКА) */}
-        <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-700 pointer-events-none ${isLibraryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-48px)]'}`}>
-          <div className={`bg-white/90 backdrop-blur-2xl rounded-t-[3rem] shadow-[0_-10px_50px_rgba(0,0,0,0.1)] border-t border-white flex flex-col transition-all duration-500 pointer-events-auto ${isLibraryFullscreen ? 'h-[95vh]' : 'h-[75vh] md:h-80'}`}>
-            
-            <div className="relative w-full flex justify-center py-2 h-12">
-              <button onClick={toggleLibrary} className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-black/5 transition-colors rounded-t-[3rem]">
-                <div className="w-12 h-1.5 bg-ink/10 rounded-full mb-1"></div>
-                <span className="text-[10px] font-black uppercase tracking-widest leading-none text-plum flex items-center gap-2">
-                  <Layers size={14} /> {isClientMode ? "Выбор карты" : "Библиотека Мастера"}
-                </span>
-              </button>
-              {isLibraryOpen && (
-                <button onClick={toggleFullscreen} className="absolute right-8 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors hover:bg-black/5" style={{ color: COLORS.ink }}>
-                  <Maximize2 size={18} />
-                </button>
-              )}
-            </div>
-            
-            <div className="flex flex-1 flex-col md:flex-row p-4 md:p-8 pt-0 gap-4 md:gap-8 min-h-0 overflow-hidden">
-              {!isClientMode && (
-                <div className="w-full md:w-72 border-b md:border-b-0 md:border-r pb-4 md:pb-0 pr-0 md:pr-6 h-[30%] md:h-auto flex-shrink-0 overflow-y-auto custom-scrollbar flex flex-col gap-3" style={{ borderColor: `${COLORS.ink}10` }}>
-                  <div className="flex p-1 rounded-xl mb-1 flex-shrink-0 bg-black/5">
-                    <button onClick={() => setActiveTab('platform')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'platform' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>БАЗА</button>
-                    <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'cloud' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>ОБЛАКО</button>
-                    <button onClick={() => setActiveTab('local')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'local' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>МОИ</button>
-                    <button onClick={() => setActiveTab('sessions')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'sessions' ? 'bg-white shadow-sm text-forest' : 'hover:opacity-70 text-ink/60'}`}>СЕССИИ</button>
-                  </div>
-
-                  {activeTab === 'sessions' && (
-                    <div className="flex flex-col gap-2 flex-shrink-0">
-                      <div className="text-[10px] font-bold text-center mb-2" style={{ color: COLORS.ink }}>СОХРАНЕННЫЕ РАССТАНОВКИ</div>
-                      {savedSessions.length === 0 && <div className="text-[9px] text-center opacity-50">Нет сохраненных сессий</div>}
-                      {savedSessions.map(session => (
-                        <div key={session.id} className="group flex items-center justify-between p-3 rounded-2xl border border-gray-100 hover:bg-black/5 transition-colors">
-                           <div>
-                              <div className="text-[10px] font-bold" style={{ color: COLORS.ink }}>{session.name}</div>
-                              <div className="text-[8px] text-gray-500">{new Date(session.createdAt).toLocaleDateString()}</div>
-                           </div>
-                           <div className="flex gap-1">
-                              <button onClick={() => loadSavedSession(session)} className="p-2 text-forest hover:bg-forest/10 rounded-lg transition-colors" title="Загрузить на стол"><UploadCloud size={14}/></button>
-                              <button onClick={async () => {
-                                const ok = await askConfirm('Удалить эту сессию навсегда?');
-                                if(ok) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions', session.id));
-                              }} className="p-2 text-terra hover:bg-terra/10 rounded-lg transition-colors" title="Удалить сессию"><Trash2 size={14}/></button>
-                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {activeTab === 'local' && (
-                    <div className="flex flex-col gap-3 flex-shrink-0">
-                      <div className="rounded-2xl p-3 text-[9px] leading-relaxed" style={{ backgroundColor: `${COLORS.forest}12`, color: COLORS.forest, border: `1px solid ${COLORS.forest}25` }}>
-                        <div className="font-black uppercase tracking-widest mb-2 flex items-center gap-1"><FolderOpen size={11} /> Как добавить колоду с Google Диска:</div>
-                        <div className="space-y-1 font-medium" style={{ color: `${COLORS.ink}99` }}>
-                          <div>1. Откройте папку с картами на Google Диске</div>
-                          <div>2. Правая кнопка → <b>"Открыть доступ"</b></div>
-                          <div>3. Нажмите <b>"Все у кого есть ссылка"</b></div>
-                          <div>4. Скопируйте ссылку и вставьте ниже</div>
-                        </div>
-                      </div>
-                      <button onClick={addDeckByLinks} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black transition-all uppercase hover:opacity-80 shadow-sm" style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }}>
-                        <LinkIcon size={16} /> Вставить ссылку на папку
-                      </button>
-                    </div>
-                  )}
-
-                  {activeTab === 'platform' && isPlatformDecksLoading && <div className="flex justify-center py-4 flex-shrink-0"><Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} /></div>}
-                  {activeTab === 'cloud' && isBaseDecksLoading && <div className="flex justify-center py-4 flex-shrink-0"><Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} /></div>}
-                  
-                  {activeTab !== 'sessions' && (activeTab === 'platform' ? platformDecks : activeTab === 'local' ? localDecks : [...baseDecks, ...cloudDecks]).map(item => (
-                    <div key={item.id} className={`group flex items-center gap-3 p-3 rounded-2xl transition-all relative border flex-shrink-0 ${selectedDeckId === item.id ? 'bg-white shadow-sm border-white' : 'border-transparent hover:bg-black/5'}`}>
-                      <button onClick={() => selectDeck(item)} className="flex-1 flex items-center gap-3 text-left overflow-hidden hover:opacity-70">
-                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden border flex-shrink-0 shadow-sm" style={{ borderColor: `${COLORS.ink}10` }}>
-                          {item.backImage ? <img src={item.backImage} className="w-full h-full object-contain" alt="" /> : <FolderOpen size={16} color={`${COLORS.ink}4D`} />}
-                        </div>
-                        <div className="flex flex-col overflow-hidden">
-                          <span className="text-[10px] font-bold truncate uppercase" style={{ color: COLORS.ink }}>{item.name}</span>
-                          {item.isPlatformDeck && <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: COLORS.forest }}>Платформа</span>}
-                          {item.isBaseDeck && <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}50` }}>Google Drive</span>}
-                        </div>
-                      </button>
-                      {!item.isBaseDeck && !item.isPlatformDeck && (
-                        <button onClick={async () => {
-                          const ok = await askConfirm("Удалить колоду?");
-                          if (ok) {
-                            if (activeTab === 'local') setLocalDecks(p => p.filter(d => d.id !== item.id));
-                            else await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_decks', item.id));
-                            notify("Удалено");
-                          }
-                        }} className="opacity-0 group-hover:opacity-100 p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: COLORS.terra }}>
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              <div className="flex-1 flex flex-col overflow-hidden">
-                {activeDeckData ? (
-                  <>
-                    <div className="flex justify-between items-center mb-3 flex-shrink-0">
-                      <span className="text-sm font-black uppercase" style={{ color: `${COLORS.ink}B3` }}>{activeDeckData.name}</span>
-                      {!isClientMode && (
-                        <button onClick={toggleDeckFlip} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:scale-105 transition-all">
-                          {isLibraryDeckFlipped ? "Скрыть карты" : "Открыть колоду"}
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar flex gap-4 content-start flex-wrap pb-8 pr-2">
-                      <button onClick={() => {
-                        const availableCards = activeDeckData.cards.filter(img => !usedImages.has(img));
-                        if (availableCards.length === 0) return notify("В колоде больше нет свободных карт!");
-                        
-                        const array = new Uint32Array(1);
-                        window.crypto.getRandomValues(array);
-                        const randomIndex = array[0] % availableCards.length;
-                        addElement('card', { img: availableCards[randomIndex], backImg: activeDeckData.backImage });
-                        if (isLibraryFullscreen) toggleLibrary();
-                      }} className="flex-shrink-0 w-24 h-36 md:w-28 md:h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 hover:scale-105 transition-all shadow-sm" style={{ borderColor: `${COLORS.plum}4D`, backgroundColor: `${COLORS.plum}10`, color: COLORS.plum }}>
-                        <Plus size={28} /><span className="text-[9px] font-black uppercase">Наугад</span>
-                      </button>
-                      
-                      {activeDeckData.cards.map((img, idx) => {
-                        const isUsed = usedImages.has(img);
-                        return (
-                          <button key={idx} onClick={() => {
-                            if (isUsed) return notify("Эта карта уже лежит на столе!");
-                            addElement('card', { img, backImg: activeDeckData.backImage });
-                            if (isLibraryFullscreen) toggleLibrary();
-                          }} className={`relative flex-shrink-0 h-36 md:h-40 rounded-2xl group transition-all flex items-center justify-center ${isUsed ? 'opacity-40 cursor-not-allowed grayscale' : 'shadow-sm hover:shadow-lg hover:scale-105'}`}>
-                            {isLibraryDeckFlipped
-                              ? <img src={img} className="h-full w-auto min-w-[5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
-                              : <div className="h-full w-24 md:w-28 flex items-center justify-center rounded-2xl overflow-hidden relative shadow-sm border border-white/20" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
-                                {activeDeckData.backImage ? <img src={activeDeckData.backImage} className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" /> : <Layers size={40} className="text-white opacity-30" />}
-                              </div>}
-                            <div className="absolute top-2 left-2 text-white text-[10px] font-black px-2 py-0.5 rounded-md z-10 pointer-events-none backdrop-blur-md bg-black/40 border border-white/20 shadow-sm">{idx + 1}</div>
-                            {isUsed && (
-                              <div className="absolute inset-0 bg-black/30 rounded-2xl flex items-center justify-center pointer-events-none">
-                                <CheckCircle size={32} className="text-white drop-shadow-md" />
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center font-bold uppercase tracking-widest leading-none text-center px-4" style={{ color: `${COLORS.ink}33` }}>
-                    {isClientMode ? "Мастер еще не выбрал колоду" : "Выберите колоду слева"}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
       </main>
 
-      {isNamingDeck && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center backdrop-blur-sm p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
-          <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl border-4" style={{ borderColor: COLORS.haze }}>
-            <h3 className="text-xl font-black mb-2 uppercase italic" style={{ color: COLORS.ink }}>ИМЯ КОЛОДЫ</h3>
-            <p className="text-[10px] mb-6 font-medium" style={{ color: `${COLORS.ink}66` }}>Выбрано файлов: {pendingFiles.length}. Файл с "рубашка" в названии станет обложкой.</p>
-            <input autoFocus value={tempDeckName} onChange={e => setTempDeckName(e.target.value)} onKeyDown={e => e.key === 'Enter' && confirmUpload()} placeholder="Напр: Эмоции" className="w-full px-6 py-4 rounded-2xl border-2 mb-8 outline-none font-bold text-base" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
-            {isUploading && (
-              <div className="mb-6">
-                <div className="flex justify-between text-[10px] font-bold mb-2" style={{ color: `${COLORS.ink}66` }}>
-                  <span>Загрузка в облако...</span><span>{uploadProgress}%</span>
-                </div>
-                <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${COLORS.ink}10` }}>
-                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%`, backgroundColor: COLORS.plum }} />
-                </div>
-              </div>
-            )}
-            <div className="flex gap-4">
-              <button onClick={() => { setIsNamingDeck(false); setPendingFiles([]); }} disabled={isUploading} className="flex-1 font-bold uppercase text-xs hover:opacity-70 transition-colors disabled:opacity-30" style={{ color: `${COLORS.ink}66` }}>Отмена</button>
-              <button onClick={confirmUpload} disabled={isUploading} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="flex-[2] py-4 rounded-2xl font-black shadow-lg uppercase text-xs disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-2">
-                {isUploading ? <><Loader2 size={14} className="animate-spin" /> Загрузка {uploadProgress}%</> : "Готово"}
-              </button>
-            </div>
-          </div>
+      {/* ПЛАШКА ОТМЕНЫ */}
+      {undoStack && (
+        <div className="fixed z-[110] flex items-center gap-3 px-5 py-3 rounded-3xl shadow-[0_10px_40px_rgb(0,0,0,0.2)] border" style={{ bottom: isLibraryOpen ? '320px' : '80px', left: '50%', transform: 'translateX(-50%)', backgroundColor: COLORS.ink, borderColor: `${COLORS.terra}40`, transition: 'bottom 0.4s ease' }}>
+          <Undo2 size={16} color={COLORS.terra} />
+          <span className="text-white text-sm font-bold whitespace-nowrap">{undoStack.cards.length} {undoStack.cards.length === 1 ? 'объект' : 'объектов'} удалено</span>
+          <button onClick={undoClear} className="px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:opacity-80 transition-all" style={{ backgroundColor: COLORS.plum, color: 'white' }}>ОТМЕНА</button>
+          <UndoTimer expiresAt={undoStack.expiresAt} />
         </div>
       )}
 
-      {previewCard && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}F2` }} onClick={() => setPreviewCard(null)}>
-          <div className="absolute top-6 left-1/2 -translate-x-1/2 text-white font-black tracking-widest uppercase bg-black/50 px-6 py-2 rounded-full backdrop-blur-md text-xs text-center w-[90%] md:w-auto">
-            {previewCard.isFlipped ? "Эту карту сейчас видите только вы" : "Эта карта открыта для всех"}
+      {/* НИЖНЯЯ ПАНЕЛЬ (БИБЛИОТЕКА) */}
+      <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-700 pointer-events-none ${isLibraryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-48px)]'}`}>
+        <div className={`bg-white/90 backdrop-blur-2xl rounded-t-[3rem] shadow-[0_-10px_50px_rgba(0,0,0,0.1)] border-t border-white flex flex-col transition-all duration-500 pointer-events-auto ${isLibraryFullscreen ? 'h-[95vh]' : 'h-[75vh] md:h-80'}`}>
+          
+          <div className="relative w-full flex justify-center py-2 h-12">
+            <button onClick={toggleLibrary} className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-black/5 transition-colors rounded-t-[3rem]">
+              <div className="w-12 h-1.5 bg-ink/10 rounded-full mb-1"></div>
+              <span className="text-[10px] font-black uppercase tracking-widest leading-none text-plum flex items-center gap-2">
+                <Layers size={14} /> {isClientMode ? "Выбор карты" : "Библиотека Мастера"}
+              </span>
+            </button>
+            {isLibraryOpen && (
+              <button onClick={toggleFullscreen} className="absolute right-8 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors hover:bg-black/5" style={{ color: COLORS.ink }}>
+                <Maximize2 size={18} />
+              </button>
+            )}
           </div>
-          <button className="absolute top-6 right-6 text-white p-2 rounded-full transition-all hover:opacity-70" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
-            <X size={40} />
-          </button>
-          <img src={previewCard.img} className="max-h-[85vh] max-w-[90vw] h-auto w-auto rounded-2xl shadow-2xl bg-white object-contain" style={{ animation: 'scaleIn 0.2s ease-out' }} alt="Карта" />
+          
+          <div className="flex flex-1 flex-col md:flex-row p-4 md:p-8 pt-0 gap-4 md:gap-8 min-h-0 overflow-hidden">
+            {!isClientMode && (
+              <div className="w-full md:w-72 border-b md:border-b-0 md:border-r pb-4 md:pb-0 pr-0 md:pr-6 h-[30%] md:h-auto flex-shrink-0 overflow-y-auto custom-scrollbar flex flex-col gap-3" style={{ borderColor: `${COLORS.ink}10` }}>
+                <div className="flex p-1 rounded-xl mb-1 flex-shrink-0 bg-black/5">
+                  <button onClick={() => setActiveTab('platform')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'platform' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>БАЗА</button>
+                  <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'cloud' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>ОБЛАКО</button>
+                  <button onClick={() => setActiveTab('local')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'local' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>МОИ</button>
+                  <button onClick={() => setActiveTab('sessions')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'sessions' ? 'bg-white shadow-sm text-forest' : 'hover:opacity-70 text-ink/60'}`}>СЕССИИ</button>
+                </div>
+
+                {activeTab === 'sessions' && (
+                  <div className="flex flex-col gap-2 flex-shrink-0">
+                    <div className="text-[10px] font-bold text-center mb-2" style={{ color: COLORS.ink }}>СОХРАНЕННЫЕ РАССТАНОВКИ</div>
+                    {savedSessions.length === 0 && <div className="text-[9px] text-center opacity-50">Нет сохраненных сессий</div>}
+                    {savedSessions.map(session => (
+                      <div key={session.id} className="group flex items-center justify-between p-3 rounded-2xl border border-gray-100 hover:bg-black/5 transition-colors">
+                         <div>
+                            <div className="text-[10px] font-bold" style={{ color: COLORS.ink }}>{session.name}</div>
+                            <div className="text-[8px] text-gray-500">{new Date(session.createdAt).toLocaleDateString()}</div>
+                         </div>
+                         <div className="flex gap-1">
+                            <button onClick={() => loadSavedSession(session)} className="p-2 text-forest hover:bg-forest/10 rounded-lg transition-colors" title="Загрузить на стол"><UploadCloud size={14}/></button>
+                            <button onClick={async () => {
+                              const ok = await askConfirm('Удалить эту сессию навсегда?');
+                              if(ok) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions', session.id));
+                            }} className="p-2 text-terra hover:bg-terra/10 rounded-lg transition-colors" title="Удалить сессию"><Trash2 size={14}/></button>
+                         </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {activeTab === 'local' && (
+                  <div className="flex flex-col gap-3 flex-shrink-0">
+                    <div className="rounded-2xl p-3 text-[9px] leading-relaxed" style={{ backgroundColor: `${COLORS.forest}12`, color: COLORS.forest, border: `1px solid ${COLORS.forest}25` }}>
+                      <div className="font-black uppercase tracking-widest mb-2 flex items-center gap-1"><FolderOpen size={11} /> Как добавить колоду с Google Диска:</div>
+                      <div className="space-y-1 font-medium" style={{ color: `${COLORS.ink}99` }}>
+                        <div>1. Откройте папку с картами на Google Диске</div>
+                        <div>2. Правая кнопка → <b>"Открыть доступ"</b></div>
+                        <div>3. Нажмите <b>"Все у кого есть ссылка"</b></div>
+                        <div>4. Скопируйте ссылку и вставьте ниже</div>
+                      </div>
+                    </div>
+                    <button onClick={addDeckByLinks} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black transition-all uppercase hover:opacity-80 shadow-sm" style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }}>
+                      <LinkIcon size={16} /> Вставить ссылку на папку
+                    </button>
+                  </div>
+                )}
+
+                {activeTab === 'platform' && isPlatformDecksLoading && <div className="flex justify-center py-4 flex-shrink-0"><Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} /></div>}
+                {activeTab === 'cloud' && isBaseDecksLoading && <div className="flex justify-center py-4 flex-shrink-0"><Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} /></div>}
+                
+                {activeTab !== 'sessions' && (activeTab === 'platform' ? platformDecks : activeTab === 'local' ? localDecks : [...baseDecks, ...cloudDecks]).map(item => (
+                  <div key={item.id} className={`group flex items-center gap-3 p-3 rounded-2xl transition-all relative border flex-shrink-0 ${selectedDeckId === item.id ? 'bg-white shadow-sm border-white' : 'border-transparent hover:bg-black/5'}`}>
+                    <button onClick={() => selectDeck(item)} className="flex-1 flex items-center gap-3 text-left overflow-hidden hover:opacity-70">
+                      <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden border flex-shrink-0 shadow-sm" style={{ borderColor: `${COLORS.ink}10` }}>
+                        {item.backImage ? <img src={item.backImage} className="w-full h-full object-contain" alt="" /> : <FolderOpen size={16} color={`${COLORS.ink}4D`} />}
+                      </div>
+                      <div className="flex flex-col overflow-hidden">
+                        <span className="text-[10px] font-bold truncate uppercase" style={{ color: COLORS.ink }}>{item.name}</span>
+                        {item.isPlatformDeck && <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: COLORS.forest }}>Платформа</span>}
+                        {item.isBaseDeck && <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}50` }}>Google Drive</span>}
+                      </div>
+                    </button>
+                    {!item.isBaseDeck && !item.isPlatformDeck && (
+                      <button onClick={async () => {
+                        const ok = await askConfirm("Удалить колоду?");
+                        if (ok) {
+                          if (activeTab === 'local') setLocalDecks(p => p.filter(d => d.id !== item.id));
+                          else await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_decks', item.id));
+                          notify("Удалено");
+                        }
+                      }} className="opacity-0 group-hover:opacity-100 p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: COLORS.terra }}>
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {activeDeckData ? (
+                <>
+                  <div className="flex justify-between items-center mb-3 flex-shrink-0">
+                    <span className="text-sm font-black uppercase" style={{ color: `${COLORS.ink}B3` }}>{activeDeckData.name}</span>
+                    {!isClientMode && (
+                      <button onClick={toggleDeckFlip} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:scale-105 transition-all">
+                        {isLibraryDeckFlipped ? "Скрыть карты" : "Открыть колоду"}
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar flex gap-4 content-start flex-wrap pb-8 pr-2">
+                    <button onClick={() => {
+                      const availableCards = activeDeckData.cards.filter(img => !usedImages.has(img));
+                      if (availableCards.length === 0) return notify("В колоде больше нет свободных карт!");
+                      
+                      const array = new Uint32Array(1);
+                      window.crypto.getRandomValues(array);
+                      const randomIndex = array[0] % availableCards.length;
+                      addElement('card', { img: availableCards[randomIndex], backImg: activeDeckData.backImage });
+                      if (isLibraryFullscreen) toggleLibrary();
+                    }} className="flex-shrink-0 w-24 h-36 md:w-28 md:h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 hover:scale-105 transition-all shadow-sm" style={{ borderColor: `${COLORS.plum}4D`, backgroundColor: `${COLORS.plum}10`, color: COLORS.plum }}>
+                      <Plus size={28} /><span className="text-[9px] font-black uppercase">Наугад</span>
+                    </button>
+                    
+                    {activeDeckData.cards.map((img, idx) => {
+                      const isUsed = usedImages.has(img);
+                      return (
+                        <button key={idx} onClick={() => {
+                          if (isUsed) return notify("Эта карта уже лежит на столе!");
+                          addElement('card', { img, backImg: activeDeckData.backImage });
+                          if (isLibraryFullscreen) toggleLibrary();
+                        }} className={`relative flex-shrink-0 h-36 md:h-40 rounded-2xl group transition-all flex items-center justify-center ${isUsed ? 'opacity-40 cursor-not-allowed grayscale' : 'shadow-sm hover:shadow-lg hover:scale-105'}`}>
+                          {isLibraryDeckFlipped
+                            ? <img src={img} className="h-full w-auto min-w-[5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
+                            : <div className="h-full w-24 md:w-28 flex items-center justify-center rounded-2xl overflow-hidden relative shadow-sm border border-white/20" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
+                              {activeDeckData.backImage ? <img src={activeDeckData.backImage} className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" /> : <Layers size={40} className="text-white opacity-30" />}
+                            </div>}
+                          <div className="absolute top-2 left-2 text-white text-[10px] font-black px-2 py-0.5 rounded-md z-10 pointer-events-none backdrop-blur-md bg-black/40 border border-white/20 shadow-sm">{idx + 1}</div>
+                          {isUsed && (
+                            <div className="absolute inset-0 bg-black/30 rounded-2xl flex items-center justify-center pointer-events-none">
+                              <CheckCircle size={32} className="text-white drop-shadow-md" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center font-bold uppercase tracking-widest leading-none text-center px-4" style={{ color: `${COLORS.ink}33` }}>
+                  {isClientMode ? "Мастер еще не выбрал колоду" : "Выберите колоду слева"}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      )}
+      </div>
 
       <style>{`
         .backface-hidden { backface-visibility: hidden; }
@@ -2192,7 +2353,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
 
     setIsDragging(true); hasMoved.current = false; clickTimestamp.current = Date.now();
     initialMousePos.current = { x: cx, y: cy };
-    startPos.current = { x: cx - element.x, y: cy - element.y };
+    startPos.current = { x: (cx - (element.x || 0)), y: (cy - (element.y || 0)) };
     if (!isField) onUpdate({ zIndex: maxZIndex + 1 });
   };
 
@@ -2220,8 +2381,8 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     const boardRect = boardRef.current.getBoundingClientRect();
     const cx = e.touches ? e.touches[0].clientX : e.clientX;
     const cy = e.touches ? e.touches[0].clientY : e.clientY;
-    const centerX = boardRect.left + element.x + element.width / 2;
-    const centerY = boardRect.top + element.y + element.height / 2;
+    const centerX = boardRect.left + (element.x || 0) + element.width / 2;
+    const centerY = boardRect.top + (element.y || 0) + element.height / 2;
 
     const angleRad = Math.atan2(cy - centerY, cx - centerX);
     let angleDeg = angleRad * (180 / Math.PI) + 90;
@@ -2258,7 +2419,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         const dx = cx - startPos.current.x;
         if (isText) {
           const nw = Math.max(150, startDim.current.w + dx);
-          onUpdate({ width: nw }); // Высота у текста теперь автоматическая
+          onUpdate({ width: nw }); 
         } else {
           const ratio = startDim.current.w / startDim.current.h;
           const nw = Math.max(element.type === 'token' ? 25 : (element.type === 'arrow' ? 30 : 80), startDim.current.w + dx);
@@ -2267,8 +2428,8 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       } else if (isRotating) {
         if (!boardRef.current) return;
         const boardRect = boardRef.current.getBoundingClientRect();
-        const centerX = boardRect.left + element.x + element.width / 2;
-        const centerY = boardRect.top + element.y + element.height / 2;
+        const centerX = boardRect.left + (element.x || 0) + element.width / 2;
+        const centerY = boardRect.top + (element.y || 0) + element.height / 2;
         
         const angleRad = Math.atan2(cy - centerY, cx - centerX);
         let angleDeg = angleRad * (180 / Math.PI) + 90;
@@ -2319,10 +2480,10 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       ref={elementRef}
       className={`absolute group ${canDrag ? 'touch-none' : ''} ${(isDragging || isRotating) ? 'z-[1000]' : ''}`}
       style={{
-        left: Math.max(0, element.x), top: Math.max(0, element.y),
+        left: Math.max(0, element.x || 0), top: Math.max(0, element.y || 0),
         width: element.width, height: isText ? 'auto' : element.height,
         zIndex: isField ? 0 : (element.zIndex || 1),
-        transform: `rotate(${appliedRotation}deg)`,
+        transform: `rotate(${appliedRotation || 0}deg)`,
         transition: (isDragging || isResizing || isRotating) ? 'none' : 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
       }}
     >
