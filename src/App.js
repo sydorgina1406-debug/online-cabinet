@@ -483,7 +483,6 @@ export default function App() {
   // Состояния для собственной видеосвязи (WebRTC)
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
-  const remoteStreamRef = useRef(null); // Новая переменная для чистого потока WebRTC
   const pcRef = useRef(null);
   const processedCandidates = useRef(new Set());
   const [isVideoActive, setIsVideoActive] = useState(false);
@@ -828,23 +827,23 @@ export default function App() {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-      const pc = new RTCPeerConnection({ 
-         iceServers: [
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' }
-         ] 
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
+        ]
       });
       pcRef.current = pc;
-
-      remoteStreamRef.current = new MediaStream();
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStreamRef.current;
 
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
       pc.ontrack = (event) => {
-        event.streams[0].getTracks().forEach(track => {
-           remoteStreamRef.current.addTrack(track);
-        });
+        if (remoteVideoRef.current && event.streams[0]) {
+           remoteVideoRef.current.srcObject = event.streams[0];
+           remoteVideoRef.current.play().catch(()=>{});
+        }
         setCallStatus(''); 
       };
 
@@ -872,7 +871,7 @@ export default function App() {
           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
         }
 
-        if (data.answerCandidates && pc.currentRemoteDescription) {
+        if (pc.currentRemoteDescription && data.answerCandidates) {
           data.answerCandidates.forEach(c => {
             const candString = JSON.stringify(c);
             if (!processedCandidates.current.has(candString)) {
@@ -899,23 +898,23 @@ export default function App() {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-      const pc = new RTCPeerConnection({ 
-         iceServers: [
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' }
-         ] 
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
+        ]
       });
       pcRef.current = pc;
-
-      remoteStreamRef.current = new MediaStream();
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStreamRef.current;
 
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
       pc.ontrack = (event) => {
-        event.streams[0].getTracks().forEach(track => {
-           remoteStreamRef.current.addTrack(track);
-        });
+        if (remoteVideoRef.current && event.streams[0]) {
+           remoteVideoRef.current.srcObject = event.streams[0];
+           remoteVideoRef.current.play().catch(()=>{});
+        }
         setCallStatus('');
       };
 
@@ -972,10 +971,6 @@ export default function App() {
     }
     if (remoteVideoRef.current?.srcObject) {
       remoteVideoRef.current.srcObject = null;
-    }
-    if (remoteStreamRef.current) {
-      remoteStreamRef.current.getTracks().forEach(t => t.stop());
-      remoteStreamRef.current = null;
     }
 
     setIsVideoActive(false);
