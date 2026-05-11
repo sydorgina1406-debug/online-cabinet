@@ -820,7 +820,8 @@ export default function App() {
     } catch (err) {
       setCallStatus('');
       setIsVideoActive(false);
-      notify("Не удалось получить доступ к камере или микрофону. Проверьте разрешения браузера.");
+      notify("Ошибка: " + err.name + " / " + err.message, 8000);
+      console.error("Детали ошибки WebRTC:", err);
     }
   };
 
@@ -878,7 +879,8 @@ export default function App() {
     } catch (err) {
       setCallStatus('');
       setIsVideoActive(false);
-      notify("Не удалось получить доступ к камере или микрофону. Проверьте разрешения браузера.");
+      notify("Ошибка: " + err.name + " / " + err.message, 8000);
+      console.error("Детали ошибки WebRTC:", err);
     }
   };
 
@@ -1830,7 +1832,7 @@ export default function App() {
       )}
 
       {isNamingDeck && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center backdrop-blur-sm p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
+        <div className="fixed inset0 z-[110] flex items-center justify-center backdrop-blur-sm p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl border-4" style={{ borderColor: COLORS.haze }}>
             <h3 className="text-xl font-black mb-2 uppercase italic" style={{ color: COLORS.ink }}>ИМЯ КОЛОДЫ</h3>
             <p className="text-[10px] mb-6 font-medium" style={{ color: `${COLORS.ink}66` }}>Выбрано файлов: {pendingFiles.length}. Файл с "рубашка" в названии станет обложкой.</p>
