@@ -69,7 +69,7 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
     );
   }
 
-  const isSide = viewMode === 'side' && !isLaying;
+  const isSide = viewMode === 'side';
   const rot = ((rotation % 360) + 360) % 360;
 
   let dir = 'up';
@@ -79,7 +79,31 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
 
   const hexColor = color.replace('#', '');
   const gradientId = `grad-${hexColor}-${gender}`;
-  const shadowStyle = isLaying ? 'drop-shadow(0px 2px 3px rgba(0,0,0,0.4))' : 'drop-shadow(0px 6px 12px rgba(0,0,0,0.3))';
+  const shadowStyle = isLaying ? 'drop-shadow(0px 1px 3px rgba(0,0,0,0.4))' : 'drop-shadow(0px 6px 12px rgba(0,0,0,0.3))';
+
+  const drawEyes = (cx1, cy1, cx2, cy2, r) => {
+    if (isLaying) {
+      return (
+        <g>
+          <path d={`M ${cx1-2},${cy1} Q ${cx1},${cy1+2} ${cx1+2},${cy1}`} stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+          <path d={`M ${cx2-2},${cy2} Q ${cx2},${cy2+2} ${cx2+2},${cy2}`} stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+        </g>
+      );
+    }
+    return (
+      <g>
+        <circle cx={cx1} cy={cy1} r={r} fill="#222" />
+        <circle cx={cx2} cy={cy2} r={r} fill="#222" />
+      </g>
+    );
+  };
+
+  const drawProfileEye = (cx, cy, r) => {
+    if (isLaying) {
+      return <path d={`M ${cx-2},${cy} Q ${cx},${cy+2} ${cx+2},${cy}`} stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />;
+    }
+    return <circle cx={cx} cy={cy} r={r} fill="#222" />;
+  };
 
   return (
     <svg viewBox="0 0 100 100" className={className} style={{ overflow: 'visible', filter: shadowStyle }}>
@@ -95,38 +119,8 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
         </linearGradient>
       </defs>
 
-      {isLaying ? (
+      {isSide ? (
         <g>
-          <g transform={`rotate(${rot}, 50, 50)`}>
-            {isMale ? (
-              <>
-                <path d="M 32,38 L 68,38 L 60,85 L 40,85 Z" fill={color} />
-                <path d="M 32,38 L 68,38 L 60,85 L 40,85 Z" fill={`url(#${gradientId})`} />
-              </>
-            ) : (
-              <>
-                <path d="M 50,35 L 75,85 L 25,85 Z" fill={color} />
-                <path d="M 50,35 L 75,85 L 25,85 Z" fill={`url(#${gradientId})`} />
-              </>
-            )}
-            <circle cx="50" cy="24" r="14" fill="url(#woodHead)" />
-            <polygon points="50,26 47,30 53,30" fill="#A67C52" />
-            {/* Закрытые глаза для лежащей фигурки */}
-            <path d="M 42,24 Q 44,22 46,24" stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-            <path d="M 54,24 Q 56,22 58,24" stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          </g>
-          {name && (
-            <text
-              x="50" y="95" textAnchor="middle" fontSize="10" fontWeight="900" fill="rgba(255,255,255,0.95)"
-              style={{ textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }} textLength={name.length > 5 ? "35" : undefined} lengthAdjust="spacingAndGlyphs"
-            >
-              {name}
-            </text>
-          )}
-        </g>
-      ) : isSide ? (
-        <g>
-          {/* Тонкий эстетичный вектор (луч внимания из уровня глаз/головы) */}
           <g transform={`rotate(${rot}, 50, 24)`} opacity="0.6">
             <line x1="50" y1="24" x2="50" y2="-36" stroke={color} strokeWidth="1.5" strokeDasharray="3 3" />
             <polygon points="50,-42 47,-34 53,-34" fill={color} />
@@ -148,7 +142,7 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
               )}
               <circle cx="50" cy="24" r="14" fill="url(#woodHead)" />
               <polygon points="62,23 68,26 62,28" fill="#B3783A" />
-              <circle cx="56" cy="22" r="1.8" fill="#222" />
+              {drawProfileEye(56, 22, 1.8)}
             </g>
           )}
 
@@ -167,8 +161,7 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
               )}
               <circle cx="50" cy="24" r="14" fill="url(#woodHead)" />
               <polygon points="50,26 47,30 53,30" fill="#A67C52" />
-              <circle cx="44" cy="24" r="1.5" fill="#333" />
-              <circle cx="56" cy="24" r="1.5" fill="#333" />
+              {drawEyes(44, 24, 56, 24, 1.5)}
             </g>
           )}
 
@@ -216,8 +209,7 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
             )}
             <circle cx="50" cy="50" r="14" fill="url(#woodHead)" stroke="rgba(0,0,0,0.1)" strokeWidth="1" />
             <polygon points="50,45 47,49 53,49" fill="#B3783A" />
-            <circle cx="45" cy="52" r="1.8" fill="#222" />
-            <circle cx="55" cy="52" r="1.8" fill="#222" />
+            {drawEyes(45, 52, 55, 52, 1.8)}
           </g>
 
           {name && (
@@ -258,7 +250,7 @@ const loadPlatformDecks = async () => {
 const COLORS = {
   plum: '#8B3252',
   forest: '#2D4A3E',
-  terra: '#D26027', // Сделали более теплым, кирпично-оранжевым
+  terra: '#D26027', 
   ink: '#1C1020',
   haze: '#F2EFF5'
 };
@@ -497,9 +489,9 @@ export default function App() {
   const [isNotebookOpen, setIsNotebookOpen] = useState(false);
   const [savedNotes, setSavedNotes] = useState([]);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
-  const [editingNoteId, setEditingNoteId] = useState(null); // Новое состояние для редактирования
+  const [editingNoteId, setEditingNoteId] = useState(null);
   const [noteTitleInput, setNoteTitleInput] = useState('');
-  // Для создания заметок теперь не стейт-переменная текста, а управление через ref:
+  const [isUploadingNoteImage, setIsUploadingNoteImage] = useState(false);
   const notebookEditorRef = useRef(null);
 
   const [figureColor, setFigureColor] = useState('#8B3252'); 
@@ -563,6 +555,8 @@ export default function App() {
   const [undoStack, setUndoStack] = useState(null);
   
   const [customDialog, setCustomDialog] = useState(null);
+
+  const usedImages = new Set(cardsOnTable.filter(c => c.type === 'card').map(c => c.img));
 
   const notifyTimeoutRef = useRef(null);
   const notify = (text, time = 4000) => {
@@ -929,6 +923,20 @@ export default function App() {
     window._isClientMode = true;
   };
 
+  const shareLinkToClient = async () => {
+    const url = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
+    if (navigator.share && /Mobi|Android|iPhone/i.test(navigator.userAgent)) {
+      try {
+        await navigator.share({ title: 'Онлайн Кабинет', url: url });
+        return;
+      } catch (e) {
+        console.log('Поделиться отменено');
+      }
+    }
+    await copyToClipboard(url);
+    setCopyFeedback(true); setTimeout(() => setCopyFeedback(false), 2000);
+  };
+
   const saveCurrentSession = async () => {
     const name = await askPrompt("Введите название для сохранения текущего стола (например: Сессия с Анной):");
     if (!name || !name.trim()) return;
@@ -965,6 +973,28 @@ export default function App() {
       if (isLibraryOpen) toggleLibrary();
     } catch (e) {
       notify("Ошибка загрузки сессии: " + e.message);
+    }
+  };
+
+  const handleNoteImageUpload = async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    setIsUploadingNoteImage(true);
+    notify("Загрузка картинки...", 4000);
+    try {
+      const data = await new Promise(r => { const rd = new FileReader(); rd.onload = ev => r(ev.target.result); rd.readAsDataURL(f); });
+      const comp = await compressImage(data, 800, 800);
+      const url = await uploadImageToStorage(comp, `notes_images/${user?.uid || 'anon'}/${Date.now()}.jpg`);
+      if (notebookEditorRef.current) {
+         notebookEditorRef.current.focus();
+         document.execCommand('insertImage', false, url);
+      }
+      notify("Картинка добавлена!");
+    } catch (err) {
+      notify("Ошибка загрузки: " + err.message);
+    } finally {
+      setIsUploadingNoteImage(false);
+      e.target.value = '';
     }
   };
 
@@ -1294,7 +1324,7 @@ export default function App() {
                           </button>
                         </div>
                       </div>
-                      <div className="text-xs line-clamp-3 text-gray-500 whitespace-pre-wrap rich-text" dangerouslySetInnerHTML={{ __html: note.text }}></div>
+                      <div className="text-xs text-gray-500 whitespace-pre-wrap rich-text max-h-[150px] overflow-hidden" dangerouslySetInnerHTML={{ __html: note.text }}></div>
                       <button onClick={() => {
                         addElement('private-text', { text: note.text });
                         setIsNotebookOpen(false);
@@ -1310,13 +1340,19 @@ export default function App() {
                   <input autoFocus type="text" value={noteTitleInput} onChange={e => setNoteTitleInput(e.target.value)} placeholder="Название (напр: Работа с травмой)" className="w-full px-4 py-3 rounded-xl border-2 border-b-0 rounded-b-none outline-none font-bold text-sm shadow-inner" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
                   
                   {/* Панель форматирования для Моих Техник */}
-                  <div className="flex gap-2 items-center bg-gray-100 px-3 py-2 border-2 border-b-0 border-t-0" style={{ borderColor: COLORS.haze }}>
+                  <div className="flex gap-2 items-center bg-gray-100 px-3 py-2 border-2 border-b-0 border-t-0 flex-wrap" style={{ borderColor: COLORS.haze }}>
                     <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('bold', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Жирный"><Bold size={14} strokeWidth={3} /></button>
                     <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('italic', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Курсив"><Italic size={14} /></button>
                     <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('underline', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Подчеркнутый"><Underline size={14} /></button>
                     <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('strikeThrough', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Зачеркнутый"><Strikethrough size={14} /></button>
                     <div className="w-px h-4 bg-gray-300 mx-1"></div>
                     <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('insertUnorderedList', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Список"><List size={14} /></button>
+                    <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                    {/* Кнопка загрузки картинки */}
+                    <label className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700 cursor-pointer flex items-center justify-center relative" title="Вставить картинку">
+                      {isUploadingNoteImage ? <Loader2 size={14} className="animate-spin text-plum" /> : <ImageIcon size={14} />}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleNoteImageUpload} disabled={isUploadingNoteImage} />
+                    </label>
                   </div>
                   
                   <div
@@ -1711,13 +1747,9 @@ export default function App() {
           </button>
           
           {!isClientMode && (
-            <button onClick={async () => {
-              const url = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
-              await copyToClipboard(url);
-              setCopyFeedback(true); setTimeout(() => setCopyFeedback(false), 2000);
-            }} className="px-4 py-2.5 rounded-[1rem] text-[10px] font-black border flex items-center gap-2 shadow-sm transition-all hover:scale-105" style={{ backgroundColor: copyFeedback ? COLORS.forest : 'white', borderColor: copyFeedback ? COLORS.forest : `${COLORS.plum}30`, color: copyFeedback ? 'white' : COLORS.plum }}>
+            <button onClick={shareLinkToClient} className="px-3 md:px-4 py-2.5 rounded-[1rem] text-[10px] font-black border flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-105 min-w-[40px]" style={{ backgroundColor: copyFeedback ? COLORS.forest : 'white', borderColor: copyFeedback ? COLORS.forest : `${COLORS.plum}30`, color: copyFeedback ? 'white' : COLORS.plum }} title="Поделиться ссылкой с клиентом">
               {copyFeedback ? <CheckCircle size={14} /> : <UserPlus size={14} />}
-              <span className="hidden sm:inline">{copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА ДЛЯ КЛИЕНТА"}</span>
+              <span className="ml-1 text-[9px] md:text-[10px] whitespace-nowrap">{copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА"}</span>
             </button>
           )}
 
@@ -2020,28 +2052,40 @@ export default function App() {
                     </div>
                     <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar flex gap-4 content-start flex-wrap pb-8 pr-2">
                       <button onClick={() => {
+                        const availableCards = activeDeckData.cards.filter(img => !usedImages.has(img));
+                        if (availableCards.length === 0) return notify("В колоде больше нет свободных карт!");
+                        
                         const array = new Uint32Array(1);
                         window.crypto.getRandomValues(array);
-                        const randomIndex = array[0] % activeDeckData.cards.length;
-                        addElement('card', { img: activeDeckData.cards[randomIndex], backImg: activeDeckData.backImage });
+                        const randomIndex = array[0] % availableCards.length;
+                        addElement('card', { img: availableCards[randomIndex], backImg: activeDeckData.backImage });
                         if (isLibraryFullscreen) toggleLibrary();
                       }} className="flex-shrink-0 w-24 h-36 md:w-28 md:h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 hover:scale-105 transition-all shadow-sm" style={{ borderColor: `${COLORS.plum}4D`, backgroundColor: `${COLORS.plum}10`, color: COLORS.plum }}>
                         <Plus size={28} /><span className="text-[9px] font-black uppercase">Наугад</span>
                       </button>
                       
-                      {activeDeckData.cards.map((img, idx) => (
-                        <button key={idx} onClick={() => {
-                          addElement('card', { img, backImg: activeDeckData.backImage });
-                          if (isLibraryFullscreen) toggleLibrary();
-                        }} className="relative flex-shrink-0 h-36 md:h-40 rounded-2xl group shadow-sm hover:shadow-lg transition-all flex items-center justify-center hover:scale-105">
-                          {isLibraryDeckFlipped
-                            ? <img src={img} className="h-full w-auto min-w-[5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
-                            : <div className="h-full w-24 md:w-28 flex items-center justify-center rounded-2xl overflow-hidden relative shadow-sm border border-white/20" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
-                              {activeDeckData.backImage ? <img src={activeDeckData.backImage} className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" /> : <Layers size={40} className="text-white opacity-30" />}
-                            </div>}
-                          <div className="absolute top-2 left-2 text-white text-[10px] font-black px-2 py-0.5 rounded-md z-10 pointer-events-none backdrop-blur-md bg-black/40 border border-white/20 shadow-sm">{idx + 1}</div>
-                        </button>
-                      ))}
+                      {activeDeckData.cards.map((img, idx) => {
+                        const isUsed = usedImages.has(img);
+                        return (
+                          <button key={idx} onClick={() => {
+                            if (isUsed) return notify("Эта карта уже лежит на столе!");
+                            addElement('card', { img, backImg: activeDeckData.backImage });
+                            if (isLibraryFullscreen) toggleLibrary();
+                          }} className={`relative flex-shrink-0 h-36 md:h-40 rounded-2xl group transition-all flex items-center justify-center ${isUsed ? 'opacity-40 cursor-not-allowed grayscale' : 'shadow-sm hover:shadow-lg hover:scale-105'}`}>
+                            {isLibraryDeckFlipped
+                              ? <img src={img} className="h-full w-auto min-w-[5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
+                              : <div className="h-full w-24 md:w-28 flex items-center justify-center rounded-2xl overflow-hidden relative shadow-sm border border-white/20" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
+                                {activeDeckData.backImage ? <img src={activeDeckData.backImage} className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" /> : <Layers size={40} className="text-white opacity-30" />}
+                              </div>}
+                            <div className="absolute top-2 left-2 text-white text-[10px] font-black px-2 py-0.5 rounded-md z-10 pointer-events-none backdrop-blur-md bg-black/40 border border-white/20 shadow-sm">{idx + 1}</div>
+                            {isUsed && (
+                              <div className="absolute inset-0 bg-black/30 rounded-2xl flex items-center justify-center pointer-events-none">
+                                <CheckCircle size={32} className="text-white drop-shadow-md" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </>
                 ) : (
@@ -2106,6 +2150,7 @@ export default function App() {
         .rich-text ul { list-style-type: disc; padding-left: 1.5rem; margin-top: 0.25rem; margin-bottom: 0.25rem; }
         .rich-text li { margin-bottom: 0.25rem; }
         .rich-text:empty:before { content: attr(data-placeholder); color: rgba(0,0,0,0.3); font-weight: bold; pointer-events: none; }
+        .rich-text img { max-width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px; margin-top: 0.5rem; margin-bottom: 0.5rem; display: block; }
         
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
         @keyframes timerPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
