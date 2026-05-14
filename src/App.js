@@ -69,7 +69,6 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
     );
   }
 
-  // Вид сбоку сохраняется даже если глаза закрыты (isLaying)
   const isSide = viewMode === 'side';
   const rot = ((rotation % 360) + 360) % 360;
 
@@ -365,7 +364,6 @@ const loadBaseDecks = async (notifyCb) => {
 let globalAudioCtx = null;
 const playSound = (type, isMuted) => {
   if (isMuted) return;
-  // Отключение звуков на мобильных устройствах
   if (typeof window !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
     return;
   }
@@ -481,7 +479,6 @@ export default function App() {
   
   const [platformName, setPlatformName] = useState("ОНЛАЙН КАБИНЕТ");
   
-  // Состояния для собственной видеосвязи (WebRTC)
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const pcRef = useRef(null);
@@ -491,7 +488,6 @@ export default function App() {
   const [isVideoCallReady, setIsVideoCallReady] = useState(false);
   const [callStatus, setCallStatus] = useState('');
   
-  // Логика перемещения и изменения размера окна видеосвязи
   const videoDragRef = useRef({ isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 });
   const videoResizeRef = useRef({ isResizing: false, startX: 0, startY: 0, startW: 320, startH: 420 });
   const [videoPos, setVideoPos] = useState({ x: 20, y: 20 });
@@ -499,7 +495,6 @@ export default function App() {
   
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Инициализируем окно видеосвязи справа внизу
       setVideoPos({ 
          x: Math.max(20, window.innerWidth - 340), 
          y: Math.max(20, window.innerHeight - 440) 
@@ -567,11 +562,9 @@ export default function App() {
     };
   }, [videoPos, videoDim]);
 
-  // Состояния для плашек
   const [isDicePanelOpen, setIsDicePanelOpen] = useState(false);
   const [isFiguresPanelOpen, setIsFiguresPanelOpen] = useState(false);
 
-  // Состояния для Записной книжки (Техник)
   const [isNotebookOpen, setIsNotebookOpen] = useState(false);
   const [savedNotes, setSavedNotes] = useState([]);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
@@ -820,7 +813,6 @@ export default function App() {
     }
   };
 
-  // Слушатель завершения звонка для клиента
   useEffect(() => {
      if (isVideoActive && isClientMode && roomId) {
        const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
@@ -990,7 +982,6 @@ export default function App() {
         }
         else if (d.id === '_active_deck') { setActiveDeckData(d.data()); }
         else if (d.id === '_timer_state') { setSessionTimer(d.data()); }
-        // Игнорируем технические файлы при выводе на стол
         else if (!d.id.startsWith('_')) cards.push({ id: d.id, ...d.data() });
       });
       setCardsOnTable(cards);
@@ -1236,16 +1227,15 @@ export default function App() {
 
   const takeScreenshot = async () => {
     if (!boardRef.current) return;
-
+  
     const elements = cardsOnTable.filter(c => !c.id.startsWith('_'));
     if (elements.length === 0) {
       return notify("Стол пуст, нечего сохранять");
     }
-
-    notify("Создаю скриншот, подождите...", 8000);
-
+  
+    notify("Создаю скриншот, подождите...", 6000);
+  
     try {
-      // 1. Рамка вокруг всех объектов (с запасом на повороты)
       const PADDING = 60;
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       elements.forEach(el => {
@@ -1267,58 +1257,46 @@ export default function App() {
       maxY += PADDING;
       const W = Math.ceil(maxX - minX);
       const H = Math.ceil(maxY - minY);
-
-      // 2. Canvas с двойным разрешением
+  
       const SCALE = 2;
       const canvas = document.createElement('canvas');
       canvas.width = W * SCALE;
       canvas.height = H * SCALE;
       const ctx = canvas.getContext('2d');
       ctx.scale(SCALE, SCALE);
-
-      // Фон стола
+  
       ctx.fillStyle = tableBg?.bgColor || '#FDFAF6';
       ctx.fillRect(0, 0, W, H);
-
-      // 3. Загрузчик картинок с обходом CORS через прокси
-      const loadImageProxy = async (originalSrc) => {
-        if (!originalSrc) return null;
-        
-        return new Promise((resolve) => {
-          const tryLoad = (src, useProxy) => {
-            const img = new Image();
-            // Всегда пробуем anonymous, кроме совсем безнадежных случаев
-            img.crossOrigin = 'anonymous'; 
-            
-            const timer = setTimeout(() => {
-                img.src = ''; // Cancel loading
-                resolve(null);
-            }, 8000);
-
-            img.onload = () => {
-              clearTimeout(timer);
-              resolve(img);
-            };
-
-            img.onerror = () => {
-              clearTimeout(timer);
-              // Если сломалось без прокси, пробуем с прокси
-              if (!useProxy && originalSrc.startsWith('http')) {
-                  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(originalSrc)}`;
-                  tryLoad(proxyUrl, true);
-              } else {
-                  // Если даже прокси не помог, сдаемся для этой картинки
-                  resolve(null); 
-              }
-            };
-            img.src = src;
-          };
-
-          // Сначала пробуем загрузить напрямую
-          tryLoad(originalSrc, false);
-        });
+  
+      const loadBase64Image = async (url) => {
+        if (!url) return null;
+        try {
+          let res = await fetch(url).catch(() => null);
+          if (!res || !res.ok) {
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+            res = await fetch(proxyUrl);
+          }
+          if (!res.ok) return null;
+          const blob = await res.blob();
+          const base64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+          if (!base64) return null;
+          return new Promise((resolve) => {
+             const img = new Image();
+             img.onload = () => resolve(img);
+             img.onerror = () => resolve(null);
+             img.src = base64;
+          });
+        } catch (e) {
+          console.warn('Base64 image load failed:', e);
+          return null;
+        }
       };
-
+  
       const roundRectPath = (cx, cy, cw, ch, r) => {
         ctx.beginPath();
         ctx.moveTo(cx + r, cy);
@@ -1328,46 +1306,42 @@ export default function App() {
         ctx.arcTo(cx, cy, cx + cw, cy, r);
         ctx.closePath();
       };
-
-      // 4. Сортируем по z-index
+  
       const sorted = [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-
-      // Параллельная предзагрузка всех уникальных картинок с обходом CORS
+  
       const imageCache = {};
       const sources = new Set();
       sorted.forEach(el => {
         if (el.img) sources.add(el.img);
         if (el.backImg) sources.add(el.backImg);
       });
-      
       await Promise.all(Array.from(sources).map(async src => {
-        imageCache[src] = await loadImageProxy(src);
+        imageCache[src] = await loadBase64Image(src);
       }));
-
-      // 5. Рисуем каждый объект
+  
       for (const el of sorted) {
         const x = (el.x || 0) - minX;
         const y = (el.y || 0) - minY;
         const ew = el.width || 160;
         const eh = el.height || 240;
         const rot = el.rotation || 0;
-
+  
         ctx.save();
         ctx.translate(x + ew / 2, y + eh / 2);
         ctx.rotate(rot * Math.PI / 180);
         ctx.translate(-ew / 2, -eh / 2);
-
+  
         try {
           if (el.type === 'card') {
             const imgSrc = el.isFlipped ? el.backImg : el.img;
             const img = imgSrc ? imageCache[imgSrc] : null;
-
+  
             ctx.save();
             roundRectPath(0, 0, ew, eh, 14);
             ctx.fillStyle = el.isFlipped ? '#2D4A3E' : 'white';
             ctx.fill();
             ctx.clip();
-
+  
             if (img && img.naturalWidth > 0) {
               const imgR = img.naturalWidth / img.naturalHeight;
               const boxR = ew / eh;
@@ -1391,12 +1365,12 @@ export default function App() {
               ctx.fillText('MAK SPACE', ew / 2, eh / 2);
             }
             ctx.restore();
-
+  
             roundRectPath(0, 0, ew, eh, 14);
             ctx.strokeStyle = 'rgba(0,0,0,0.08)';
             ctx.lineWidth = 1;
             ctx.stroke();
-
+  
           } else if (el.type === 'field') {
             const img = el.img ? imageCache[el.img] : null;
             if (img && img.naturalWidth > 0) {
@@ -1432,7 +1406,7 @@ export default function App() {
           } else if (el.type === 'figure') {
             const color = el.color || '#8B3252';
             const isMale = el.gender === 'male';
-
+  
             ctx.fillStyle = color;
             if (isMale) {
               roundRectPath(ew * 0.32, eh * 0.38, ew * 0.36, eh * 0.47, 4);
@@ -1471,6 +1445,7 @@ export default function App() {
               ctx.arc(ew * 0.55, eh * 0.24, 1.6, 0, Math.PI * 2);
               ctx.fill();
             }
+            
             if (el.name) {
               const fs = Math.max(10, ew * 0.12);
               ctx.font = `900 ${fs}px sans-serif`;
@@ -1490,11 +1465,11 @@ export default function App() {
             ctx.strokeStyle = isPrivate ? 'rgba(216, 180, 254, 1)' : 'rgba(253, 224, 71, 1)';
             ctx.lineWidth = 1;
             ctx.stroke();
-
+  
             const tmp = document.createElement('div');
             tmp.innerHTML = el.text || '';
             const text = (tmp.textContent || tmp.innerText || '').trim();
-
+  
             if (text) {
               ctx.fillStyle = isPrivate ? '#5B21B6' : '#713F12';
               ctx.font = '12px sans-serif';
@@ -1531,11 +1506,10 @@ export default function App() {
         } catch (drawErr) {
           console.warn('Element draw error:', drawErr);
         }
-
+  
         ctx.restore();
       }
-
-      // 6. Сохраняем
+  
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-');
@@ -1808,7 +1782,6 @@ export default function App() {
         </div>
       )}
 
-      {/* ПЛАВАЮЩЕЕ ОКНО: ЗАПИСНАЯ КНИЖКА (МОИ ТЕХНИКИ) */}
       {isNotebookOpen && !isClientMode && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-2xl w-full shadow-2xl relative max-h-[90vh] flex flex-col">
@@ -1869,7 +1842,6 @@ export default function App() {
                 <div className="flex flex-col mb-4">
                   <input autoFocus type="text" value={noteTitleInput} onChange={e => setNoteTitleInput(e.target.value)} placeholder="Название (напр: Работа с травмой)" className="w-full px-4 py-3 rounded-xl border-2 border-b-0 rounded-b-none outline-none font-bold text-sm shadow-inner" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
                   
-                  {/* Панель форматирования для Моих Техник */}
                   <div className="flex gap-2 items-center bg-gray-100 px-3 py-2 border-2 border-b-0 border-t-0 flex-wrap" style={{ borderColor: COLORS.haze }}>
                     <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('bold', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Жирный"><Bold size={14} strokeWidth={3} /></button>
                     <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('italic', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Курсив"><Italic size={14} /></button>
@@ -1878,7 +1850,6 @@ export default function App() {
                     <div className="w-px h-4 bg-gray-300 mx-1"></div>
                     <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('insertUnorderedList', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Список"><List size={14} /></button>
                     <div className="w-px h-4 bg-gray-300 mx-1"></div>
-                    {/* Кнопка загрузки картинки */}
                     <label className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700 cursor-pointer flex items-center justify-center relative" title="Вставить картинку">
                       {isUploadingNoteImage ? <Loader2 size={14} className="animate-spin text-plum" /> : <ImageIcon size={14} />}
                       <input type="file" accept="image/*" className="hidden" onChange={handleNoteImageUpload} disabled={isUploadingNoteImage} />
@@ -1891,9 +1862,9 @@ export default function App() {
                     className="rich-text w-full px-4 py-3 rounded-b-xl border-2 outline-none text-sm custom-scrollbar min-h-[200px] shadow-inner leading-relaxed bg-white"
                     style={{ borderColor: COLORS.haze, color: COLORS.ink }}
                     data-placeholder="Текст техники, алгоритм или вопросы... Выделите текст и используйте кнопки сверху 👆"
-                 />
+                  />
                   
-                 <div className="flex gap-3 mt-4">
+                  <div className="flex gap-3 mt-4">
                     <button onClick={() => { setIsCreatingNote(false); setEditingNoteId(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors text-xs uppercase tracking-widest text-gray-600">Отмена</button>
                     <button onClick={async () => {
                       const finalHtml = notebookEditorRef.current ? notebookEditorRef.current.innerHTML : '';
@@ -1928,6 +1899,7 @@ export default function App() {
         </div>
       )}
 
+      {}
       {customDialog && (
         <div className="fixed inset-0 z-[500] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl">
@@ -1943,7 +1915,6 @@ export default function App() {
         </div>
       )}
 
-      {/* ИНСТРУКЦИЯ ПО ПЛАТФОРМЕ */}
       {isHelpOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }} onClick={() => setIsHelpOpen(false)}>
           <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-5xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
@@ -1954,7 +1925,6 @@ export default function App() {
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               
-              {/* КЛИЕНТ И ДОСТУП */}
               <div className="space-y-4">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> Клиент и Доступ</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
@@ -1965,7 +1935,6 @@ export default function App() {
                </div>
              </div>
 
-              {/* ГРУППОВЫЕ ИГРЫ И ПРИВАТНОСТЬ КАРТ */}
               <div className="space-y-4">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> Групповые и Трансформационные игры</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
@@ -1979,7 +1948,6 @@ export default function App() {
                </div>
              </div>
 
-              {/* ИНСТРУМЕНТЫ ВЕРХНЕЙ ПАНЕЛИ */}
               <div className="space-y-4">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><LayoutGrid size={16}/> Панель инструментов</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
@@ -1993,7 +1961,6 @@ export default function App() {
                </div>
              </div>
 
-              {/* ЗАМЕТКИ И ТЕХНИКИ */}
               <div className="space-y-4">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Type size={16}/> Работа с заметками</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
@@ -2012,7 +1979,6 @@ export default function App() {
                </div>
              </div>
 
-              {/* ПЛАВАЮЩИЕ ПАНЕЛИ */}
               <div className="space-y-4">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Layers size={16}/> Плавающие панели</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
@@ -2027,7 +1993,6 @@ export default function App() {
                </div>
              </div>
 
-              {/* ДЕЙСТВИЯ С КАРТАМИ */}
               <div className="space-y-4">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><MousePointer2 size={16}/> Действия с объектами</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2">
@@ -2048,7 +2013,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* БИБЛИОТЕКА МАСТЕРА */}
               <div className="space-y-4 lg:col-span-2">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><FolderOpen size={16}/> Библиотека Мастера</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
@@ -2066,18 +2030,17 @@ export default function App() {
                </div>
              </div>
 
-           </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ПЛАВАЮЩЕЕ ОКНО ВИДЕОСВЯЗИ */}
+      {}
       {isVideoActive && (
         <div
            className="fixed z-[200] bg-ink rounded-[2rem] shadow-2xl overflow-hidden flex flex-col border border-white/20"
            style={{ left: videoPos.x, top: videoPos.y, width: videoDim.w, height: videoDim.h, touchAction: 'none' }}
         >
-          {/* Заголовок для перемещения */}
           <div
              onMouseDown={handleVideoPointerDown}
              onTouchStart={handleVideoPointerDown}
@@ -2116,7 +2079,6 @@ export default function App() {
              <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100" />
           </div>
 
-          {/* Хэндл для изменения размера */}
           <div
              onMouseDown={handleVideoResizePointerDown}
              onTouchStart={handleVideoResizePointerDown}
@@ -2155,6 +2117,7 @@ export default function App() {
         </div>
       )}
       
+      {}
       {isFieldModalOpen && !isClientMode && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-2xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
@@ -2230,7 +2193,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ШАПКА / HEADER */}
+      {}
       <header className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-3 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm gap-2 relative" style={{ borderColor: `${COLORS.ink}10` }}>
         <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
           <div className="flex items-center gap-3">
@@ -2255,10 +2218,8 @@ export default function App() {
           </div>
         </div>
         
-        {/* ИНСТРУМЕНТЫ ПРАВАЯ ЧАСТЬ */}
         <div className="flex items-center gap-2 flex-wrap justify-center md:justify-end w-full md:w-auto">
           
-          {/* КНОПКИ ВЫЗОВА ПЛАШЕК */}
           <div className="flex bg-black/5 p-1 rounded-2xl shadow-inner border border-ink/5 gap-1 mr-1">
              <button onClick={() => setIsFiguresPanelOpen(!isFiguresPanelOpen)} className={`p-2 rounded-xl transition-all flex items-center justify-center ${isFiguresPanelOpen ? 'bg-white shadow-sm text-plum' : 'hover:bg-white text-ink/70'}`} title="Открыть фигурки и стрелки">
                 <FigureIcon gender="male" color={isFiguresPanelOpen ? COLORS.plum : 'currentColor'} isMenu={true} className="w-[18px] h-[18px] opacity-80" />
@@ -2330,7 +2291,6 @@ export default function App() {
           
           {!isClientMode && (
             <>
-              {/* ЗАМЕТКИ, ПОЛЕ, ОЧИСТКА */}
               <button onClick={() => setIsNotebookOpen(true)} className="relative p-2.5 rounded-[1rem] transition-all hover:scale-105 shadow-sm border" style={{ backgroundColor: '#E0F2FE', color: '#2563EB', borderColor: '#BFDBFE' }} title="Мои Техники (Записная книжка)">
                 <BookOpen size={18} />
               </button>
@@ -2351,7 +2311,6 @@ export default function App() {
             </>
           )}
 
-          {/* КНОПКА ИНСТРУКЦИИ */}
           <button onClick={() => setIsHelpOpen(true)} className="px-3 py-2.5 rounded-[1rem] border transition-all hover:bg-black/5 hover:scale-105 flex items-center gap-2 shadow-sm" style={{ backgroundColor: 'white', color: COLORS.plum, borderColor: `${COLORS.plum}30` }} title="Инструкция">
             <HelpCircle size={14} />
             <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">ИНСТРУКЦИЯ</span>
@@ -2363,9 +2322,9 @@ export default function App() {
         </div>
       </header>
 
+      {}
       <main className="flex-1 relative flex flex-col overflow-hidden pt-28 md:pt-24">
         
-        {/* ПЛАШКА: КУБИКИ И ФИШКИ */}
         {isDicePanelOpen && (
           <div className="absolute top-4 right-4 md:right-8 z-40 flex flex-col items-center gap-2 md:gap-3 bg-white/90 backdrop-blur-xl p-4 md:p-5 rounded-[1.5rem] md:rounded-[2.5rem] shadow-[0_10px_40px_rgb(0,0,0,0.15)] border border-white transition-all pointer-events-auto" style={{ animation: 'popup 0.2s ease-out' }}>
             <button onClick={() => setIsDicePanelOpen(false)} className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-terra hover:bg-gray-100 rounded-full transition-colors">
@@ -2415,7 +2374,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ПЛАШКА: ФИГУРЫ И СТРЕЛКИ */}
         {isFiguresPanelOpen && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex flex-wrap md:flex-nowrap items-center justify-center gap-2 md:gap-4 bg-white/95 backdrop-blur-xl px-5 py-3 rounded-2xl md:rounded-full shadow-[0_10px_40px_rgb(0,0,0,0.15)] border border-white transition-all pointer-events-auto w-[95%] md:w-max" style={{ animation: 'popup 0.2s ease-out' }}>
             
@@ -2459,14 +2417,13 @@ export default function App() {
           </div>
         )}
 
-        {/* ИГРОВОЕ ПОЛЕ */}
         <div ref={scrollContainerRef} className="absolute inset-0 overflow-auto custom-scrollbar transition-colors duration-500" style={{ backgroundColor: tableBg.bgColor }}>
           <div ref={boardRef} className="relative min-w-[3000px] min-h-[3000px] bg-transparent" onMouseMove={handleMouseMove} onTouchMove={handleMouseMove}>
             <div className="absolute inset-0 pointer-events-none transition-opacity duration-500" style={{ backgroundColor: tableBg.blendMode ? tableBg.bgColor : 'transparent', backgroundImage: tableBg.value === 'none' ? 'none' : (tableBg.type === 'css' ? tableBg.value : `url('${tableBg.value}')`), backgroundSize: tableBg.bgSize, backgroundPosition: 'center', backgroundRepeat: tableBg.repeat || 'repeat', backgroundBlendMode: tableBg.blendMode || 'normal', opacity: tableBg.opacity }}></div>
             
             {cardsOnTable
               .filter(elem => !undoStack?.cards.some(c => c.id === elem.id))
-              .filter(elem => !(isClientMode && elem.type === 'private-text')) // СКРЫВАЕМ ПРИВАТНЫЕ ЗАМЕТКИ ОТ КЛИЕНТА
+              .filter(elem => !(isClientMode && elem.type === 'private-text'))
               .map((elem) => (
                 <DraggableElement key={elem.id} element={elem} globalFigureView={figureViewMode} isClientMode={isClientMode} isMuted={isMuted} isLaserMode={isLaserMode} playSound={playSound} maxZIndex={Math.max(0, ...cardsOnTable.map(c => c.zIndex || 0))} onUpdate={(d) => updateDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, elem.id), d)} onRemove={() => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, elem.id))} onPreview={() => elem.type === 'card' && setPreviewCard(elem)} currentUser={user} currentUserName={userName} onNotify={notify} boardRef={boardRef} />
               ))}
@@ -2501,7 +2458,7 @@ export default function App() {
           </div>
         )}
 
-        {/* НИЖНЯЯ ПАНЕЛЬ (БИБЛИОТЕКА) */}
+        {}
         <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-700 pointer-events-none ${isLibraryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-48px)]'}`}>
           <div className={`bg-white/90 backdrop-blur-2xl rounded-t-[3rem] shadow-[0_-10px_50px_rgba(0,0,0,0.1)] border-t border-white flex flex-col transition-all duration-500 pointer-events-auto ${isLibraryFullscreen ? 'h-[95vh]' : 'h-[75vh] md:h-80'}`}>
             
@@ -2660,6 +2617,7 @@ export default function App() {
         </div>
       </main>
 
+      {}
       {isNamingDeck && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center backdrop-blur-sm p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl border-4" style={{ borderColor: COLORS.haze }}>
@@ -2703,7 +2661,6 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(139, 50, 82, 0.2); border-radius: 10px; }
         
-        /* Стили для редактора текста */
         .rich-text b, .rich-text strong { font-weight: 900; color: inherit; }
         .rich-text i, .rich-text em { font-style: italic; }
         .rich-text u { text-decoration: underline; text-underline-offset: 2px; }
@@ -2887,7 +2844,6 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         transition: (isDragging || isResizing || isRotating) ? 'none' : 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
       }}
     >
-      {/* РАДАР / КОМПАС ДЛЯ ВРАЩЕНИЯ ФИГУРОК */}
       {isFigureOrArrow && canDrag && (
         <div
           onMouseDown={handleRotateStart}
@@ -2905,26 +2861,22 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         </div>
       )}
 
-      {/* МЕНЮ БЫСТРЫХ ДЕЙСТВИЙ */}
       {!(isLaserMode && !isClientMode) && (
         <div className="absolute -top-16 left-1/2 -translate-x-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all bg-white/80 backdrop-blur-xl rounded-full px-2 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-20 border border-white">
           {!isField && <button onClick={(e) => { e.stopPropagation(); onUpdate({ zIndex: maxZIndex + 1 }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="На передний план"><ArrowUpToLine size={16} /></button>}
           
-          {/* НОВАЯ КНОПКА ПОЛОЖИТЬ/ПОСТАВИТЬ (ТОЛЬКО ДЛЯ ФИГУР) */}
           {element.type === 'figure' && (
             <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLaying: !element.isLaying }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title={element.isLaying ? "Открыть глаза / Поднять фигурку" : "Закрыть глаза (сон/смерть)"}>
               {element.isLaying ? <Eye size={16} /> : <EyeOff size={16} />}
             </button>
           )}
 
-          {/* КНОПКА УПАСТЬ (ТОЛЬКО ДЛЯ ФИГУР) */}
           {element.type === 'figure' && (
             <button onClick={(e) => { e.stopPropagation(); onUpdate({ isFallen: !element.isFallen }); }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 ${element.isFallen ? 'bg-terra/10 text-terra' : 'hover:bg-black/5 text-ink/70'}`} title={element.isFallen ? "Поднять фигурку" : "Уронить на пол"}>
               <UserMinus size={16} />
             </button>
           )}
 
-          {/* ГЛАЗОК - появляется ТОЛЬКО когда карта рубашкой вверх (isFlipped === true) */}
           {element.type === 'card' && element.isFlipped && (
             <button onClick={(e) => {
               e.stopPropagation();
@@ -2960,7 +2912,6 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
             <button onClick={(e) => { e.stopPropagation(); onPreview(); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="Увеличить"><Maximize2 size={16} /></button>
           )}
           
-          {/* Кнопки поворота (Для карт, где нет компаса) */}
           {(!isClientMode || !isField) && !isFigureOrArrow && (
             <div className="flex bg-gray-100 rounded-full p-0.5 shadow-inner border border-gray-200/50 ml-1">
               <button onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (element.rotation - 90 + 360) % 360 }); }} className="w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white text-ink/70 shadow-sm" title={`Повернуть влево (90°)`}>
@@ -2994,7 +2945,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         </div>
       )}
 
-      {!isClientMode && isField && !(isLaserMode && !isClientMode) && (
+      {(!isClientMode && isField && !(isLaserMode && !isClientMode)) && (
         <div className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all z-20" style={{ left: 'calc(100% + 12px)' }}>
           <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }} className="p-3 rounded-full transition-colors hover:opacity-80 shadow-xl border bg-white/90 backdrop-blur-md" style={{ color: isLocked ? COLORS.terra : `${COLORS.ink}80`, borderColor: isLocked ? COLORS.terra : `${COLORS.ink}20` }} title={isLocked ? "Открепить поле" : "Закрепить поле"}>
             {isLocked ? <Lock size={20} /> : <Unlock size={20} />}
@@ -3007,7 +2958,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         style={{ 
           perspective: isField ? 'none' : '1000px', 
           height: isText ? 'auto' : '100%',
-          transform: element.isFallen ? 'rotate(90deg)' : 'none', // ПЛАВНОЕ ПАДЕНИЕ
+          transform: element.isFallen ? 'rotate(90deg)' : 'none',
           transition: (isDragging || isResizing || isRotating) ? 'none' : 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
         }}
       >
