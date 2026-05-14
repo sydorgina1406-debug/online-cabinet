@@ -1268,48 +1268,31 @@ export default function App() {
       ctx.fillStyle = tableBg?.bgColor || '#FDFAF6';
       ctx.fillRect(0, 0, W, H);
   
-      const loadBase64Image = async (url) => {
-        if (!url) return null;
-        try {
-          // 1. Прямая загрузка (для локальных картинок и базы платформы)
-          let res = await fetch(url).catch(() => null);
-          
-          // 2. Мощный CORS-прокси (Отлично справляется с редиректами Google Drive)
-          if (!res || !res.ok) {
-            const proxyUrl1 = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-            res = await fetch(proxyUrl1).catch(() => null);
-          }
-
-          // 3. Запасной прокси (allorigins)
-          if (!res || !res.ok) {
-            const proxyUrl2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-            res = await fetch(proxyUrl2).catch(() => null);
-          }
+      // Надежный загрузчик картинок с обходом CORS
+      const loadSafeImage = async (originalUrl) => {
+        if (!originalUrl) return null;
+        
+        const loadImage = (src) => new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous'; // Обязательно для Canvas
+          img.onload = () => resolve(img);
+          img.onerror = () => resolve(null);
+          img.src = src;
+        });
   
-          if (!res || !res.ok) return null;
-          
-          // Превращаем успешный ответ в Base64
-          const blob = await res.blob();
-          const base64 = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(blob);
-          });
-          
-          if (!base64) return null;
-          
-          // Отдаем чистый локальный Base64 канвасу
-          return new Promise((resolve) => {
-             const img = new Image();
-             img.onload = () => resolve(img);
-             img.onerror = () => resolve(null);
-             img.src = base64;
-          });
-        } catch (e) {
-          console.warn('Base64 image load failed:', e);
-          return null;
-        }
+        // 1. Пробуем загрузить напрямую (если сервер позволяет)
+        let img = await loadImage(originalUrl);
+        if (img) return img;
+        
+        // 2. Мощный прокси специально для картинок (wsrv.nl). Решает проблему с Google Drive!
+        img = await loadImage(`https://wsrv.nl/?url=${encodeURIComponent(originalUrl)}`);
+        if (img) return img;
+        
+        // 3. Запасной прокси (allorigins)
+        img = await loadImage(`https://api.allorigins.win/raw?url=${encodeURIComponent(originalUrl)}`);
+        if (img) return img;
+        
+        return null; // Если вообще ничего не помогло
       };
   
       const roundRectPath = (cx, cy, cw, ch, r) => {
@@ -1324,15 +1307,16 @@ export default function App() {
   
       const sorted = [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
   
-      // Параллельная загрузка всех картинок
+      // Предзагружаем все картинки
       const imageCache = {};
       const sources = new Set();
       sorted.forEach(el => {
         if (el.img) sources.add(el.img);
         if (el.backImg) sources.add(el.backImg);
       });
+      
       await Promise.all(Array.from(sources).map(async src => {
-        imageCache[src] = await loadBase64Image(src);
+        imageCache[src] = await loadSafeImage(src);
       }));
   
       for (const el of sorted) {
@@ -1368,17 +1352,18 @@ export default function App() {
                 dh = eh; dw = eh * imgR; dx = (ew - dw) / 2; dy = 0;
               }
               ctx.drawImage(img, dx, dy, dw, dh);
-            } else if (el.isFlipped) {
+            } else {
+              // Если вдруг прокси не справился, рисуем градиент вместо белого квадрата
               const grad = ctx.createLinearGradient(0, 0, ew, eh);
-              grad.addColorStop(0, '#2D4A3E');
-              grad.addColorStop(1, '#1C1020');
+              grad.addColorStop(0, el.isFlipped ? '#2D4A3E' : '#E2E8F0');
+              grad.addColorStop(1, el.isFlipped ? '#1C1020' : '#CBD5E1');
               ctx.fillStyle = grad;
               ctx.fillRect(0, 0, ew, eh);
-              ctx.fillStyle = 'rgba(255,255,255,0.3)';
+              ctx.fillStyle = el.isFlipped ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)';
               ctx.font = 'bold 11px sans-serif';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';
-              ctx.fillText('MAK SPACE', ew / 2, eh / 2);
+              ctx.fillText(el.isFlipped ? 'MAK SPACE' : 'Недоступно', ew / 2, eh / 2);
             }
             ctx.restore();
   
