@@ -483,6 +483,7 @@ export default function App() {
   const remoteVideoRef = useRef(null);
   const pcRef = useRef(null);
   const processedCandidates = useRef(new Set());
+  const callSnapshotUnsubRef = useRef(null);
   const [isVideoActive, setIsVideoActive] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [isVideoCallReady, setIsVideoCallReady] = useState(false);
@@ -679,21 +680,37 @@ export default function App() {
   const startNativeCall = async () => {
     try {
       setIsVideoActive(true);
-      setCallStatus('Доступ к камере...');
+      setCallStatus('Подготовка...');
       processedCandidates.current.clear();
 
+      // Даем React время на отрисовку модального окна с video-тегами
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      setCallStatus('Доступ к камере...');
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      if (localVideoRef.current) {
+         localVideoRef.current.srcObject = stream;
+         localVideoRef.current.play().catch(()=>{});
+      }
 
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
 
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
-
+      // Принимаем чужой стрим
       pc.ontrack = (event) => {
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
-        setCallStatus('');
+        if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== event.streams[0]) {
+           remoteVideoRef.current.srcObject = event.streams[0];
+           remoteVideoRef.current.play().catch(()=>{});
+        }
+        setCallStatus(''); // Связь установлена
       };
+
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === 'connected') setCallStatus('');
+        else if (pc.connectionState === 'disconnected') setCallStatus('Связь прервана...');
+      };
+
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
       const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
       await setDoc(callDoc, { offerCandidates: [], answerCandidates: [] });
@@ -711,17 +728,26 @@ export default function App() {
 
       setCallStatus('Ожидание клиента...');
 
-      onSnapshot(callDoc, async (snap) => {
+      if (callSnapshotUnsubRef.current) callSnapshotUnsubRef.current();
+
+      callSnapshotUnsubRef.current = onSnapshot(callDoc, async (snap) => {
         const data = snap.data();
-        if (data?.answer && !pc.currentRemoteDescription) {
-          await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        if (!data) return;
+
+        // Если пришел ответ и мы его еще не применяли
+        if (data.answer && pc.signalingState === 'have-local-offer') {
+          try {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+          } catch(e) { console.error("setRemoteDescription error", e); }
         }
-        if (pc.currentRemoteDescription && data?.answerCandidates) {
+
+        // Если удаленное описание уже установлено, можно добавлять кандидатов
+        if (pc.remoteDescription && data.answerCandidates) {
           data.answerCandidates.forEach(c => {
-            const candString = JSON.stringify(c);
-            if (!processedCandidates.current.has(candString)) {
+            const candKey = c.candidate;
+            if (!processedCandidates.current.has(candKey)) {
                pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
-               processedCandidates.current.add(candString);
+               processedCandidates.current.add(candKey);
             }
           });
         }
@@ -729,29 +755,44 @@ export default function App() {
     } catch (err) {
       setCallStatus('');
       setIsVideoActive(false);
-      notify("Ошибка: " + err.name + " / " + err.message, 8000);
-      console.error("Детали ошибки WebRTC:", err);
+      notify("Ошибка видеосвязи: " + err.message, 8000);
+      console.error("WebRTC Error:", err);
     }
   };
 
   const joinNativeCall = async () => {
     try {
       setIsVideoActive(true);
-      setCallStatus('Доступ к камере...');
+      setCallStatus('Подготовка...');
       processedCandidates.current.clear();
 
+      // Даем React время на отрисовку модального окна с video-тегами
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      setCallStatus('Доступ к камере...');
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      if (localVideoRef.current) {
+         localVideoRef.current.srcObject = stream;
+         localVideoRef.current.play().catch(()=>{});
+      }
 
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
 
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
-
       pc.ontrack = (event) => {
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
+        if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== event.streams[0]) {
+           remoteVideoRef.current.srcObject = event.streams[0];
+           remoteVideoRef.current.play().catch(()=>{});
+        }
         setCallStatus('');
       };
+
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === 'connected') setCallStatus('');
+        else if (pc.connectionState === 'disconnected') setCallStatus('Связь прервана...');
+      };
+
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
       const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
 
@@ -773,14 +814,18 @@ export default function App() {
       await pc.setLocalDescription(answer);
       await updateDoc(callDoc, { answer: { type: answer.type, sdp: answer.sdp } });
 
-      onSnapshot(callDoc, (snap) => {
+      if (callSnapshotUnsubRef.current) callSnapshotUnsubRef.current();
+
+      callSnapshotUnsubRef.current = onSnapshot(callDoc, (snap) => {
         const data = snap.data();
-        if (pc.currentRemoteDescription && data?.offerCandidates) {
+        if (!data) return;
+
+        if (pc.remoteDescription && data.offerCandidates) {
           data.offerCandidates.forEach(c => {
-            const candString = JSON.stringify(c);
-            if (!processedCandidates.current.has(candString)) {
+            const candKey = c.candidate;
+            if (!processedCandidates.current.has(candKey)) {
                pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
-               processedCandidates.current.add(candString);
+               processedCandidates.current.add(candKey);
             }
           });
         }
@@ -788,12 +833,16 @@ export default function App() {
     } catch (err) {
       setCallStatus('');
       setIsVideoActive(false);
-      notify("Ошибка: " + err.name + " / " + err.message, 8000);
-      console.error("Детали ошибки WebRTC:", err);
+      notify("Ошибка видеосвязи: " + err.message, 8000);
+      console.error("WebRTC Error:", err);
     }
   };
 
   const endNativeCall = async () => {
+    if (callSnapshotUnsubRef.current) {
+       callSnapshotUnsubRef.current();
+       callSnapshotUnsubRef.current = null;
+    }
     if (pcRef.current) {
       pcRef.current.close();
       pcRef.current = null;
@@ -803,6 +852,7 @@ export default function App() {
       localVideoRef.current.srcObject = null;
     }
     if (remoteVideoRef.current?.srcObject) {
+      remoteVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
       remoteVideoRef.current.srcObject = null;
     }
     setIsVideoActive(false);
