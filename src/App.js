@@ -69,7 +69,7 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
     );
   }
 
-  // ИСПРАВЛЕНИЕ: Теперь вид сбоку сохраняется даже если глаза закрыты (isLaying)
+  // Вид сбоку сохраняется даже если глаза закрыты (isLaying)
   const isSide = viewMode === 'side';
   const rot = ((rotation % 360) + 360) % 360;
 
@@ -1236,22 +1236,302 @@ export default function App() {
 
   const takeScreenshot = async () => {
     if (!boardRef.current) return;
-    notify("Создаю скриншот, пожалуйста, подождите...");
+
+    const elements = cardsOnTable.filter(c => !c.id.startsWith('_'));
+    if (elements.length === 0) {
+      return notify("Стол пуст, нечего сохранять");
+    }
+
+    notify("Создаю скриншот, подождите...", 6000);
+
     try {
-      if (!window.html2canvas) {
-        const script = document.createElement('script');
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-        document.body.appendChild(script);
-        await new Promise(resolve => script.onload = resolve);
+      // 1. Рамка вокруг всех объектов (с запасом на повороты)
+      const PADDING = 60;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      elements.forEach(el => {
+        const x = el.x || 0;
+        const y = el.y || 0;
+        const w = el.width || 160;
+        const h = el.height || 240;
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+        const half = Math.sqrt(w * w + h * h) / 2; // диагональ/2 — учитывает поворот
+        minX = Math.min(minX, cx - half);
+        minY = Math.min(minY, cy - half);
+        maxX = Math.max(maxX, cx + half);
+        maxY = Math.max(maxY, cy + half);
+      });
+      minX = Math.max(0, minX - PADDING);
+      minY = Math.max(0, minY - PADDING);
+      maxX += PADDING;
+      maxY += PADDING;
+      const W = Math.ceil(maxX - minX);
+      const H = Math.ceil(maxY - minY);
+
+      // 2. Canvas с двойным разрешением
+      const SCALE = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = W * SCALE;
+      canvas.height = H * SCALE;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(SCALE, SCALE);
+
+      // Фон стола
+      ctx.fillStyle = tableBg?.bgColor || '#FDFAF6';
+      ctx.fillRect(0, 0, W, H);
+
+      // 3. Загрузчик картинок с fallback (CORS → без CORS)
+      const loadImage = (src) => new Promise((resolve) => {
+        if (!src) return resolve(null);
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        const timer = setTimeout(() => resolve(null), 8000);
+        img.onload = () => { clearTimeout(timer); resolve(img); };
+        img.onerror = () => {
+          clearTimeout(timer);
+          const img2 = new Image();
+          const t2 = setTimeout(() => resolve(null), 4000);
+          img2.onload = () => { clearTimeout(t2); resolve(img2); };
+          img2.onerror = () => { clearTimeout(t2); resolve(null); };
+          img2.src = src;
+        };
+        img.src = src;
+      });
+
+      const roundRectPath = (cx, cy, cw, ch, r) => {
+        ctx.beginPath();
+        ctx.moveTo(cx + r, cy);
+        ctx.arcTo(cx + cw, cy, cx + cw, cy + ch, r);
+        ctx.arcTo(cx + cw, cy + ch, cx, cy + ch, r);
+        ctx.arcTo(cx, cy + ch, cx, cy, r);
+        ctx.arcTo(cx, cy, cx + cw, cy, r);
+        ctx.closePath();
+      };
+
+      // 4. Сортируем по z-index
+      const sorted = [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+      // Параллельная предзагрузка всех уникальных картинок
+      const imageCache = {};
+      const sources = new Set();
+      sorted.forEach(el => {
+        if (el.img) sources.add(el.img);
+        if (el.backImg) sources.add(el.backImg);
+      });
+      await Promise.all(Array.from(sources).map(async src => {
+        imageCache[src] = await loadImage(src);
+      }));
+
+      // 5. Рисуем каждый объект
+      for (const el of sorted) {
+        const x = (el.x || 0) - minX;
+        const y = (el.y || 0) - minY;
+        const ew = el.width || 160;
+        const eh = el.height || 240;
+        const rot = el.rotation || 0;
+
+        ctx.save();
+        ctx.translate(x + ew / 2, y + eh / 2);
+        ctx.rotate(rot * Math.PI / 180);
+        ctx.translate(-ew / 2, -eh / 2);
+
+        try {
+          if (el.type === 'card') {
+            // КЛЮЧЕВАЯ ПРАВКА: рисуем именно ту сторону, которая лежит на столе
+            const imgSrc = el.isFlipped ? el.backImg : el.img;
+            const img = imgSrc ? imageCache[imgSrc] : null;
+
+            ctx.save();
+            roundRectPath(0, 0, ew, eh, 14);
+            ctx.fillStyle = el.isFlipped ? '#2D4A3E' : 'white';
+            ctx.fill();
+            ctx.clip();
+
+            if (img && img.naturalWidth > 0) {
+              // object-contain
+              const imgR = img.naturalWidth / img.naturalHeight;
+              const boxR = ew / eh;
+              let dw, dh, dx, dy;
+              if (imgR > boxR) {
+                dw = ew; dh = ew / imgR; dx = 0; dy = (eh - dh) / 2;
+              } else {
+                dh = eh; dw = eh * imgR; dx = (ew - dw) / 2; dy = 0;
+              }
+              ctx.drawImage(img, dx, dy, dw, dh);
+            } else if (el.isFlipped) {
+              // Рубашка не загрузилась — рисуем фирменный градиент
+              const grad = ctx.createLinearGradient(0, 0, ew, eh);
+              grad.addColorStop(0, '#2D4A3E');
+              grad.addColorStop(1, '#1C1020');
+              ctx.fillStyle = grad;
+              ctx.fillRect(0, 0, ew, eh);
+              ctx.fillStyle = 'rgba(255,255,255,0.3)';
+              ctx.font = 'bold 11px sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText('MAK SPACE', ew / 2, eh / 2);
+            }
+            ctx.restore();
+
+            // Тонкая рамка
+            roundRectPath(0, 0, ew, eh, 14);
+            ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+          } else if (el.type === 'field') {
+            const img = el.img ? imageCache[el.img] : null;
+            if (img && img.naturalWidth > 0) {
+              const imgR = img.naturalWidth / img.naturalHeight;
+              const boxR = ew / eh;
+              let dw, dh, dx, dy;
+              if (imgR > boxR) {
+                dw = ew; dh = ew / imgR; dx = 0; dy = (eh - dh) / 2;
+              } else {
+                dh = eh; dw = eh * imgR; dx = (ew - dw) / 2; dy = 0;
+              }
+              ctx.drawImage(img, dx, dy, dw, dh);
+            }
+          } else if (el.type === 'token') {
+            ctx.beginPath();
+            ctx.arc(ew / 2, eh / 2, ew / 2 - 1, 0, Math.PI * 2);
+            ctx.fillStyle = el.color || '#8B3252';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          } else if (el.type === 'arrow') {
+            const sx = ew / 100;
+            const sy = eh / 100;
+            ctx.fillStyle = el.color || '#8B3252';
+            ctx.beginPath();
+            ctx.moveTo(50 * sx, 10 * sy);
+            ctx.lineTo(80 * sx, 85 * sy);
+            ctx.lineTo(50 * sx, 70 * sy);
+            ctx.lineTo(20 * sx, 85 * sy);
+            ctx.closePath();
+            ctx.fill();
+          } else if (el.type === 'figure') {
+            const color = el.color || '#8B3252';
+            const isMale = el.gender === 'male';
+
+            // Тело
+            ctx.fillStyle = color;
+            if (isMale) {
+              roundRectPath(ew * 0.32, eh * 0.38, ew * 0.36, eh * 0.47, 4);
+              ctx.fill();
+            } else {
+              ctx.beginPath();
+              ctx.moveTo(ew * 0.5, eh * 0.35);
+              ctx.lineTo(ew * 0.75, eh * 0.85);
+              ctx.lineTo(ew * 0.25, eh * 0.85);
+              ctx.closePath();
+              ctx.fill();
+            }
+            // Голова
+            const grad = ctx.createRadialGradient(ew * 0.42, eh * 0.19, 1, ew * 0.5, eh * 0.24, ew * 0.16);
+            grad.addColorStop(0, '#FCE3C5');
+            grad.addColorStop(1, '#C99454');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(ew * 0.5, eh * 0.24, ew * 0.14, 0, Math.PI * 2);
+            ctx.fill();
+            // Глаза
+            if (el.isLaying) {
+              ctx.strokeStyle = '#333';
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              ctx.moveTo(ew * 0.42, eh * 0.24);
+              ctx.quadraticCurveTo(ew * 0.45, eh * 0.26, ew * 0.48, eh * 0.24);
+              ctx.moveTo(ew * 0.52, eh * 0.24);
+              ctx.quadraticCurveTo(ew * 0.55, eh * 0.26, ew * 0.58, eh * 0.24);
+              ctx.stroke();
+            } else {
+              ctx.fillStyle = '#222';
+              ctx.beginPath();
+              ctx.arc(ew * 0.45, eh * 0.24, 1.6, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.beginPath();
+              ctx.arc(ew * 0.55, eh * 0.24, 1.6, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            // Имя
+            if (el.name) {
+              const fs = Math.max(10, ew * 0.12);
+              ctx.font = `900 ${fs}px sans-serif`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+              ctx.lineWidth = 3;
+              ctx.strokeText(String(el.name), ew / 2, eh * 0.62);
+              ctx.fillStyle = 'white';
+              ctx.fillText(String(el.name), ew / 2, eh * 0.62);
+            }
+          } else if (el.type === 'text' || el.type === 'private-text') {
+            const isPrivate = el.type === 'private-text';
+            ctx.fillStyle = isPrivate ? 'rgba(243, 232, 255, 0.95)' : 'rgba(254, 249, 195, 0.95)';
+            roundRectPath(0, 0, ew, eh, 14);
+            ctx.fill();
+            ctx.strokeStyle = isPrivate ? 'rgba(216, 180, 254, 1)' : 'rgba(253, 224, 71, 1)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Достаём чистый текст из HTML
+            const tmp = document.createElement('div');
+            tmp.innerHTML = el.text || '';
+            const text = (tmp.textContent || tmp.innerText || '').trim();
+
+            if (text) {
+              ctx.fillStyle = isPrivate ? '#5B21B6' : '#713F12';
+              ctx.font = '12px sans-serif';
+              ctx.textAlign = 'left';
+              ctx.textBaseline = 'top';
+              const lines = [];
+              const paras = text.split('\n');
+              const maxW = ew - 20;
+              for (const para of paras) {
+                if (!para) { lines.push(''); continue; }
+                const words = para.split(/\s+/);
+                let line = '';
+                for (const word of words) {
+                  const test = line ? line + ' ' + word : word;
+                  if (ctx.measureText(test).width > maxW && line) {
+                    lines.push(line);
+                    line = word;
+                  } else {
+                    line = test;
+                  }
+                }
+                if (line) lines.push(line);
+              }
+              const lineHeight = 16;
+              const maxLines = Math.floor((eh - 16) / lineHeight);
+              let ty = 8;
+              for (const l of lines.slice(0, maxLines)) {
+                ctx.fillText(l, 10, ty);
+                ty += lineHeight;
+              }
+              if (lines.length > maxLines) ctx.fillText('...', 10, ty);
+            }
+          }
+        } catch (drawErr) {
+          console.warn('Element draw error:', drawErr);
+        }
+
+        ctx.restore();
       }
-      const canvas = await window.html2canvas(boardRef.current, { useCORS: true, backgroundColor: tableBg?.bgColor || '#FDFAF6' });
+
+      // 6. Сохраняем
+      const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
-      link.download = `session_${new Date().toLocaleDateString()}.png`;
-      link.href = canvas.toDataURL();
+      const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-');
+      link.download = `Сессия_${dateStr}.png`;
+      link.href = dataUrl;
       link.click();
-      notify("Скриншот успешно сохранен! ✓");
-    } catch(e) {
-      notify("Ошибка при создании скриншота. Попробуйте системный скриншот.");
+      notify("Скриншот сохранен! ✓");
+    } catch (e) {
+      console.error('Screenshot error:', e);
+      notify("Ошибка скриншота: " + (e.message || 'неизвестная'));
     }
   };
 
