@@ -1268,27 +1268,38 @@ export default function App() {
       ctx.fillStyle = tableBg?.bgColor || '#FDFAF6';
       ctx.fillRect(0, 0, W, H);
   
-      const loadSafeImage = async (originalUrl) => {
-        if (!originalUrl) return null;
-        
-        const loadImage = (src) => new Promise((resolve) => {
-          const img = new Image();
-          img.crossOrigin = 'anonymous'; 
-          img.onload = () => resolve(img);
-          img.onerror = () => resolve(null);
-          img.src = src;
-        });
+      // Безопасный загрузчик изображений (решает проблему белых карт)
+      const loadImageSafe = async (url) => {
+        if (!url) return null;
+        try {
+          const fetchAsBase64 = async (fetchUrl) => {
+            const res = await fetch(fetchUrl, { mode: 'cors' });
+            if (!res.ok) throw new Error('Network error');
+            const blob = await res.blob();
+            return await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+          };
   
-        let img = await loadImage(originalUrl);
-        if (img) return img;
-        
-        img = await loadImage(`https://wsrv.nl/?url=${encodeURIComponent(originalUrl)}`);
-        if (img) return img;
-        
-        img = await loadImage(`https://api.allorigins.win/raw?url=${encodeURIComponent(originalUrl)}`);
-        if (img) return img;
-        
-        return null; 
+          let base64 = null;
+          try { base64 = await fetchAsBase64(url); } catch (e) {
+            try { base64 = await fetchAsBase64(`https://corsproxy.io/?${encodeURIComponent(url)}`); } catch (e2) {
+              base64 = await fetchAsBase64(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+            }
+          }
+  
+          return await new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+            img.src = base64;
+          });
+        } catch (err) {
+          return null;
+        }
       };
   
       const roundRectPath = (cx, cy, cw, ch, r) => {
@@ -1303,6 +1314,7 @@ export default function App() {
   
       const sorted = [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
   
+      // Предзагрузка всех картинок
       const imageCache = {};
       const sources = new Set();
       sorted.forEach(el => {
@@ -1310,7 +1322,7 @@ export default function App() {
         if (el.backImg) sources.add(el.backImg);
       });
       await Promise.all(Array.from(sources).map(async src => {
-        imageCache[src] = await loadSafeImage(src);
+        imageCache[src] = await loadImageSafe(src);
       }));
   
       for (const el of sorted) {
@@ -1319,6 +1331,7 @@ export default function App() {
         const ew = el.width || 160;
         const eh = el.height || 240;
         
+        // ВАЖНО: Фигурки не вращают общий контейнер! Их вращение рисуется внутренне
         const rot = el.type === 'figure' ? 0 : (el.rotation || 0);
   
         ctx.save();
@@ -1442,11 +1455,11 @@ export default function App() {
                 ctx.fillText(String(el.name), ew / 2, eh * 0.85);
               }
             } else {
-              const rot = ((el.rotation % 360) + 360) % 360;
+              const rotAngle = ((el.rotation % 360) + 360) % 360;
               let dir = 'up';
-              if (rot >= 45 && rot < 135) dir = 'right';
-              else if (rot >= 135 && rot <= 225) dir = 'down';
-              else if (rot > 225 && rot < 315) dir = 'left';
+              if (rotAngle >= 45 && rotAngle < 135) dir = 'right';
+              else if (rotAngle >= 135 && rotAngle <= 225) dir = 'down';
+              else if (rotAngle > 225 && rotAngle < 315) dir = 'left';
   
               if (dir === 'left' || dir === 'right') {
                 ctx.save();
