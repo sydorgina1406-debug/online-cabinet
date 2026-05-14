@@ -1233,7 +1233,7 @@ export default function App() {
       return notify("Стол пуст, нечего сохранять");
     }
   
-    notify("Создаю скриншот, подождите...", 6000);
+    notify("Создаю скриншот, подождите...", 8000);
   
     try {
       const PADDING = 60;
@@ -1271,12 +1271,24 @@ export default function App() {
       const loadBase64Image = async (url) => {
         if (!url) return null;
         try {
+          // 1. Прямая загрузка (для локальных картинок и базы платформы)
           let res = await fetch(url).catch(() => null);
+          
+          // 2. Мощный CORS-прокси (Отлично справляется с редиректами Google Drive)
           if (!res || !res.ok) {
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-            res = await fetch(proxyUrl);
+            const proxyUrl1 = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+            res = await fetch(proxyUrl1).catch(() => null);
           }
-          if (!res.ok) return null;
+
+          // 3. Запасной прокси (allorigins)
+          if (!res || !res.ok) {
+            const proxyUrl2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+            res = await fetch(proxyUrl2).catch(() => null);
+          }
+  
+          if (!res || !res.ok) return null;
+          
+          // Превращаем успешный ответ в Base64
           const blob = await res.blob();
           const base64 = await new Promise((resolve) => {
             const reader = new FileReader();
@@ -1284,7 +1296,10 @@ export default function App() {
             reader.onerror = () => resolve(null);
             reader.readAsDataURL(blob);
           });
+          
           if (!base64) return null;
+          
+          // Отдаем чистый локальный Base64 канвасу
           return new Promise((resolve) => {
              const img = new Image();
              img.onload = () => resolve(img);
@@ -1309,6 +1324,7 @@ export default function App() {
   
       const sorted = [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
   
+      // Параллельная загрузка всех картинок
       const imageCache = {};
       const sources = new Set();
       sorted.forEach(el => {
