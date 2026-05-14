@@ -11,7 +11,7 @@ import {
   getStorage, ref as storageRef, uploadString, getDownloadURL
 } from 'firebase/storage';
 import {
-  Plus, Layers, RotateCw, RotateCcw, Trash2, Maximize2, Minimize2, X, ChevronUp,
+  Plus, Layers, RotateCw, RotateCcw, Trash2, Maximize2, Minimize2, X, ChevronUp, ChevronDown,
   FolderOpen, LayoutGrid, Move, Cloud, Copy, CheckCircle,
   Users, LogOut, AlertCircle, ExternalLink, Image as ImageIcon,
   Volume2, VolumeX, ArrowUp, ArrowDown, ArrowUpToLine, Save, MousePointer2, UserCircle, UserPlus,
@@ -119,6 +119,7 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
         </linearGradient>
       </defs>
 
+      {}
       {isSide ? (
         <g>
           <g transform={`rotate(${rot}, 50, 24)`} opacity="0.6">
@@ -476,6 +477,7 @@ export default function App() {
   const [isLaserMode, setIsLaserMode] = useState(false);
   const [isCheckingKey, setIsCheckingKey] = useState(false);
   const [appLoading, setAppLoading] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const [platformName, setPlatformName] = useState("ОНЛАЙН КАБИНЕТ");
   
@@ -540,8 +542,8 @@ export default function App() {
         const dx = cx - videoResizeRef.current.startX;
         const dy = cy - videoResizeRef.current.startY;
         setVideoDim({
-          w: Math.max(240, videoResizeRef.current.startW + dx),
-          h: Math.max(300, videoResizeRef.current.startH + dy)
+          w: Math.max(80, videoResizeRef.current.startW + dx),
+          h: Math.max(110, videoResizeRef.current.startH + dy)
         });
       }
     };
@@ -683,7 +685,6 @@ export default function App() {
       setCallStatus('Подготовка...');
       processedCandidates.current.clear();
 
-      // Даем React время на отрисовку модального окна с video-тегами
       await new Promise(resolve => setTimeout(resolve, 100));
 
       setCallStatus('Доступ к камере...');
@@ -696,13 +697,12 @@ export default function App() {
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
 
-      // Принимаем чужой стрим
       pc.ontrack = (event) => {
         if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== event.streams[0]) {
            remoteVideoRef.current.srcObject = event.streams[0];
            remoteVideoRef.current.play().catch(()=>{});
         }
-        setCallStatus(''); // Связь установлена
+        setCallStatus('');
       };
 
       pc.onconnectionstatechange = () => {
@@ -734,14 +734,12 @@ export default function App() {
         const data = snap.data();
         if (!data) return;
 
-        // Если пришел ответ и мы его еще не применяли
         if (data.answer && pc.signalingState === 'have-local-offer') {
           try {
             await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
           } catch(e) { console.error("setRemoteDescription error", e); }
         }
 
-        // Если удаленное описание уже установлено, можно добавлять кандидатов
         if (pc.remoteDescription && data.answerCandidates) {
           data.answerCandidates.forEach(c => {
             const candKey = c.candidate;
@@ -766,7 +764,6 @@ export default function App() {
       setCallStatus('Подготовка...');
       processedCandidates.current.clear();
 
-      // Даем React время на отрисовку модального окна с video-тегами
       await new Promise(resolve => setTimeout(resolve, 100));
 
       setCallStatus('Доступ к камере...');
@@ -1277,14 +1274,14 @@ export default function App() {
 
   const takeScreenshot = async () => {
     if (!boardRef.current) return;
-  
+    
     const elements = cardsOnTable.filter(c => !c.id.startsWith('_'));
     if (elements.length === 0) {
       return notify("Стол пуст, нечего сохранять");
     }
-  
+    
     notify("Создаю скриншот, подождите...", 8000);
-  
+    
     try {
       const PADDING = 60;
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -1307,18 +1304,17 @@ export default function App() {
       maxY += PADDING;
       const W = Math.ceil(maxX - minX);
       const H = Math.ceil(maxY - minY);
-  
+      
       const SCALE = 2;
       const canvas = document.createElement('canvas');
       canvas.width = W * SCALE;
       canvas.height = H * SCALE;
       const ctx = canvas.getContext('2d');
       ctx.scale(SCALE, SCALE);
-  
+      
       ctx.fillStyle = tableBg?.bgColor || '#FDFAF6';
       ctx.fillRect(0, 0, W, H);
-  
-      // Безопасный загрузчик изображений (решает проблему белых карт)
+      
       const loadImageSafe = async (url) => {
         if (!url) return null;
         try {
@@ -1351,7 +1347,7 @@ export default function App() {
           return null;
         }
       };
-  
+      
       const roundRectPath = (cx, cy, cw, ch, r) => {
         ctx.beginPath();
         ctx.moveTo(cx + r, cy);
@@ -1361,10 +1357,9 @@ export default function App() {
         ctx.arcTo(cx, cy, cx + cw, cy, r);
         ctx.closePath();
       };
-  
+      
       const sorted = [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-  
-      // Предзагрузка всех картинок
+      
       const imageCache = {};
       const sources = new Set();
       sorted.forEach(el => {
@@ -1374,14 +1369,13 @@ export default function App() {
       await Promise.all(Array.from(sources).map(async src => {
         imageCache[src] = await loadImageSafe(src);
       }));
-  
+      
       for (const el of sorted) {
         const x = (el.x || 0) - minX;
         const y = (el.y || 0) - minY;
         const ew = el.width || 160;
         const eh = el.height || 240;
         
-        // ВАЖНО: Фигурки не вращают общий контейнер! Их вращение рисуется внутренне
         const rot = el.type === 'figure' ? 0 : (el.rotation || 0);
   
         ctx.save();
@@ -2092,7 +2086,6 @@ export default function App() {
         </div>
       )}
 
-      {}
       {customDialog && (
         <div className="fixed inset-0 z-[500] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl">
@@ -2108,6 +2101,7 @@ export default function App() {
         </div>
       )}
 
+      {}
       {isHelpOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }} onClick={() => setIsHelpOpen(false)}>
           <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-5xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
@@ -2231,53 +2225,50 @@ export default function App() {
       {}
       {isVideoActive && (
         <div
-           className="fixed z-[200] bg-ink rounded-[2rem] shadow-2xl overflow-hidden flex flex-col border border-white/20"
+           onMouseDown={handleVideoPointerDown}
+           onTouchStart={handleVideoPointerDown}
+           className="fixed z-[200] bg-ink rounded-[1.5rem] shadow-2xl overflow-hidden flex flex-col border border-white/20 cursor-move"
            style={{ left: videoPos.x, top: videoPos.y, width: videoDim.w, height: videoDim.h, touchAction: 'none' }}
         >
-          <div
-             onMouseDown={handleVideoPointerDown}
-             onTouchStart={handleVideoPointerDown}
-             className="absolute top-0 left-0 right-0 h-14 bg-gradient-to-b from-black/60 to-transparent z-[60] cursor-move flex items-center justify-between px-6"
-          >
-            <span className="text-white text-[10px] font-black uppercase tracking-widest opacity-80 pointer-events-none">Видеосвязь</span>
-            <button
-               onMouseDown={e => e.stopPropagation()}
-               onTouchStart={e => e.stopPropagation()}
-               onClick={() => {
-                 if (isClientMode) {
-                    setIsVideoActive(false);
-                    if (pcRef.current) pcRef.current.close();
-                    if (localVideoRef.current?.srcObject) localVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
-                 } else {
-                    endNativeCall();
-                 }
-               }}
-               className="bg-red-500/80 p-1.5 rounded-full text-white hover:bg-red-600 transition-colors pointer-events-auto"
-            >
-               <X size={14} />
-            </button>
+          <div className="absolute top-2 right-2 z-[60]">
+             <button
+                onMouseDown={e => e.stopPropagation()}
+                onTouchStart={e => e.stopPropagation()}
+                onClick={() => {
+                  if (isClientMode) {
+                     setIsVideoActive(false);
+                     if (pcRef.current) pcRef.current.close();
+                     if (localVideoRef.current?.srcObject) localVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
+                  } else {
+                     endNativeCall();
+                  }
+                }}
+                className="bg-red-500/80 p-1.5 rounded-full text-white hover:bg-red-600 transition-colors pointer-events-auto shadow-md"
+             >
+                <X size={14} />
+             </button>
           </div>
 
-          <div className="flex-1 bg-black relative">
+          <div className="flex-1 bg-black relative pointer-events-none">
              {callStatus && (
                <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/90 z-40 text-center px-4">
-                  <Loader2 className="animate-spin text-plum mb-3" size={32} />
-                  <span className="text-white text-[10px] font-black tracking-widest uppercase opacity-80">{callStatus}</span>
+                  <Loader2 className="animate-spin text-plum mb-3" size={24} />
+                  <span className="text-white text-[9px] font-black tracking-widest uppercase opacity-80">{callStatus}</span>
                </div>
              )}
              <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
           </div>
 
-          <div className="absolute bottom-4 left-4 w-24 h-32 bg-gray-800 rounded-xl overflow-hidden shadow-2xl border border-white/20 z-50 pointer-events-none">
+          <div className="absolute bottom-2 left-2 w-[30%] h-[30%] min-w-[30px] min-h-[40px] bg-gray-800 rounded-lg overflow-hidden shadow-xl border border-white/20 z-50 pointer-events-none">
              <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100" />
           </div>
 
           <div
              onMouseDown={handleVideoResizePointerDown}
              onTouchStart={handleVideoResizePointerDown}
-             className="absolute bottom-0 right-0 w-8 h-8 cursor-nwse-resize z-[70] flex items-center justify-center text-white/40 hover:text-white"
+             className="absolute bottom-0 right-0 w-12 h-12 cursor-nwse-resize z-[70] flex items-end justify-end p-2 text-white/50 hover:text-white"
           >
-            <Maximize2 size={16} className="rotate-90 pointer-events-none" />
+            <Maximize2 size={18} className="rotate-90 pointer-events-none drop-shadow-md" />
           </div>
         </div>
       )}
@@ -2387,8 +2378,8 @@ export default function App() {
       )}
 
       {}
-      <header className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-3 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm gap-2 relative" style={{ borderColor: `${COLORS.ink}10` }}>
-        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+      <header className={`flex flex-col md:flex-row items-center justify-between px-4 md:px-8 bg-white/90 backdrop-blur-md border-b z-30 shadow-sm relative transition-all duration-300 ${isMobileMenuOpen ? 'pb-8 pt-3 gap-2' : 'py-3'}`} style={{ borderColor: `${COLORS.ink}10` }}>
+        <div className="flex items-center justify-between w-full md:w-auto">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.plum}, ${COLORS.forest})` }}>
               <Layers size={20} />
@@ -2409,10 +2400,17 @@ export default function App() {
               </div>
             </div>
           </div>
+          
+          <button 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden flex items-center justify-center p-2 rounded-xl bg-gray-50 border border-gray-100 shadow-sm transition-all active:scale-95"
+            style={{ color: COLORS.plum }}
+          >
+            {isMobileMenuOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
         </div>
         
-        <div className="flex items-center gap-2 flex-wrap justify-center md:justify-end w-full md:w-auto">
-          
+        <div className={`w-full md:w-auto flex items-center gap-2 flex-wrap justify-center md:justify-end transition-all duration-300 overflow-hidden ${isMobileMenuOpen ? 'max-h-[800px] opacity-100 mt-2' : 'max-h-0 opacity-0 md:max-h-[800px] md:opacity-100 md:mt-0'}`}>
           <div className="flex bg-black/5 p-1 rounded-2xl shadow-inner border border-ink/5 gap-1 mr-1">
              <button onClick={() => setIsFiguresPanelOpen(!isFiguresPanelOpen)} className={`p-2 rounded-xl transition-all flex items-center justify-center ${isFiguresPanelOpen ? 'bg-white shadow-sm text-plum' : 'hover:bg-white text-ink/70'}`} title="Открыть фигурки и стрелки">
                 <FigureIcon gender="male" color={isFiguresPanelOpen ? COLORS.plum : 'currentColor'} isMenu={true} className="w-[18px] h-[18px] opacity-80" />
@@ -2512,6 +2510,14 @@ export default function App() {
           <button onClick={() => window.location.reload()} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5" style={{ color: `${COLORS.ink}80` }} title="Выйти">
             <LogOut size={18} />
           </button>
+        </div>
+
+        <div 
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-16 h-3 bg-white border border-t-0 rounded-b-lg flex items-center justify-center cursor-pointer shadow-sm md:hidden z-40 hover:bg-gray-50"
+          style={{ borderColor: `${COLORS.ink}10` }}
+        >
+          <div className="w-5 h-1 rounded-full bg-gray-300" />
         </div>
       </header>
 
@@ -2837,6 +2843,7 @@ export default function App() {
         </div>
       )}
 
+      {}
       {previewCard && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}F2` }} onClick={() => setPreviewCard(null)}>
           <div className="absolute top-6 left-1/2 -translate-x-1/2 text-white font-black tracking-widest uppercase bg-black/50 px-6 py-2 rounded-full backdrop-blur-md text-xs text-center w-[90%] md:w-auto">
