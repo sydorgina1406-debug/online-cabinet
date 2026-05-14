@@ -1242,7 +1242,7 @@ export default function App() {
       return notify("Стол пуст, нечего сохранять");
     }
 
-    notify("Создаю скриншот, подождите...", 6000);
+    notify("Создаю скриншот, подождите...", 8000);
 
     try {
       // 1. Рамка вокруг всех объектов (с запасом на повороты)
@@ -1255,7 +1255,7 @@ export default function App() {
         const h = el.height || 240;
         const cx = x + w / 2;
         const cy = y + h / 2;
-        const half = Math.sqrt(w * w + h * h) / 2; // диагональ/2 — учитывает поворот
+        const half = Math.sqrt(w * w + h * h) / 2;
         minX = Math.min(minX, cx - half);
         minY = Math.min(minY, cy - half);
         maxX = Math.max(maxX, cx + half);
@@ -1280,23 +1280,44 @@ export default function App() {
       ctx.fillStyle = tableBg?.bgColor || '#FDFAF6';
       ctx.fillRect(0, 0, W, H);
 
-      // 3. Загрузчик картинок с fallback (CORS → без CORS)
-      const loadImage = (src) => new Promise((resolve) => {
-        if (!src) return resolve(null);
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        const timer = setTimeout(() => resolve(null), 8000);
-        img.onload = () => { clearTimeout(timer); resolve(img); };
-        img.onerror = () => {
-          clearTimeout(timer);
-          const img2 = new Image();
-          const t2 = setTimeout(() => resolve(null), 4000);
-          img2.onload = () => { clearTimeout(t2); resolve(img2); };
-          img2.onerror = () => { clearTimeout(t2); resolve(null); };
-          img2.src = src;
-        };
-        img.src = src;
-      });
+      // 3. Загрузчик картинок с обходом CORS через прокси
+      const loadImageProxy = async (originalSrc) => {
+        if (!originalSrc) return null;
+        
+        return new Promise((resolve) => {
+          const tryLoad = (src, useProxy) => {
+            const img = new Image();
+            // Всегда пробуем anonymous, кроме совсем безнадежных случаев
+            img.crossOrigin = 'anonymous'; 
+            
+            const timer = setTimeout(() => {
+                img.src = ''; // Cancel loading
+                resolve(null);
+            }, 8000);
+
+            img.onload = () => {
+              clearTimeout(timer);
+              resolve(img);
+            };
+
+            img.onerror = () => {
+              clearTimeout(timer);
+              // Если сломалось без прокси, пробуем с прокси
+              if (!useProxy && originalSrc.startsWith('http')) {
+                  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(originalSrc)}`;
+                  tryLoad(proxyUrl, true);
+              } else {
+                  // Если даже прокси не помог, сдаемся для этой картинки
+                  resolve(null); 
+              }
+            };
+            img.src = src;
+          };
+
+          // Сначала пробуем загрузить напрямую
+          tryLoad(originalSrc, false);
+        });
+      };
 
       const roundRectPath = (cx, cy, cw, ch, r) => {
         ctx.beginPath();
@@ -1311,15 +1332,16 @@ export default function App() {
       // 4. Сортируем по z-index
       const sorted = [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
 
-      // Параллельная предзагрузка всех уникальных картинок
+      // Параллельная предзагрузка всех уникальных картинок с обходом CORS
       const imageCache = {};
       const sources = new Set();
       sorted.forEach(el => {
         if (el.img) sources.add(el.img);
         if (el.backImg) sources.add(el.backImg);
       });
+      
       await Promise.all(Array.from(sources).map(async src => {
-        imageCache[src] = await loadImage(src);
+        imageCache[src] = await loadImageProxy(src);
       }));
 
       // 5. Рисуем каждый объект
@@ -1337,7 +1359,6 @@ export default function App() {
 
         try {
           if (el.type === 'card') {
-            // КЛЮЧЕВАЯ ПРАВКА: рисуем именно ту сторону, которая лежит на столе
             const imgSrc = el.isFlipped ? el.backImg : el.img;
             const img = imgSrc ? imageCache[imgSrc] : null;
 
@@ -1348,7 +1369,6 @@ export default function App() {
             ctx.clip();
 
             if (img && img.naturalWidth > 0) {
-              // object-contain
               const imgR = img.naturalWidth / img.naturalHeight;
               const boxR = ew / eh;
               let dw, dh, dx, dy;
@@ -1359,7 +1379,6 @@ export default function App() {
               }
               ctx.drawImage(img, dx, dy, dw, dh);
             } else if (el.isFlipped) {
-              // Рубашка не загрузилась — рисуем фирменный градиент
               const grad = ctx.createLinearGradient(0, 0, ew, eh);
               grad.addColorStop(0, '#2D4A3E');
               grad.addColorStop(1, '#1C1020');
@@ -1373,7 +1392,6 @@ export default function App() {
             }
             ctx.restore();
 
-            // Тонкая рамка
             roundRectPath(0, 0, ew, eh, 14);
             ctx.strokeStyle = 'rgba(0,0,0,0.08)';
             ctx.lineWidth = 1;
@@ -1415,7 +1433,6 @@ export default function App() {
             const color = el.color || '#8B3252';
             const isMale = el.gender === 'male';
 
-            // Тело
             ctx.fillStyle = color;
             if (isMale) {
               roundRectPath(ew * 0.32, eh * 0.38, ew * 0.36, eh * 0.47, 4);
@@ -1428,7 +1445,6 @@ export default function App() {
               ctx.closePath();
               ctx.fill();
             }
-            // Голова
             const grad = ctx.createRadialGradient(ew * 0.42, eh * 0.19, 1, ew * 0.5, eh * 0.24, ew * 0.16);
             grad.addColorStop(0, '#FCE3C5');
             grad.addColorStop(1, '#C99454');
@@ -1436,7 +1452,7 @@ export default function App() {
             ctx.beginPath();
             ctx.arc(ew * 0.5, eh * 0.24, ew * 0.14, 0, Math.PI * 2);
             ctx.fill();
-            // Глаза
+            
             if (el.isLaying) {
               ctx.strokeStyle = '#333';
               ctx.lineWidth = 1.5;
@@ -1455,7 +1471,6 @@ export default function App() {
               ctx.arc(ew * 0.55, eh * 0.24, 1.6, 0, Math.PI * 2);
               ctx.fill();
             }
-            // Имя
             if (el.name) {
               const fs = Math.max(10, ew * 0.12);
               ctx.font = `900 ${fs}px sans-serif`;
@@ -1476,7 +1491,6 @@ export default function App() {
             ctx.lineWidth = 1;
             ctx.stroke();
 
-            // Достаём чистый текст из HTML
             const tmp = document.createElement('div');
             tmp.innerHTML = el.text || '';
             const text = (tmp.textContent || tmp.innerText || '').trim();
