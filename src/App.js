@@ -1268,31 +1268,27 @@ export default function App() {
       ctx.fillStyle = tableBg?.bgColor || '#FDFAF6';
       ctx.fillRect(0, 0, W, H);
   
-      // Надежный загрузчик картинок с обходом CORS
       const loadSafeImage = async (originalUrl) => {
         if (!originalUrl) return null;
         
         const loadImage = (src) => new Promise((resolve) => {
           const img = new Image();
-          img.crossOrigin = 'anonymous'; // Обязательно для Canvas
+          img.crossOrigin = 'anonymous'; 
           img.onload = () => resolve(img);
           img.onerror = () => resolve(null);
           img.src = src;
         });
   
-        // 1. Пробуем загрузить напрямую (если сервер позволяет)
         let img = await loadImage(originalUrl);
         if (img) return img;
         
-        // 2. Мощный прокси специально для картинок (wsrv.nl). Решает проблему с Google Drive!
         img = await loadImage(`https://wsrv.nl/?url=${encodeURIComponent(originalUrl)}`);
         if (img) return img;
         
-        // 3. Запасной прокси (allorigins)
         img = await loadImage(`https://api.allorigins.win/raw?url=${encodeURIComponent(originalUrl)}`);
         if (img) return img;
         
-        return null; // Если вообще ничего не помогло
+        return null; 
       };
   
       const roundRectPath = (cx, cy, cw, ch, r) => {
@@ -1307,14 +1303,12 @@ export default function App() {
   
       const sorted = [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
   
-      // Предзагружаем все картинки
       const imageCache = {};
       const sources = new Set();
       sorted.forEach(el => {
         if (el.img) sources.add(el.img);
         if (el.backImg) sources.add(el.backImg);
       });
-      
       await Promise.all(Array.from(sources).map(async src => {
         imageCache[src] = await loadSafeImage(src);
       }));
@@ -1324,7 +1318,8 @@ export default function App() {
         const y = (el.y || 0) - minY;
         const ew = el.width || 160;
         const eh = el.height || 240;
-        const rot = el.rotation || 0;
+        
+        const rot = el.type === 'figure' ? 0 : (el.rotation || 0);
   
         ctx.save();
         ctx.translate(x + ew / 2, y + eh / 2);
@@ -1353,7 +1348,6 @@ export default function App() {
               }
               ctx.drawImage(img, dx, dy, dw, dh);
             } else {
-              // Если вдруг прокси не справился, рисуем градиент вместо белого квадрата
               const grad = ctx.createLinearGradient(0, 0, ew, eh);
               grad.addColorStop(0, el.isFlipped ? '#2D4A3E' : '#E2E8F0');
               grad.addColorStop(1, el.isFlipped ? '#1C1020' : '#CBD5E1');
@@ -1408,55 +1402,190 @@ export default function App() {
             const color = el.color || '#8B3252';
             const isMale = el.gender === 'male';
   
-            ctx.fillStyle = color;
-            if (isMale) {
-              roundRectPath(ew * 0.32, eh * 0.38, ew * 0.36, eh * 0.47, 4);
-              ctx.fill();
-            } else {
-              ctx.beginPath();
-              ctx.moveTo(ew * 0.5, eh * 0.35);
-              ctx.lineTo(ew * 0.75, eh * 0.85);
-              ctx.lineTo(ew * 0.25, eh * 0.85);
-              ctx.closePath();
-              ctx.fill();
-            }
-            const grad = ctx.createRadialGradient(ew * 0.42, eh * 0.19, 1, ew * 0.5, eh * 0.24, ew * 0.16);
-            grad.addColorStop(0, '#FCE3C5');
-            grad.addColorStop(1, '#C99454');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(ew * 0.5, eh * 0.24, ew * 0.14, 0, Math.PI * 2);
-            ctx.fill();
-            
-            if (el.isLaying) {
-              ctx.strokeStyle = '#333';
-              ctx.lineWidth = 1.5;
-              ctx.beginPath();
-              ctx.moveTo(ew * 0.42, eh * 0.24);
-              ctx.quadraticCurveTo(ew * 0.45, eh * 0.26, ew * 0.48, eh * 0.24);
-              ctx.moveTo(ew * 0.52, eh * 0.24);
-              ctx.quadraticCurveTo(ew * 0.55, eh * 0.26, ew * 0.58, eh * 0.24);
+            if (figureViewMode === 'top') {
+              const fRot = el.rotation || 0;
+              ctx.save();
+              ctx.translate(ew / 2, eh / 2);
+              ctx.rotate(fRot * Math.PI / 180);
+              ctx.translate(-ew / 2, -eh / 2);
+  
+              ctx.fillStyle = 'rgba(0,0,0,0.15)';
+              ctx.beginPath(); ctx.arc(ew * 0.5, eh * 0.5, ew * 0.3, 0, Math.PI * 2); ctx.fill();
+  
+              ctx.fillStyle = color;
+              if (isMale) {
+                roundRectPath(ew * 0.25, eh * 0.3, ew * 0.5, eh * 0.4, 6);
+                ctx.fill();
+              } else {
+                ctx.beginPath(); ctx.arc(ew * 0.5, eh * 0.5, ew * 0.28, 0, Math.PI * 2); ctx.fill();
+              }
+              
+              ctx.fillStyle = '#C99454';
+              ctx.beginPath(); ctx.arc(ew * 0.5, eh * 0.5, ew * 0.14, 0, Math.PI * 2); ctx.fill();
+              ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+              ctx.lineWidth = 1;
               ctx.stroke();
-            } else {
+  
               ctx.fillStyle = '#222';
-              ctx.beginPath();
-              ctx.arc(ew * 0.45, eh * 0.24, 1.6, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.beginPath();
-              ctx.arc(ew * 0.55, eh * 0.24, 1.6, 0, Math.PI * 2);
-              ctx.fill();
-            }
-            
-            if (el.name) {
-              const fs = Math.max(10, ew * 0.12);
-              ctx.font = `900 ${fs}px sans-serif`;
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-              ctx.lineWidth = 3;
-              ctx.strokeText(String(el.name), ew / 2, eh * 0.62);
-              ctx.fillStyle = 'white';
-              ctx.fillText(String(el.name), ew / 2, eh * 0.62);
+              ctx.beginPath(); ctx.arc(ew * 0.45, eh * 0.52, 1.8, 0, Math.PI * 2); ctx.fill();
+              ctx.beginPath(); ctx.arc(ew * 0.55, eh * 0.52, 1.8, 0, Math.PI * 2); ctx.fill();
+              ctx.restore();
+  
+              if (el.name) {
+                ctx.font = `900 10px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+                ctx.lineWidth = 2;
+                ctx.strokeText(String(el.name), ew / 2, eh * 0.85);
+                ctx.fillStyle = 'white';
+                ctx.fillText(String(el.name), ew / 2, eh * 0.85);
+              }
+            } else {
+              const rot = ((el.rotation % 360) + 360) % 360;
+              let dir = 'up';
+              if (rot >= 45 && rot < 135) dir = 'right';
+              else if (rot >= 135 && rot <= 225) dir = 'down';
+              else if (rot > 225 && rot < 315) dir = 'left';
+  
+              if (dir === 'left' || dir === 'right') {
+                ctx.save();
+                if (dir === 'left') {
+                  ctx.translate(ew, 0);
+                  ctx.scale(-1, 1);
+                }
+                
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath();
+                ctx.ellipse(ew * 0.5, eh * 0.85, ew * 0.25, eh * 0.08, 0, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                ctx.fillStyle = color;
+                if (isMale) {
+                  roundRectPath(ew * 0.38, eh * 0.38, ew * 0.24, eh * 0.47, 4);
+                  ctx.fill();
+                } else {
+                  ctx.beginPath();
+                  ctx.moveTo(ew * 0.5, eh * 0.35);
+                  ctx.lineTo(ew * 0.7, eh * 0.85);
+                  ctx.lineTo(ew * 0.3, eh * 0.85);
+                  ctx.closePath();
+                  ctx.fill();
+                }
+                
+                ctx.fillStyle = '#C99454';
+                ctx.beginPath();
+                ctx.arc(ew * 0.5, eh * 0.24, ew * 0.14, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#B3783A';
+                ctx.beginPath();
+                ctx.moveTo(ew * 0.62, eh * 0.23);
+                ctx.lineTo(ew * 0.68, eh * 0.26);
+                ctx.lineTo(ew * 0.62, eh * 0.28);
+                ctx.closePath();
+                ctx.fill();
+                
+                if (el.isLaying) {
+                  ctx.strokeStyle = '#333';
+                  ctx.lineWidth = 1.5;
+                  ctx.beginPath();
+                  ctx.moveTo(ew * 0.53, eh * 0.22);
+                  ctx.quadraticCurveTo(ew * 0.56, eh * 0.25, ew * 0.59, eh * 0.22);
+                  ctx.stroke();
+                } else {
+                  ctx.fillStyle = '#222';
+                  ctx.beginPath();
+                  ctx.arc(ew * 0.56, eh * 0.22, 1.8, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+                ctx.restore();
+              } else if (dir === 'down') {
+                ctx.fillStyle = color;
+                if (isMale) {
+                  ctx.beginPath();
+                  ctx.moveTo(ew * 0.32, eh * 0.38);
+                  ctx.lineTo(ew * 0.68, eh * 0.38);
+                  ctx.lineTo(ew * 0.60, eh * 0.85);
+                  ctx.lineTo(ew * 0.40, eh * 0.85);
+                  ctx.closePath();
+                  ctx.fill();
+                } else {
+                  ctx.beginPath();
+                  ctx.moveTo(ew * 0.5, eh * 0.35);
+                  ctx.lineTo(ew * 0.75, eh * 0.85);
+                  ctx.lineTo(ew * 0.25, eh * 0.85);
+                  ctx.closePath();
+                  ctx.fill();
+                }
+                
+                ctx.fillStyle = '#C99454';
+                ctx.beginPath();
+                ctx.arc(ew * 0.5, eh * 0.24, ew * 0.14, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#A67C52';
+                ctx.beginPath();
+                ctx.moveTo(ew * 0.5, eh * 0.26);
+                ctx.lineTo(ew * 0.47, eh * 0.30);
+                ctx.lineTo(ew * 0.53, eh * 0.30);
+                ctx.closePath();
+                ctx.fill();
+                
+                if (el.isLaying) {
+                  ctx.strokeStyle = '#333';
+                  ctx.lineWidth = 1.5;
+                  ctx.beginPath();
+                  ctx.moveTo(ew * 0.41, eh * 0.24);
+                  ctx.quadraticCurveTo(ew * 0.44, eh * 0.27, ew * 0.47, eh * 0.24);
+                  ctx.moveTo(ew * 0.53, eh * 0.24);
+                  ctx.quadraticCurveTo(ew * 0.56, eh * 0.27, ew * 0.59, eh * 0.24);
+                  ctx.stroke();
+                } else {
+                  ctx.fillStyle = '#222';
+                  ctx.beginPath();
+                  ctx.arc(ew * 0.44, eh * 0.24, 1.5, 0, Math.PI * 2);
+                  ctx.fill();
+                  ctx.beginPath();
+                  ctx.arc(ew * 0.56, eh * 0.24, 1.5, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+              } else {
+                ctx.fillStyle = color;
+                if (isMale) {
+                  ctx.beginPath();
+                  ctx.moveTo(ew * 0.32, eh * 0.38);
+                  ctx.lineTo(ew * 0.68, eh * 0.38);
+                  ctx.lineTo(ew * 0.60, eh * 0.85);
+                  ctx.lineTo(ew * 0.40, eh * 0.85);
+                  ctx.closePath();
+                  ctx.fill();
+                } else {
+                  ctx.beginPath();
+                  ctx.moveTo(ew * 0.5, eh * 0.35);
+                  ctx.lineTo(ew * 0.75, eh * 0.85);
+                  ctx.lineTo(ew * 0.25, eh * 0.85);
+                  ctx.closePath();
+                  ctx.fill();
+                }
+                
+                ctx.fillStyle = '#C99454';
+                ctx.beginPath();
+                ctx.arc(ew * 0.5, eh * 0.24, ew * 0.14, 0, Math.PI * 2);
+                ctx.fill();
+              }
+  
+              if (el.name) {
+                const fs = dir === 'left' || dir === 'right' ? 7 : 10;
+                ctx.font = `900 ${fs}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+                ctx.lineWidth = 2;
+                ctx.strokeText(String(el.name), ew / 2, eh * 0.65);
+                ctx.fillStyle = 'white';
+                ctx.fillText(String(el.name), ew / 2, eh * 0.65);
+              }
             }
           } else if (el.type === 'text' || el.type === 'private-text') {
             const isPrivate = el.type === 'private-text';
