@@ -119,7 +119,6 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
         </linearGradient>
       </defs>
 
-      {}
       {isSide ? (
         <g>
           <g transform={`rotate(${rot}, 50, 24)`} opacity="0.6">
@@ -604,10 +603,16 @@ export default function App() {
   const prevDiceTime = useRef(0);
   
   const [diceType, setDiceType] = useState(6);
+  
   const [diceD10, setDiceD10] = useState({ value: 1, timestamp: 0 });
   const [visualDiceD10, setVisualDiceD10] = useState(1);
   const [isAnimatingD10, setIsAnimatingD10] = useState(false);
   const prevDiceTimeD10 = useRef(0);
+
+  const [diceD12, setDiceD12] = useState({ value: 1, timestamp: 0 });
+  const [visualDiceD12, setVisualDiceD12] = useState(1);
+  const [isAnimatingD12, setIsAnimatingD12] = useState(false);
+  const prevDiceTimeD12 = useRef(0);
   
   const [cursors, setCursors] = useState({});
   const lastCursorSync = useRef(0);
@@ -959,6 +964,26 @@ export default function App() {
   }, [diceD10.timestamp, diceD10.value, isMuted]);
 
   useEffect(() => {
+    if (diceD12.timestamp > prevDiceTimeD12.current) {
+      if (prevDiceTimeD12.current !== 0) {
+        playSound('dice', isMuted);
+        setIsAnimatingD12(true);
+        const interval = setInterval(() => setVisualDiceD12(Math.floor(Math.random() * 12) + 1), 80);
+        const timeout = setTimeout(() => {
+          clearInterval(interval);
+          setVisualDiceD12(diceD12.value);
+          setIsAnimatingD12(false);
+        }, 600);
+        prevDiceTimeD12.current = diceD12.timestamp;
+        return () => { clearInterval(interval); clearTimeout(timeout); };
+      } else {
+        setVisualDiceD12(diceD12.value);
+        prevDiceTimeD12.current = diceD12.timestamp;
+      }
+    }
+  }, [diceD12.timestamp, diceD12.value, isMuted]);
+
+  useEffect(() => {
     const init = async () => {
       try { await signInAnonymously(auth); } catch (e) {}
       onAuthStateChanged(auth, (u) => {
@@ -1014,6 +1039,7 @@ export default function App() {
       snap.docs.forEach(d => {
         if (d.id === '_dice_state') setDice({ value: d.data().value, timestamp: d.data().timestamp });
         else if (d.id === '_dice_d10_state') setDiceD10({ value: d.data().value, timestamp: d.data().timestamp });
+        else if (d.id === '_dice_d12_state') setDiceD12({ value: d.data().value, timestamp: d.data().timestamp });
         else if (d.id === '_dice_type') setDiceType(d.data().type || 6);
         else if (d.id === '_settings') {
           if (d.data().platformName) setPlatformName(d.data().platformName);
@@ -2535,7 +2561,7 @@ export default function App() {
               ))}
             </div>
             <div className="flex p-0.5 rounded-lg md:rounded-xl" style={{ backgroundColor: `${COLORS.ink}15` }}>
-              {[6, 10].map(type => (
+              {[6, 10, 12].map(type => (
                 <button key={type} onClick={async () => {
                   setDiceType(type);
                   await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_type'), { type }, { merge: true });
@@ -2548,9 +2574,13 @@ export default function App() {
               <div className={`w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl md:rounded-2xl shadow-md flex items-center justify-center border transition-all ${isAnimating ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.plum}20` }}>
                 {renderDiceFace(visualDice, COLORS.plum)}
               </div>
-            ) : (
+            ) : diceType === 10 ? (
               <div className={`w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl md:rounded-2xl shadow-md flex items-center justify-center border transition-all ${isAnimatingD10 ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.forest}30` }}>
                 <span className="font-black text-2xl md:text-3xl" style={{ color: COLORS.forest }}>{visualDiceD10}</span>
+              </div>
+            ) : (
+              <div className={`w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl md:rounded-2xl shadow-md flex items-center justify-center border transition-all ${isAnimatingD12 ? 'animate-bounce scale-110' : ''}`} style={{ borderColor: `${COLORS.terra}30` }}>
+                <span className="font-black text-2xl md:text-3xl" style={{ color: COLORS.terra }}>{visualDiceD12}</span>
               </div>
             )}
             <button onClick={async () => {
@@ -2560,14 +2590,20 @@ export default function App() {
                 window.crypto.getRandomValues(array);
                 const v = (array[0] % 6) + 1;
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_state'), { value: v, timestamp: Date.now() });
-              } else {
+              } else if (diceType === 10) {
                 if (isAnimatingD10) return;
                 const array = new Uint32Array(1);
                 window.crypto.getRandomValues(array);
                 const v = (array[0] % 10) + 1;
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_d10_state'), { value: v, timestamp: Date.now() });
+              } else if (diceType === 12) {
+                if (isAnimatingD12) return;
+                const array = new Uint32Array(1);
+                window.crypto.getRandomValues(array);
+                const v = (array[0] % 12) + 1;
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_d12_state'), { value: v, timestamp: Date.now() });
               }
-            }} disabled={diceType === 6 ? isAnimating : isAnimatingD10} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="w-full py-2 rounded-xl text-[10px] font-black uppercase shadow-md hover:scale-105 transition-all disabled:opacity-50">
+            }} disabled={diceType === 6 ? isAnimating : diceType === 10 ? isAnimatingD10 : isAnimatingD12} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="w-full py-2 rounded-xl text-[10px] font-black uppercase shadow-md hover:scale-105 transition-all disabled:opacity-50">
               Бросить
             </button>
           </div>
@@ -2856,6 +2892,7 @@ export default function App() {
         </div>
       )}
 
+      {}
       <style>{`
         .backface-hidden { backface-visibility: hidden; }
         .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 6px; }
