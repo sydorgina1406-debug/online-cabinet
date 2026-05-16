@@ -1343,35 +1343,48 @@ export default function App() {
       
       const loadImageSafe = async (url) => {
         if (!url) return null;
+        
+        const tryLoad = (src) => new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error('Load failed'));
+          img.src = src;
+        });
+
+        const proxies = [
+          url,
+          `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+          `https://corsproxy.io/?${encodeURIComponent(url)}`
+        ];
+
+        for (const proxyUrl of proxies) {
+          try {
+            const img = await tryLoad(proxyUrl);
+            if (img && img.naturalWidth > 0) return img;
+          } catch (e) {
+            // Переходим к следующему прокси
+          }
+        }
+        
+        // Последний fallback: получение base64 через JSON
         try {
-          const fetchAsBase64 = async (fetchUrl) => {
-            const res = await fetch(fetchUrl, { mode: 'cors' });
-            if (!res.ok) throw new Error('Network error');
-            const blob = await res.blob();
-            return await new Promise((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.onerror = reject;
-              reader.readAsDataURL(blob);
-            });
-          };
-  
-          let base64 = null;
-          try { base64 = await fetchAsBase64(url); } catch (e) {
-            try { base64 = await fetchAsBase64(`https://corsproxy.io/?${encodeURIComponent(url)}`); } catch (e2) {
-              base64 = await fetchAsBase64(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+          const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.contents) {
+              return await new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => resolve(null);
+                img.src = data.contents;
+              });
             }
           }
-  
-          return await new Promise(resolve => {
-            const img = new Image();
-            img.onload = () => resolve(img);
-            img.onerror = () => resolve(null);
-            img.src = base64;
-          });
-        } catch (err) {
-          return null;
-        }
+        } catch (e) {}
+
+        return null;
       };
       
       const roundRectPath = (cx, cy, cw, ch, r) => {
