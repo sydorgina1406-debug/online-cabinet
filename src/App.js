@@ -18,7 +18,7 @@ Volume2, VolumeX, ArrowUp, ArrowDown, ArrowUpToLine, Save, MousePointer2, UserCi
 Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
 Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, MessageCircle,
 Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff, Dices, UserMinus, BookOpen,
-Bold, Italic, Underline, Strikethrough, List
+Bold, Italic, Underline, Strikethrough, List, MonitorPlay
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -424,10 +424,8 @@ return await getDownloadURL(imgRef);
 };
 
 const copyToClipboard = async (text) => {
-try {
 if (navigator.clipboard && window.isSecureContext) {
 await navigator.clipboard.writeText(text);
-return true;
 } else {
 const el = document.createElement('textarea');
 el.value = text;
@@ -435,12 +433,8 @@ el.style.position = 'fixed';
 el.style.opacity = '0';
 document.body.appendChild(el);
 el.focus(); el.select();
-const res = document.execCommand('copy');
+document.execCommand('copy');
 document.body.removeChild(el);
-return res;
-}
-} catch (err) {
-return false;
 }
 };
 
@@ -1251,16 +1245,8 @@ window._isClientMode = true;
 
 const shareLinkToClient = async () => {
 const url = ${window.location.origin}${window.location.pathname}?room=${roomId};
-const success = await copyToClipboard(url);
-if (success) {
+await copyToClipboard(url);
 setCopyFeedback(true); setTimeout(() => setCopyFeedback(false), 2000);
-notify("Ссылка для клиента скопирована! Отправьте её удобным способом.");
-} else {
-const userPrompt = await askPrompt("Ваше устройство блокирует авто-копирование. Скопируйте ссылку вручную:", url);
-if (userPrompt) {
-notify("Ссылка скопирована вручную.");
-}
-}
 };
 
 const saveCurrentSession = async () => {
@@ -2179,90 +2165,66 @@ return (
         <button onClick={() => setIsHelpOpen(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
           <X size={24} style={{ color: COLORS.ink }} />
         </button>
-        <h2 className="text-2xl font-black uppercase mb-8 text-center" style={{ color: COLORS.ink }}>Руководство по платформе</h2>
+        <h2 className="text-2xl font-black uppercase mb-8 text-center" style={{ color: COLORS.ink }}>Полное руководство</h2>
         
         <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl mb-8 shadow-sm">
-          <h4 className="font-black text-red-700 text-sm flex items-center gap-2 uppercase tracking-wide"><Video size={18}/> Важно для мобильных версий (Видеосвязь)</h4>
+          <h4 className="font-black text-red-700 text-sm flex items-center gap-2 uppercase tracking-wide"><MonitorPlay size={18}/> Важный порядок действий (Работа с клиентом)</h4>
           <p className="text-sm text-red-800 mt-2 leading-relaxed">
-            Чтобы вы или ваш клиент смогли подключиться к видеосвязи со смартфона, <b>обязательно разверните верхнюю панель инструментов</b> (нажав на кнопку со стрелочкой <ChevronDown size={14} className="inline text-red-700"/> в правом верхнем углу экрана).<br/><br/>
-            В развернутом меню появится кнопка <b>«Подключиться к видео» / Значок камеры</b>. Нажмите на нее для запуска трансляции.
+            Для стабильной работы платформы (независимо от того, используете вы телефон или ПК) <b>строго соблюдайте этот порядок</b>:
           </p>
+          <ol className="list-decimal list-inside text-sm text-red-800 mt-2 font-bold space-y-1">
+            <li>Сначала включите видеосвязь (кнопка с камерой).</li>
+            <li>Только после этого копируйте и отправляйте ссылку клиенту.</li>
+          </ol>
+          <p className="text-sm text-red-800 mt-3 leading-relaxed">
+            <b>Для мобильных устройств:</b> Чтобы включить видеосвязь или скопировать ссылку, <b>обязательно разверните верхнюю панель инструментов</b> (нажав на кнопку со стрелочкой <ChevronDown size={14} className="inline text-red-700"/> в правом верхнем углу).
+          </p>
+          <div className="mt-3 p-2 bg-white/50 rounded-lg text-xs font-bold flex gap-2">
+             <AlertCircle size={16} className="shrink-0 text-red-600" />
+             <span>Хотя платформа поддерживает смартфоны, мы настоятельно рекомендуем использовать ПК или планшет для комфортной работы психолога.</span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
           <div className="space-y-4">
-            <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> Доступ Клиента</h3>
+            <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> Клиент и Доступ</h3>
             <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
-              <p>Нажмите <UserPlus size={14} className="inline text-plum"/> <b>«ССЫЛКА»</b> на верхней панели (или в меню на телефоне). Ссылка скопируется — отправьте её клиенту.</p>
-              <p>Клиент переходит по ссылке, вводит своё имя и попадает за ваш стол. <b>Регистрация клиенту не нужна.</b></p>
+              <p>Нажмите <UserPlus size={14} className="inline text-plum"/> <b>«ССЫЛКА ДЛЯ КЛИЕНТА»</b> на верхней панели. Ссылка скопируется — отправьте её клиенту.</p>
+              <p>Клиент переходит по ссылке, вводит своё имя и попадает за ваш стол. <b>Регистрация не нужна.</b></p>
               <p><b>Права клиента:</b> тянуть карты (если колода открыта), двигать их, писать в желтых заметках, бросать игровые кубики.</p>
-              <p className="text-terra"><b>Клиент НЕ может:</b> видеть фиолетовые заметки, открывать библиотеку и менять колоды, удалять всё со стола, видеть вашу лазерную указку (если она выключена).</p>
+              <p className="text-terra"><b>Клиент НЕ может:</b> видеть фиолетовые заметки, открывать библиотеку и менять колоды, удалять всё со стола, видеть лазерную указку (если она выключена у мастера).</p>
             </div>
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><FolderOpen size={16}/> Библиотека и Карты</h3>
+            <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> Групповые и Трансформационные игры</h3>
             <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
-              <p>Открывается кнопкой <b>«Библиотека Мастера»</b> в самом низу экрана.</p>
+              <p>Для групповых игр в платформу встроена система <b>приватности карт</b>:</p>
               <ul className="space-y-1 list-disc list-inside">
-                <li><b>БАЗА:</b> Стандартные колоды, доступные всегда.</li>
-                <li><b>ОБЛАКО:</b> Колоды, добавленные для вас администратором.</li>
-                <li><b>МОИ:</b> Ваше личное пространство. Можно добавить свои колоды ссылкой с Google Диска.</li>
-                <li><b>СЕССИИ:</b> Сохраненные столы (история раскладов).</li>
-              </ul>
-              <div className="bg-plum/10 p-3 rounded-lg border border-plum/20 mt-2">
-                <p className="font-bold text-plum mb-1">Как достать карту на стол?</p>
-                <p className="text-xs">Выберите колоду в левом списке. Нажмите огромную кнопку <b>«Наугад»</b> (вытащит случайную карту рубашкой вверх) или нажмите кнопку <b>«Открыть колоду»</b> справа вверху, чтобы увидеть все изображения и выбрать конкретную.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><MousePointer2 size={16}/> Работа с объектами</h3>
-            <div className="text-sm text-gray-700 leading-relaxed px-2">
-              <p className="mb-2">Наведите курсор на любую карту или фигурку на столе (на телефоне - нажмите на неё), чтобы появилось меню:</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-                <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><RefreshCw size={14} className="text-gray-500" /> Перевернуть (лицо/рубашка)</div>
-                <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Eye size={14} className="text-forest" /> Подсмотреть (только если закрыта)</div>
-                <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Maximize2 size={14} className="text-gray-500" /> Увеличить объект</div>
-                <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><RotateCw size={14} className="text-gray-500" /> Повернуть</div>
-                <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><ArrowUpToLine size={14} className="text-gray-500" /> На передний план</div>
-                <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Lock size={14} className="text-gray-500" /> Закрепить (от сдвигов)</div>
-              </div>
-              <div className="text-xs bg-gray-50 p-3 rounded-lg flex flex-col gap-2">
-                <span><Move size={14} className="inline text-plum"/> <b>Изменить размер:</b> потяните за правый нижний угол карты/фигурки.</span>
-                <span><RotateCw size={14} className="inline text-plum"/> <b>Вращение фигурок:</b> наведите на неё и потяните за появившийся круг компаса.</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> Групповые форматы (Приватность)</h3>
-            <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
-              <p>В платформе есть встроенная система приватности для групповых игр:</p>
-              <ul className="space-y-2 list-disc list-inside">
-                <li>Когда участник (или вы) нажимает <b><Eye size={14} className="inline text-forest" /> Подсмотреть</b> на закрытой карте, она <b>закрепляется за ним</b>. Под картой появляется его имя.</li>
+                <li>Когда участник (клиент) нажимает <b><Eye size={14} className="inline text-forest" /> Подсмотреть</b> на ничьей закрытой карте, она <b>закрепляется за ним</b>.</li>
+                <li>Под картой появляется его имя (например, <UserCircle size={12} className="inline" /> Анна).</li>
                 <li><b>Важно:</b> Никто другой из участников больше не сможет ни подсмотреть, ни перевернуть эту карту.</li>
-                <li>Вы (Психолог) можете в любой момент посмотреть или перевернуть любую карту любого участника, а также отвязать владельца.</li>
+                <li>Вы (Психолог) имеете полный контроль: вы в любой момент можете подсмотреть или перевернуть любую карту любого участника, а также отвязать владельца.</li>
               </ul>
             </div>
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><LayoutGrid size={16}/> Панель инструментов Мастера</h3>
+            <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><LayoutGrid size={16}/> Панель инструментов</h3>
             <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
-              <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>ПОЛЕ:</b> Изменение фона стола или загрузка своего игрового поля (картинки, на которую можно класть карты).</div></div>
+              <div className="flex items-start gap-2"><Crosshair size={16} className="text-red-500 mt-0.5 shrink-0"/> <div><b>Лазерная указка:</b> Обычная мышка скрыта от клиента. Указка включает красную точку, которую видят все (удобно показывать детали).</div></div>
+              <div className="flex items-start gap-2"><Camera size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Скриншот:</b> Делает качественный снимок всего рабочего стола и скачивает на ваше устройство.</div></div>
+              <div className="flex items-start gap-2"><Save size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Сохранить сессию:</b> Сохраняет весь расклад в библиотеку (вкладка СЕССИИ), чтобы загрузить его на следующих встречах.</div></div>
+              <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Настройки Поля:</b> Изменение фона стола (нейро-текстуры) или загрузка своего игрового поля (картинки, на которую можно класть карты).</div></div>
+              <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Очистить стол:</b> Удаляет все незакрепленные объекты. Внизу появится кнопка отмены (действует 10 секунд).</div></div>
               <div className="flex items-start gap-2"><Timer size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Таймер:</b> Устанавливает общее время (60/90 мин). Синхронизирован с клиентом.</div></div>
-              <div className="flex items-start gap-2"><Crosshair size={16} className="text-red-500 mt-0.5 shrink-0"/> <div><b>Лазерная указка:</b> Обычная мышка скрыта от клиента. Указка включает красную точку, которую видят все.</div></div>
-              <div className="flex items-start gap-2"><Save size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Сохранить сессию:</b> Сохраняет весь расклад в раздел СЕССИИ, чтобы продолжить на следующих встречах.</div></div>
-              <div className="flex items-start gap-2"><Camera size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Скриншот:</b> Делает качественный снимок всего стола.</div></div>
-              <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Очистить стол:</b> Удаляет все незакрепленные объекты (есть кнопка отмены на 10 сек).</div></div>
+              <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Видеосвязь:</b> Встроенная прямо в кабинет. Окно видео можно перемещать и растягивать.</div></div>
             </div>
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Type size={16}/> Работа с Заметками</h3>
+            <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Type size={16}/> Работа с заметками</h3>
             <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
               <div className="flex items-start gap-3 bg-yellow-50 p-3 rounded-xl border border-yellow-100">
                 <div className="p-2 bg-white rounded-lg shadow-sm text-terra shrink-0"><Type size={16} /></div>
@@ -2270,25 +2232,62 @@ return (
               </div>
               <div className="flex items-start gap-3 bg-purple-50 p-3 rounded-xl border border-purple-100">
                 <div className="p-2 bg-white rounded-lg shadow-sm text-purple-600 relative shrink-0"><Type size={16} /><EyeOff size={8} className="absolute bottom-1 right-1" /></div>
-                <div><b className="text-purple-900">Фиолетовая (Секретная):</b> <b>Видите только вы</b>. На экране клиента её не существует. Идеально для ваших скрытых пометок.</div>
+                <div><b className="text-purple-900">Фиолетовая (Секретная):</b> <b>Видите только вы</b>. На экране клиента её не существует. Идеально для ваших личных скрытых пометок.</div>
               </div>
               <div className="flex items-start gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
                 <div className="p-2 bg-white rounded-lg shadow-sm text-blue-600 shrink-0"><BookOpen size={16} /></div>
-                <div><b className="text-blue-900">Мои Техники:</b> Записная книжка Психолога. Запишите в неё свои скрипты. В один клик текст из неё выкладывается на стол в виде Секретной заметки.</div>
+                <div><b className="text-blue-900">Мои Техники:</b> Записная книжка Психолога. Запишите в неё свои скрипты до сессии. В один клик текст из неё выкладывается на стол в виде Секретной заметки!</div>
               </div>
             </div>
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Layers size={16}/> Плавающие панели (Игры)</h3>
+            <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Layers size={16}/> Плавающие панели</h3>
             <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
               <div className="flex items-start gap-3 bg-emerald-50 p-3 rounded-xl border border-emerald-100">
                 <div className="p-2 bg-white rounded-lg shadow-sm text-emerald-700 shrink-0"><FigureIcon gender="male" color={COLORS.forest} isMenu={true} className="w-[18px] h-[18px] opacity-80" /></div>
-                <div><b className="text-emerald-800">Расстановки (Фигурки):</b> Кнопка с фигуркой вверху. Выбор цвета, пола, имени. Можно уложить фигурку на пол или закрыть глаза. Есть переключатель вида (Сбоку/Сверху).</div>
+                <div><b className="text-emerald-800">Фигурки для расстановок:</b> Кнопка с фигуркой вверху открывает панель. Вы можете выбирать цвет, указывать имя, добавлять мужские/женские фигурки и стрелки. Есть переключатель вида (Сбоку/Сверху).</div>
               </div>
               <div className="flex items-start gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
                 <div className="p-2 bg-white rounded-lg shadow-sm text-blue-700 shrink-0"><Dices size={18} /></div>
-                <div><b className="text-blue-800">Игровые кубики:</b> Кнопка с кубиками. Доступны цветные фишки-маркеры и кубики (d6, d10, d12). Бросать кубик может и клиент.</div>
+                <div><b className="text-blue-800">Игровые кубики и фишки:</b> Кнопка с кубиками открывает панель. Доступны цветные маркеры и кубики (d6 и d10). Бросать кубик может и клиент.</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><MousePointer2 size={16}/> Действия с объектами</h3>
+            <div className="text-sm text-gray-700 leading-relaxed px-2">
+              <p className="mb-2">Наведите курсор на любую карту или фигурку на столе, чтобы появилось меню:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><RefreshCw size={14} className="text-gray-500" /> Перевернуть (лицо/рубашка)</div>
+                <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Eye size={14} className="text-forest" /> Подсмотреть (только если закрыта)</div>
+                <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Maximize2 size={14} className="text-gray-500" /> Увеличить объект</div>
+                <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><RotateCw size={14} className="text-gray-500" /> Повернуть</div>
+                <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><ArrowUpToLine size={14} className="text-gray-500" /> На передний план</div>
+                <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Lock size={14} className="text-gray-500" /> Закрепить (от сдвигов)</div>
+                <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><EyeOff size={14} className="text-gray-500" /> Уложить/Разбудить (сон/смерть для фигур)</div>
+              </div>
+              <p className="mt-3 text-xs bg-gray-50 p-3 rounded-lg flex flex-col gap-2">
+                <span><Move size={14} className="inline text-plum"/> Чтобы <b>изменить размер</b>, потяните за правый нижний угол.</span>
+                <span><RotateCw size={14} className="inline text-plum"/> Чтобы <b>свободно вращать фигурку</b>, наведите на неё и нажмите на появившийся <b>круг компаса</b> вокруг неё. Для карт используйте кнопки Влево/Вправо в меню.</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4 lg:col-span-2">
+            <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><FolderOpen size={16}/> Библиотека Мастера</h3>
+            <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
+              <p>Вызывается длинной кнопкой <b>«Библиотека Мастера»</b> в самом низу экрана.</p>
+              <ul className="space-y-1 list-disc list-inside grid grid-cols-1 md:grid-cols-2">
+                <li><b>БАЗА:</b> Стандартные колоды, доступные всегда.</li>
+                <li><b>ОБЛАКО:</b> Колоды, загруженные разработчиком специально для вас.</li>
+                <li><b>МОИ:</b> Ваше личное пространство. Можно добавить колоды ссылкой с вашего Google Диска. Видите их только вы.</li>
+                <li><b>СЕССИИ:</b> Сохраненные столы (история раскладов).</li>
+              </ul>
+              <div className="bg-plum/10 p-3 rounded-lg border border-plum/20 mt-2">
+                <p className="font-bold text-plum mb-1">Как вытаскивать карты?</p>
+                <p className="text-xs">Выберите колоду в левом списке. Нажмите <b>«Наугад»</b> (вытащит случайную рубашкой вверх) или нажмите кнопку <b>«Открыть колоду»</b> справа вверху, чтобы увидеть все изображения и выбрать конкретную.</p>
               </div>
             </div>
           </div>
@@ -2419,7 +2418,7 @@ return (
               }} />
               {isUploadingBg ? <Loader2 size={20} className="animate-spin" /> : <ImageIcon size={20} />}
               <span className="text-[9px] md:text-[10px] font-black uppercase text-center leading-tight">Свой<br/>Фон</span>
-            </label>
+        </label>
           </div>
         </div>
         <div>
@@ -2477,21 +2476,13 @@ return (
         </div>
       </div>
       
-      {/* МОБИЛЬНЫЕ КНОПКИ (ВСЕГДА ВИДНЫ) */}
-      <div className="flex items-center gap-2 md:hidden">
-        {!isClientMode && (
-          <button onClick={shareLinkToClient} className="p-2 rounded-xl border shadow-sm transition-all flex items-center justify-center" style={{ backgroundColor: copyFeedback ? COLORS.forest : 'white', borderColor: copyFeedback ? COLORS.forest : `${COLORS.plum}30`, color: copyFeedback ? 'white' : COLORS.plum }} title="Скопировать ссылку для клиента">
-            {copyFeedback ? <CheckCircle size={16} /> : <UserPlus size={16} />}
-          </button>
-        )}
-        <button 
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="flex items-center justify-center p-2 rounded-xl bg-gray-50 border border-gray-100 shadow-sm transition-all active:scale-95"
-          style={{ color: COLORS.plum }}
-        >
-          {isMobileMenuOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </button>
-      </div>
+      <button 
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="md:hidden flex items-center justify-center p-2 rounded-xl bg-gray-50 border border-gray-100 shadow-sm transition-all active:scale-95"
+        style={{ color: COLORS.plum }}
+      >
+        {isMobileMenuOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+      </button>
     </div>
     
     <div className={`w-full md:w-auto flex items-center gap-2 flex-wrap justify-center md:justify-end transition-all duration-300 overflow-hidden ${isMobileMenuOpen ? 'max-h-[800px] opacity-100 mt-2' : 'max-h-0 opacity-0 md:max-h-[800px] md:opacity-100 md:mt-0'}`}>
@@ -2544,7 +2535,7 @@ return (
       </button>
       
       {!isClientMode && (
-        <button onClick={shareLinkToClient} className="hidden md:flex px-3 md:px-4 py-2.5 rounded-[1rem] text-[10px] font-black border items-center justify-center gap-2 shadow-sm transition-all hover:scale-105 min-w-[40px]" style={{ backgroundColor: copyFeedback ? COLORS.forest : 'white', borderColor: copyFeedback ? COLORS.forest : `${COLORS.plum}30`, color: copyFeedback ? 'white' : COLORS.plum }} title="Поделиться ссылкой с клиентом">
+        <button onClick={shareLinkToClient} className="px-3 md:px-4 py-2.5 rounded-[1rem] text-[10px] font-black border flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-105 min-w-[40px]" style={{ backgroundColor: copyFeedback ? COLORS.forest : 'white', borderColor: copyFeedback ? COLORS.forest : `${COLORS.plum}30`, color: copyFeedback ? 'white' : COLORS.plum }} title="Поделиться ссылкой с клиентом">
           {copyFeedback ? <CheckCircle size={14} /> : <UserPlus size={14} />}
           <span className="ml-1 text-[9px] md:text-[10px] whitespace-nowrap">{copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА"}</span>
         </button>
