@@ -2839,9 +2839,10 @@ export default function App() {
                         <div className="font-black uppercase tracking-widest mb-2 flex items-center gap-1"><FolderOpen size={11} /> Как добавить колоду с Google Диска:</div>
                         <div className="space-y-1 font-medium" style={{ color: `${COLORS.ink}99` }}>
                           <div>1. Откройте папку с картами на Google Диске</div>
-                          <div>2. Правая кнопка → <b>"Открыть доступ"</b></div>
-                          <div>3. Нажмите <b>"Все у кого есть ссылка"</b></div>
-                          <div>4. Скопируйте ссылку и вставьте ниже</div>
+                          <div>2. Правая кнопка → <b>"Поделиться"</b></div>
+                          <div>3. В разделе доступа выберите <b>"Все, у кого есть ссылка"</b></div>
+                          <div>4. Нажмите <b>"Копировать ссылку"</b> и вставьте ниже</div>
+                          <div>5. <b>Важно:</b> файл-обложку назовите со словом "рубашка" в имени</div>
                         </div>
                       </div>
                       <button onClick={addDeckByLinks} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black transition-all uppercase hover:opacity-80 shadow-sm" style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }}>
