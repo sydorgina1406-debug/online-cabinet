@@ -665,11 +665,12 @@ export default function App() {
     notifyTimeoutRef.current = setTimeout(() => setNotification(""), time);
   };
 
-  const askPrompt = (title, placeholder = '') => {
+  const askPrompt = (title, defaultValue = '', placeholder = '') => {
     return new Promise((resolve) => {
       setCustomDialog({
         type: 'prompt',
         title,
+        defaultValue,
         placeholder,
         onOk: (val) => resolve(val),
         onCancel: () => resolve(null)
@@ -1991,7 +1992,7 @@ export default function App() {
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-lg font-black mb-4 text-center" style={{ color: COLORS.ink }}>{customDialog.title}</h3>
             {customDialog.type === 'prompt' && (
-              <input autoFocus defaultValue={customDialog.placeholder || ''} id="dialog-input" className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center" style={{ borderColor: COLORS.haze }} onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))} />
+              <input autoFocus defaultValue={customDialog.defaultValue || ''} placeholder={customDialog.placeholder || ''} id="dialog-input" className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center" style={{ borderColor: COLORS.haze }} onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))} />
             )}
             <div className="flex gap-3">
               <button onClick={() => { customDialog.onCancel(); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">Отмена</button>
@@ -2196,7 +2197,7 @@ export default function App() {
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-lg font-black mb-4 text-center" style={{ color: COLORS.ink }}>{customDialog.title}</h3>
             {customDialog.type === 'prompt' && (
-              <input autoFocus defaultValue={customDialog.placeholder || ''} id="dialog-input" className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center" style={{ borderColor: COLORS.haze }} onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))} />
+              <input autoFocus defaultValue={customDialog.defaultValue || ''} placeholder={customDialog.placeholder || ''} id="dialog-input" className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center" style={{ borderColor: COLORS.haze }} onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))} />
             )}
             <div className="flex gap-3">
               <button onClick={() => { customDialog.onCancel(); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">Отмена</button>
@@ -2865,16 +2866,36 @@ export default function App() {
                         </div>
                       </button>
                       {!item.isBaseDeck && !item.isPlatformDeck && (
-                        <button onClick={async () => {
-                          const ok = await askConfirm("Удалить колоду?");
-                          if (ok) {
-                            if (activeTab === 'local') setLocalDecks(p => p.filter(d => d.id !== item.id));
-                            else await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_decks', item.id));
-                            notify("Удалено");
-                          }
-                        }} className="opacity-0 group-hover:opacity-100 p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: COLORS.terra }}>
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
+                          <button onClick={async () => {
+                            const newName = await askPrompt("Новое имя колоды:", item.name);
+                            if (!newName || !newName.trim()) return;
+                            const trimmed = newName.trim();
+                            if (activeTab === 'local') {
+                              setLocalDecks(p => p.map(d => d.id === item.id ? { ...d, name: trimmed } : d));
+                              notify("Имя обновлено ✓");
+                            } else {
+                              try {
+                                await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_decks', item.id), { name: trimmed });
+                                notify("Имя обновлено ✓");
+                              } catch (e) {
+                                notify("Ошибка: " + e.message);
+                              }
+                            }
+                          }} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: COLORS.plum }} title="Переименовать">
+                            <Edit2 size={16} />
+                          </button>
+                          <button onClick={async () => {
+                            const ok = await askConfirm("Удалить колоду?");
+                            if (ok) {
+                              if (activeTab === 'local') setLocalDecks(p => p.filter(d => d.id !== item.id));
+                              else await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_decks', item.id));
+                              notify("Удалено");
+                            }
+                          }} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: COLORS.terra }} title="Удалить">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       )}
                     </div>
                   ))}
