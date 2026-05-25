@@ -715,28 +715,36 @@ export default function App() {
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
 
+      // ВАЖНО: сначала добавляем треки, потом всё остальное
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
       pc.ontrack = (event) => {
-        if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== event.streams[0]) {
+        console.log('[PSY] ontrack получен:', event.streams);
+        if (remoteVideoRef.current) {
            remoteVideoRef.current.srcObject = event.streams[0];
-           remoteVideoRef.current.play().catch(()=>{});
+           remoteVideoRef.current.play().catch(err => console.warn('play err', err));
         }
         setCallStatus('');
       };
 
       pc.onconnectionstatechange = () => {
+        console.log('[PSY] connectionState:', pc.connectionState);
         if (pc.connectionState === 'connected') setCallStatus('');
-        else if (pc.connectionState === 'disconnected') setCallStatus('Связь прервана...');
+        else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') setCallStatus('Связь прервана...');
       };
 
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+      pc.oniceconnectionstatechange = () => {
+        console.log('[PSY] iceConnectionState:', pc.iceConnectionState);
+      };
 
       const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
-      await setDoc(callDoc, { offerCandidates: [], answerCandidates: [] });
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: true }, { merge: true });
+      // Чистим документ перед стартом
+      await setDoc(callDoc, { offerCandidates: [], answerCandidates: [], createdAt: Date.now() });
 
       pc.onicecandidate = (event) => {
         if (event.candidate) {
-          updateDoc(callDoc, { offerCandidates: arrayUnion(event.candidate.toJSON()) });
+          console.log('[PSY] отправляю ICE кандидата');
+          updateDoc(callDoc, { offerCandidates: arrayUnion(event.candidate.toJSON()) }).catch(e => console.error('ice send err', e));
         }
       };
 
@@ -744,28 +752,44 @@ export default function App() {
       await pc.setLocalDescription(offer);
       await updateDoc(callDoc, { offer: { type: offer.type, sdp: offer.sdp } });
 
+      // Только после создания offer оповещаем клиента
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: true }, { merge: true });
+
       setCallStatus('Ожидание клиента...');
 
       if (callSnapshotUnsubRef.current) callSnapshotUnsubRef.current();
+
+      let answerSet = false;
 
       callSnapshotUnsubRef.current = onSnapshot(callDoc, async (snap) => {
         const data = snap.data();
         if (!data) return;
 
-        if (data.answer && pc.signalingState === 'have-local-offer') {
+        // Принимаем answer один раз
+        if (data.answer && !answerSet && pc.signalingState !== 'closed') {
           try {
+            console.log('[PSY] получен answer, ставлю remoteDescription');
             await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-          } catch(e) { console.error("setRemoteDescription error", e); }
+            answerSet = true;
+          } catch(e) { 
+            console.error("[PSY] setRemoteDescription error", e); 
+          }
         }
 
+        // ICE-кандидаты от клиента — обрабатываем только после установки remoteDescription
         if (pc.remoteDescription && data.answerCandidates) {
-          data.answerCandidates.forEach(c => {
-            const candKey = c.candidate;
+          for (const c of data.answerCandidates) {
+            const candKey = JSON.stringify(c);
             if (!processedCandidates.current.has(candKey)) {
-               pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
-               processedCandidates.current.add(candKey);
+              processedCandidates.current.add(candKey);
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(c));
+                console.log('[PSY] добавил answer кандидата');
+              } catch(e) {
+                console.warn('[PSY] addIceCandidate err', e);
+              }
             }
-          });
+          }
         }
       });
     } catch (err) {
@@ -794,55 +818,78 @@ export default function App() {
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
 
+      // ВАЖНО: сначала добавляем треки
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
       pc.ontrack = (event) => {
-        if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== event.streams[0]) {
+        console.log('[CLIENT] ontrack получен:', event.streams);
+        if (remoteVideoRef.current) {
            remoteVideoRef.current.srcObject = event.streams[0];
-           remoteVideoRef.current.play().catch(()=>{});
+           remoteVideoRef.current.play().catch(err => console.warn('play err', err));
         }
         setCallStatus('');
       };
 
       pc.onconnectionstatechange = () => {
+        console.log('[CLIENT] connectionState:', pc.connectionState);
         if (pc.connectionState === 'connected') setCallStatus('');
-        else if (pc.connectionState === 'disconnected') setCallStatus('Связь прервана...');
+        else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') setCallStatus('Связь прервана...');
       };
 
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+      pc.oniceconnectionstatechange = () => {
+        console.log('[CLIENT] iceConnectionState:', pc.iceConnectionState);
+      };
 
       const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
 
       pc.onicecandidate = (event) => {
         if (event.candidate) {
-          updateDoc(callDoc, { answerCandidates: arrayUnion(event.candidate.toJSON()) });
+          console.log('[CLIENT] отправляю ICE кандидата');
+          updateDoc(callDoc, { answerCandidates: arrayUnion(event.candidate.toJSON()) }).catch(e => console.error('ice send err', e));
         }
       };
 
-      const callData = (await getDoc(callDoc)).data();
-      if (!callData?.offer) {
-        setCallStatus('Ожидание психолога...');
-        return;
-      }
+      // Ждём offer от психолога (если ещё не появился — ждём через onSnapshot)
+      setCallStatus('Ожидание сигнала от психолога...');
 
-      setCallStatus('Соединение...');
-      await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      await updateDoc(callDoc, { answer: { type: answer.type, sdp: answer.sdp } });
-
+      let offerHandled = false;
       if (callSnapshotUnsubRef.current) callSnapshotUnsubRef.current();
 
-      callSnapshotUnsubRef.current = onSnapshot(callDoc, (snap) => {
+      callSnapshotUnsubRef.current = onSnapshot(callDoc, async (snap) => {
         const data = snap.data();
         if (!data) return;
 
+        // Обрабатываем offer один раз
+        if (data.offer && !offerHandled && pc.signalingState === 'stable') {
+          offerHandled = true;
+          try {
+            console.log('[CLIENT] получен offer, ставлю remoteDescription');
+            setCallStatus('Соединение...');
+            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            await updateDoc(callDoc, { answer: { type: answer.type, sdp: answer.sdp } });
+            console.log('[CLIENT] answer отправлен');
+          } catch(e) {
+            console.error('[CLIENT] обработка offer ошибка:', e);
+            offerHandled = false;
+          }
+        }
+
+        // ICE-кандидаты от психолога
         if (pc.remoteDescription && data.offerCandidates) {
-          data.offerCandidates.forEach(c => {
-            const candKey = c.candidate;
+          for (const c of data.offerCandidates) {
+            const candKey = JSON.stringify(c);
             if (!processedCandidates.current.has(candKey)) {
-               pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
-               processedCandidates.current.add(candKey);
+              processedCandidates.current.add(candKey);
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(c));
+                console.log('[CLIENT] добавил offer кандидата');
+              } catch(e) {
+                console.warn('[CLIENT] addIceCandidate err', e);
+              }
             }
-          });
+          }
         }
       });
     } catch (err) {
