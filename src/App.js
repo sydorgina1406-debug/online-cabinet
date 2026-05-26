@@ -1937,7 +1937,7 @@ export default function App() {
     if (!input || !input.trim()) return;
     const folderId = extractDriveFolderId(input.trim());
     if (folderId) {
-      const name = await askPrompt("Имя колоды:");
+      const name = await askPrompt("Имя колоды:", "", "Напр: Эмоции");
       if (!name) return;
       notify("Загружаю список файлов из папки...");
       try {
@@ -1963,7 +1963,7 @@ export default function App() {
         notify("Ошибка загрузки папки: " + e.message);
       }
     } else {
-      const name = await askPrompt("Имя колоды:");
+      const name = await askPrompt("Имя колоды:", "", "Напр: Ресурсы");
       if (!name) return;
       const linkArray = input.split(/[\n\r,\s]+/).map(l => l.trim()).filter(l => l.length > 10).map(l => convertDriveLink(l)).filter(Boolean);
       if (linkArray.length === 0) return notify("Не найдено ни одной ссылки");
@@ -1992,7 +1992,7 @@ export default function App() {
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-lg font-black mb-4 text-center" style={{ color: COLORS.ink }}>{customDialog.title}</h3>
             {customDialog.type === 'prompt' && (
-              <input autoFocus defaultValue={customDialog.defaultValue || ''} placeholder={customDialog.placeholder || ''} id="dialog-input" className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center" style={{ borderColor: COLORS.haze }} onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))} />
+              <input key={customDialog.title} autoFocus defaultValue={customDialog.defaultValue || ''} placeholder={customDialog.placeholder || ''} id="dialog-input" className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center" style={{ borderColor: COLORS.haze }} onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))} />
             )}
             <div className="flex gap-3">
               <button onClick={() => { customDialog.onCancel(); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">Отмена</button>
@@ -2197,7 +2197,7 @@ export default function App() {
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-lg font-black mb-4 text-center" style={{ color: COLORS.ink }}>{customDialog.title}</h3>
             {customDialog.type === 'prompt' && (
-              <input autoFocus defaultValue={customDialog.defaultValue || ''} placeholder={customDialog.placeholder || ''} id="dialog-input" className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center" style={{ borderColor: COLORS.haze }} onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))} />
+              <input key={customDialog.title} autoFocus defaultValue={customDialog.defaultValue || ''} placeholder={customDialog.placeholder || ''} id="dialog-input" className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center" style={{ borderColor: COLORS.haze }} onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))} />
             )}
             <div className="flex gap-3">
               <button onClick={() => { customDialog.onCancel(); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">Отмена</button>
