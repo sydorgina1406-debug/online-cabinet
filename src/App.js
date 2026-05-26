@@ -1326,6 +1326,12 @@ export default function App() {
       notify(`Здравствуйте, ${name}. Кабинет готов.`);
     };
 
+    // Тот самый запасной вход (ВРЕМЕННО), чтобы вы не застряли
+    if ((inputEmail === "yulia" || inputEmail === "юлия") && inputPwd === "owner777") {
+      enterRoomAsPsy("Юлия");
+      return;
+    }
+
     setIsCheckingKey(true);
     try {
       let csvText = '';
@@ -1339,6 +1345,12 @@ export default function App() {
         if (!proxyResponse.ok) throw new Error(`Proxy HTTP ${proxyResponse.status}`);
         csvText = await proxyResponse.text();
       }
+
+      // Проверяем, не HTML ли нам вернулся (если таблица не опубликована)
+      if (csvText.trim().startsWith('<')) {
+         throw new Error("NOT_PUBLISHED");
+      }
+
       const rows = csvText.split('\n').map(row => {
         const result = [];
         let current = '';
@@ -1351,13 +1363,20 @@ export default function App() {
         result.push(current.trim());
         return result;
       });
-      let found = null; let valid = false;
+      
+      let found = null; 
+      let valid = false;
+      let debugDateStr = '';
+
       for (let i = 1; i < rows.length; i++) {
         if (rows[i].length >= 6 &&
           rows[i][0].trim().toLowerCase() === inputEmail &&
           rows[i][1].trim() === inputPwd) {
+          
           found = rows[i][2].trim();
           let dateStr = rows[i][5].trim();
+          debugDateStr = dateStr;
+          
           if (dateStr.includes('.')) {
             const parts = dateStr.split('.');
             if (parts.length === 3) dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
@@ -1371,14 +1390,24 @@ export default function App() {
       }
       
       setIsCheckingKey(false);
-      if (found && valid) { 
-        enterRoomAsPsy(found); 
-      } else { 
-        notify(found ? "Подписка истекла (Проверьте формат даты в таблице)" : "Неверный Email или Пароль"); 
+      
+      if (found) {
+        if (valid) {
+          enterRoomAsPsy(found);
+        } else {
+          notify(`Подписка истекла. Дата в таблице: ${debugDateStr}`);
+        }
+      } else {
+        notify("Неверный Email или Пароль (вас нет в таблице)");
       }
+
     } catch (e) {
       setIsCheckingKey(false);
-      notify("Ошибка связи с таблицей. Включите прокси или убедитесь что таблица опубликована в интернете.");
+      if (e.message === "NOT_PUBLISHED") {
+         notify("Таблица вернула HTML-код. Опубликуйте её: Файл -> Поделиться -> Опубликовать в интернете (CSV).", 8000);
+      } else {
+         notify("Ошибка связи с таблицей: " + e.message);
+      }
     }
   };
 
