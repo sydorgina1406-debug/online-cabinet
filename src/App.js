@@ -493,6 +493,7 @@ export default function App() {
 
   const [platformName, setPlatformName] = useState("ОНЛАЙН КАБИНЕТ");
 
+  // Video and WebRTC specific states
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const pcRef = useRef(null);
@@ -502,6 +503,14 @@ export default function App() {
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [isVideoCallReady, setIsVideoCallReady] = useState(false);
   const [callStatus, setCallStatus] = useState('');
+  
+  // External Video Link specific states
+  const [videoMode, setVideoMode] = useState(null); // 'native' | 'external' | null
+  const [externalVideoLink, setExternalVideoLink] = useState('');
+  const [savedVideoLink, setSavedVideoLink] = useState('');
+  const [tempLinkInput, setTempLinkInput] = useState('');
+  const [saveLinkPermanently, setSaveLinkPermanently] = useState(false);
+  const [hasClickedJoinExternal, setHasClickedJoinExternal] = useState(false);
 
   const videoDragRef = useRef({ isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 });
   const videoResizeRef = useRef({ isResizing: false, startX: 0, startY: 0, startW: 320, startH: 420 });
@@ -716,7 +725,6 @@ export default function App() {
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
 
-      // ВАЖНО: сначала добавляем треки, потом всё остальное
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
       pc.ontrack = (event) => {
@@ -739,7 +747,6 @@ export default function App() {
       };
 
       const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
-      // Чистим документ перед стартом
       await setDoc(callDoc, { offerCandidates: [], answerCandidates: [], createdAt: Date.now() });
 
       pc.onicecandidate = (event) => {
@@ -753,7 +760,6 @@ export default function App() {
       await pc.setLocalDescription(offer);
       await updateDoc(callDoc, { offer: { type: offer.type, sdp: offer.sdp } });
 
-      // Только после создания offer оповещаем клиента
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: true }, { merge: true });
 
       setCallStatus('Ожидание клиента...');
@@ -766,7 +772,6 @@ export default function App() {
         const data = snap.data();
         if (!data) return;
 
-        // Принимаем answer один раз
         if (data.answer && !answerSet && pc.signalingState !== 'closed') {
           try {
             console.log('[PSY] получен answer, ставлю remoteDescription');
@@ -777,7 +782,6 @@ export default function App() {
           }
         }
 
-        // ICE-кандидаты от клиента — обрабатываем только после установки remoteDescription
         if (pc.remoteDescription && data.answerCandidates) {
           for (const c of data.answerCandidates) {
             const candKey = JSON.stringify(c);
@@ -819,7 +823,6 @@ export default function App() {
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
 
-      // ВАЖНО: сначала добавляем треки
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
       pc.ontrack = (event) => {
@@ -850,7 +853,6 @@ export default function App() {
         }
       };
 
-      // Ждём offer от психолога (если ещё не появился — ждём через onSnapshot)
       setCallStatus('Ожидание сигнала от психолога...');
 
       let offerHandled = false;
@@ -860,7 +862,6 @@ export default function App() {
         const data = snap.data();
         if (!data) return;
 
-        // Обрабатываем offer один раз
         if (data.offer && !offerHandled && pc.signalingState === 'stable') {
           offerHandled = true;
           try {
@@ -877,7 +878,6 @@ export default function App() {
           }
         }
 
-        // ICE-кандидаты от психолога
         if (pc.remoteDescription && data.offerCandidates) {
           for (const c of data.offerCandidates) {
             const candKey = JSON.stringify(c);
@@ -981,6 +981,81 @@ export default function App() {
     setTimerIsWarning(false);
     if (isDbConnected && roomId) {
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_timer_state'));
+    }
+  };
+
+  const detectVideoService = (url) => {
+    if (!url) return null;
+    const u = url.toLowerCase();
+    if (u.includes('zoom.us')) return 'Zoom';
+    if (u.includes('telemost.yandex') || u.includes('telemost.360')) return 'Телемост';
+    if (u.includes('meet.google')) return 'Google Meet';
+    if (u.includes('jit.si') || u.includes('jitsi')) return 'Jitsi';
+    if (u.includes('whereby.com')) return 'Whereby';
+    if (u.includes('teams.microsoft') || u.includes('teams.live')) return 'Teams';
+    if (u.includes('skype.com')) return 'Skype';
+    return 'Видеосвязь';
+  };
+
+  const isJitsiLink = (url) => {
+    if (!url) return false;
+    const u = url.toLowerCase();
+    return u.includes('jit.si') || u.includes('jitsi');
+  };
+
+  const generateJitsiRoom = () => {
+    const roomName = `psy-${roomId}-${Math.random().toString(36).substr(2, 6)}`;
+    return `https://meet.jit.si/${roomName}`;
+  };
+
+  const launchExternalVideo = async (linkToUse) => {
+    const link = linkToUse?.trim();
+    if (!link) return notify("Введите ссылку или сгенерируйте Jitsi");
+    if (!link.startsWith('http://') && !link.startsWith('https://')) {
+      return notify("Ссылка должна начинаться с https://");
+    }
+    try {
+      const service = detectVideoService(link);
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_external_video'), {
+        link, service, createdAt: Date.now()
+      });
+      if (saveLinkPermanently && user) {
+        await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'video'), {
+          savedLink: link
+        }, { merge: true });
+        setSavedVideoLink(link);
+      }
+      setVideoMode('external');
+      setIsVideoModalOpen(false);
+      setTempLinkInput('');
+      setSaveLinkPermanently(false);
+      if (!isJitsiLink(link)) {
+        window.open(link, '_blank', 'noopener,noreferrer');
+      }
+      notify(`Видеосвязь запущена (${service}) ✓`);
+    } catch (e) {
+      notify("Ошибка: " + e.message);
+    }
+  };
+
+  const endExternalVideo = async () => {
+    try {
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_external_video'));
+      setVideoMode(null);
+      setExternalVideoLink('');
+      setHasClickedJoinExternal(false);
+      notify("Внешняя видеосвязь завершена");
+    } catch(e) { 
+      notify("Ошибка: " + e.message); 
+    }
+  };
+
+  const joinExternalVideo = () => {
+    if (!externalVideoLink) return;
+    setVideoMode('external');
+    setHasClickedJoinExternal(true);
+    if (!isJitsiLink(externalVideoLink)) {
+      window.open(externalVideoLink, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -1127,6 +1202,36 @@ export default function App() {
     });
     return () => { tUnsub(); cUnsub(); };
   }, [user, isAuthorized, roomId, isDbConnected, isClientMode]);
+
+  useEffect(() => {
+    if (!user || !isAuthorized || isClientMode) return;
+    const loadSaved = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'video'));
+        if (docSnap.exists() && docSnap.data().savedLink) {
+          setSavedVideoLink(docSnap.data().savedLink);
+        }
+      } catch(e) {}
+    };
+    loadSaved();
+  }, [user, isAuthorized, isClientMode]);
+  
+  useEffect(() => {
+    if (!user || !isAuthorized || !roomId) return;
+    const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_external_video'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setExternalVideoLink(data.link || '');
+      } else {
+        setExternalVideoLink('');
+        if (videoMode === 'external') {
+          setVideoMode(null);
+          setHasClickedJoinExternal(false);
+        }
+      }
+    });
+    return () => unsub();
+  }, [user, isAuthorized, roomId, videoMode]);
 
   const handleMouseMove = (e) => {
     if (!isAuthorized || !isDbConnected || !user || !roomId) return;
@@ -2221,7 +2326,7 @@ export default function App() {
                 Для стабильной работы платформы (независимо от того, используете вы телефон или ПК) <b>строго соблюдайте этот порядок</b>:
               </p>
               <ol className="list-decimal list-inside text-sm text-red-800 mt-2 font-bold space-y-2">
-                <li><b>Сначала включите видеосвязь</b> (кнопка с камерой).</li>
+                <li><b>Сначала включите видеосвязь</b> (кнопка с камерой). В модалке выберите вариант: <b>встроенный звонок</b> (тестовый, поверх платформы) или <b>внешний сервис</b> (Zoom/Телемост/Meet — надёжный, откроется в соседней вкладке).</li>
                 <li><b>Только после этого копируйте и отправляйте ссылку клиенту.</b></li>
                 <li>Если клиент заходит <b>с телефона</b>, ему нужно сначала развернуть верхнюю панель (нажав на стрелочку <ChevronDown size={14} className="inline text-red-700"/> справа вверху), а затем нажать зеленую кнопку <b>«Подключиться к видео»</b>.</li>
               </ol>
@@ -2393,28 +2498,198 @@ export default function App() {
         </div>
       )}
 
+      {externalVideoLink && videoMode === 'external' && (
+        <div 
+           onMouseDown={handleVideoPointerDown} 
+           onTouchStart={handleVideoPointerDown} 
+           className="fixed z-[200] bg-ink rounded-[1.5rem] shadow-2xl overflow-hidden flex flex-col border border-white/20 cursor-move" 
+           style={{ left: videoPos.x + 20, top: videoPos.y + 20, width: videoDim.w, height: videoDim.h, touchAction: 'none' }}
+        >
+          <div className="flex items-center justify-between px-3 py-2 bg-black/30 border-b border-white/10">
+            <div className="flex items-center gap-2 text-white">
+              <Video size={12} className="text-forest" />
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-90">{detectVideoService(externalVideoLink)}</span>
+            </div>
+            <button
+              onMouseDown={e => e.stopPropagation()}
+              onTouchStart={e => e.stopPropagation()}
+              onClick={() => {
+                if (isClientMode) {
+                  setVideoMode(null);
+                  setHasClickedJoinExternal(false);
+                } else {
+                  endExternalVideo();
+                }
+              }}
+              className="bg-red-500/80 p-1 rounded-full text-white hover:bg-red-600 transition-colors shadow-md"
+            >
+              <X size={12} />
+            </button>
+          </div>
+          <div className="flex-1 bg-black relative">
+            {isJitsiLink(externalVideoLink) ? (
+              <iframe
+                src={`${externalVideoLink}#userInfo.displayName=%22${encodeURIComponent(userName || 'Гость')}%22&config.prejoinPageEnabled=false`}
+                allow="camera; microphone; fullscreen; display-capture; autoplay"
+                className="w-full h-full border-0 pointer-events-auto"
+                onMouseDown={e => e.stopPropagation()}
+                onTouchStart={e => e.stopPropagation()}
+                title="Видеосвязь"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full p-4 text-center pointer-events-none">
+                <div className="w-16 h-16 rounded-full bg-forest/20 flex items-center justify-center mb-4">
+                  <Video size={28} className="text-forest" />
+                </div>
+                <div className="text-white text-sm font-black uppercase tracking-widest mb-1">{detectVideoService(externalVideoLink)}</div>
+                <div className="text-white/60 text-[10px] mb-4 px-2">
+                  {isClientMode 
+                     ? (hasClickedJoinExternal ? "Видеосвязь открыта в соседней вкладке" : "Психолог пригласил вас на видеовстречу")
+                    : "Видеосвязь открыта в соседней вкладке"
+                  }
+                </div>
+                <button
+                  onMouseDown={e => e.stopPropagation()}
+                  onTouchStart={e => e.stopPropagation()}
+                  onClick={() => window.open(externalVideoLink, '_blank', 'noopener,noreferrer')}
+                  className="pointer-events-auto px-5 py-2.5 rounded-xl bg-forest text-white text-[10px] font-black uppercase tracking-widest shadow-lg hover:scale-105 transition-all flex items-center gap-2"
+                >
+                  <ExternalLink size={12} /> {isClientMode && !hasClickedJoinExternal ? "Подключиться" : "Открыть снова"}
+                </button>
+              </div>
+            )}
+          </div>
+          <div 
+             onMouseDown={handleVideoResizePointerDown} 
+             onTouchStart={handleVideoResizePointerDown} 
+             className="absolute bottom-0 right-0 w-10 h-10 cursor-nwse-resize z-[70] flex items-end justify-end p-2 text-white/50 hover:text-white"
+          >
+            <Maximize2 size={16} className="rotate-90 pointer-events-none drop-shadow-md" />
+          </div>
+        </div>
+      )}
+
       {isVideoModalOpen && !isClientMode && (
         <div className="fixed inset-0 z-[160] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
-          <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl relative">
-            <button onClick={() => setIsVideoModalOpen(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
+          <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-md w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <button onClick={() => { setIsVideoModalOpen(false); setTempLinkInput(''); setSaveLinkPermanently(false); }} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
               <X size={20} style={{ color: COLORS.ink }} />
             </button>
-            <h2 className="text-xl font-black uppercase mb-4 text-center" style={{ color: COLORS.ink }}>Видеосвязь</h2>
+            <h2 className="text-xl font-black uppercase mb-2 text-center flex items-center justify-center gap-2" style={{ color: COLORS.ink }}>
+              <Video size={20} /> Видеосвязь
+            </h2>
             <p className="text-[10px] text-center mb-6 font-medium leading-relaxed" style={{ color: `${COLORS.ink}99` }}>
-              Создайте приватную комнату для встроенного звонка. Она появится в плавающем окошке у вас и клиента.
+              Выберите способ связи с клиентом
             </p>
-            <button onClick={async () => {
-                setIsVideoModalOpen(false);
-                startNativeCall();
-                notify("Встроенная видеосвязь запущена!");
-              }}
-              className="w-full py-4 rounded-xl text-white font-black uppercase tracking-widest shadow-md transition-all hover:scale-[1.02] flex items-center justify-center gap-2" style={{ backgroundColor: COLORS.forest }}>
-              <Video size={18} /> Запустить звонок
-            </button>
-
-            <div className="flex gap-3 mt-3">
+            
+            <div className="mb-6 p-4 rounded-2xl border-2" style={{ borderColor: `${COLORS.plum}30`, backgroundColor: `${COLORS.plum}05` }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: COLORS.plum }}>
+                  Вариант 1: Встроенная связь
+                </div>
+                <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}>
+                  Тестовая
+                </span>
+              </div>
+              <p className="text-[10px] italic mb-3 leading-relaxed" style={{ color: `${COLORS.ink}80` }}>
+                Звонок откроется прямо в окошке поверх платформы. Работает не на всех сетях — если связь нестабильна, используйте внешний сервис ниже.
+              </p>
+              <button onClick={async () => {
+                  setIsVideoModalOpen(false);
+                  startNativeCall();
+                  notify("Встроенная видеосвязь запущена!");
+                }}
+                className="w-full py-3 rounded-xl text-white font-black uppercase tracking-widest shadow-md transition-all hover:scale-[1.02] flex items-center justify-center gap-2 text-[10px]" 
+                style={{ backgroundColor: COLORS.plum }}>
+                <Video size={14} /> Запустить встроенный звонок
+              </button>
               {isVideoCallReady && (
-                <button onClick={async () => { endNativeCall(); setIsVideoModalOpen(false); notify("Связь удалена"); }} className="w-full py-3 font-bold rounded-xl text-[10px] uppercase tracking-widest transition-colors hover:opacity-80" style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}>Завершить звонок (Удалить)</button>
+                <button onClick={async () => { endNativeCall(); setIsVideoModalOpen(false); notify("Связь удалена"); }} className="w-full mt-2 py-2 font-bold rounded-xl text-[9px] uppercase tracking-widest transition-colors hover:opacity-80" style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}>
+                  Завершить встроенный звонок
+                </button>
+              )}
+            </div>
+            
+            <div className="p-4 rounded-2xl border-2" style={{ borderColor: `${COLORS.forest}30`, backgroundColor: `${COLORS.forest}05` }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: COLORS.forest }}>
+                  Вариант 2: Внешний сервис
+                </div>
+                <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ backgroundColor: `${COLORS.forest}20`, color: COLORS.forest }}>
+                  Надёжный
+                </span>
+              </div>
+              <p className="text-[10px] mb-3 leading-relaxed" style={{ color: `${COLORS.ink}80` }}>
+                Zoom, Телемост, Google Meet, Jitsi — любой сервис. Откроется в соседней вкладке у вас и клиента.
+              </p>
+              
+              {savedVideoLink && (
+                <div className="mb-3 p-2.5 rounded-xl border" style={{ backgroundColor: 'white', borderColor: `${COLORS.forest}30` }}>
+                  <div className="text-[8px] font-black uppercase tracking-widest mb-1" style={{ color: COLORS.forest }}>Постоянная ссылка</div>
+                  <div className="text-[9px] font-bold truncate mb-2" style={{ color: COLORS.ink }}>{savedVideoLink}</div>
+                  <div className="flex gap-2">
+                    <button onClick={() => launchExternalVideo(savedVideoLink)} className="flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest text-white shadow-sm hover:opacity-90" style={{ backgroundColor: COLORS.forest }}>
+                      Использовать
+                    </button>
+                    <button onClick={async () => {
+                      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'video'), { savedLink: '' }, { merge: true });
+                      setSavedVideoLink('');
+                      notify("Постоянная ссылка удалена");
+                    }} className="px-2 py-1.5 rounded-lg text-[9px] font-bold hover:opacity-70" style={{ color: COLORS.terra }}>
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              <input 
+                type="text" 
+                value={tempLinkInput} 
+                onChange={e => setTempLinkInput(e.target.value)}
+                placeholder="https://zoom.us/j/..." 
+                className="w-full px-3 py-2.5 rounded-xl border-2 outline-none font-bold text-[11px] mb-2"
+                style={{ borderColor: COLORS.haze, color: COLORS.ink }}
+              />
+              
+              {tempLinkInput && detectVideoService(tempLinkInput) && (
+                <div className="text-[9px] font-bold mb-2 flex items-center gap-1" style={{ color: COLORS.plum }}>
+                  <CheckCircle size={10} /> Сервис: {detectVideoService(tempLinkInput)}
+                </div>
+              )}
+              
+              <button 
+                onClick={() => {
+                  setTempLinkInput(generateJitsiRoom());
+                }}
+                className="w-full py-2 rounded-xl text-[9px] font-black uppercase tracking-widest mb-3 border-2 border-dashed hover:bg-black/5 transition-all flex items-center justify-center gap-2"
+                style={{ borderColor: `${COLORS.forest}40`, color: COLORS.forest }}
+              >
+                <Plus size={12} /> Сгенерировать Jitsi (бесплатно)
+              </button>
+              
+              <label className="flex items-center gap-2 mb-3 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={saveLinkPermanently} 
+                  onChange={e => setSaveLinkPermanently(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-plum"
+                />
+                <span className="text-[10px] font-bold" style={{ color: COLORS.ink }}>Сохранить как постоянную</span>
+              </label>
+              
+              <button 
+                onClick={() => launchExternalVideo(tempLinkInput)}
+                disabled={!tempLinkInput.trim()}
+                className="w-full py-3 rounded-xl text-white font-black uppercase tracking-widest shadow-md transition-all hover:scale-[1.02] flex items-center justify-center gap-2 text-[10px] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100" 
+                style={{ backgroundColor: COLORS.forest }}
+              >
+                <Video size={14} /> Запустить внешнюю связь
+              </button>
+              
+              {externalVideoLink && (
+                <button onClick={() => { endExternalVideo(); setIsVideoModalOpen(false); }} className="w-full mt-2 py-2 font-bold rounded-xl text-[9px] uppercase tracking-widest transition-colors hover:opacity-80" style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}>
+                  Завершить внешнюю связь
+                </button>
               )}
             </div>
           </div>
@@ -2545,11 +2820,18 @@ export default function App() {
               </button>
            </div>
           ) : (
-            isVideoCallReady && (
-              <button onClick={joinNativeCall} className="flex items-center gap-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black text-white shadow-[0_0_15px_rgba(45,74,62,0.4)] transition-all hover:scale-105 uppercase animate-pulse" style={{ backgroundColor: COLORS.forest }}>
-                <Video size={14} /> Подключиться к видео
-             </button>
-            )
+            <>
+              {isVideoCallReady && (
+                <button onClick={joinNativeCall} className="flex items-center gap-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black text-white shadow-[0_0_15px_rgba(139,50,82,0.4)] transition-all hover:scale-105 uppercase animate-pulse" style={{ backgroundColor: COLORS.plum }}>
+                  <Video size={14} /> Встроенное видео
+                </button>
+              )}
+              {externalVideoLink && videoMode !== 'external' && (
+                <button onClick={joinExternalVideo} className="flex items-center gap-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black text-white shadow-[0_0_15px_rgba(45,74,62,0.4)] transition-all hover:scale-105 uppercase animate-pulse" style={{ backgroundColor: COLORS.forest }}>
+                  <Video size={14} /> Подключиться ({detectVideoService(externalVideoLink)})
+                </button>
+              )}
+            </>
           )}
 
           {timerDisplay ? (
