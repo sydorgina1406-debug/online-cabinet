@@ -294,7 +294,7 @@ const convertDriveLink = (url) => {
   if (!url.includes('drive.google.com') && !url.includes('docs.google.com')) return url;
   const id = extractDriveFileId(url);
   if (!id) return url;
-  return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+  return `https://lh3.googleusercontent.com/d/${id}=w1000`;
 };
 const extractDriveFolderId = (url) => {
   if (!url) return null;
@@ -302,7 +302,7 @@ const extractDriveFolderId = (url) => {
   if (m) return m[1];
   return null;
 };
-const getDriveThumbnailUrl = (fileId) => `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+const getDriveThumbnailUrl = (fileId) => `https://lh3.googleusercontent.com/d/${fileId}=w1000`;
 const normalizeCardNumber = (value) => String(value || '').replace(/^0+(?=\d)/, '');
 const getFileStem = (name = '') => String(name).replace(/\.[^/.]+$/, '').trim();
 const getNumberedCardNumber = (name) => {
@@ -1383,6 +1383,13 @@ export default function App() {
       
       const loadImageSafe = async (url) => {
         if (!url) return null;
+        const IMAGE_TIMEOUT_MS = 3500;
+        const extractDriveImageId = (src) => {
+          const byQuery = String(src).match(/[?&]id=([a-zA-Z0-9_-]+)/);
+          if (byQuery) return byQuery[1];
+          const byPath = String(src).match(/\/d\/([a-zA-Z0-9_-]+)/);
+          return byPath ? byPath[1] : null;
+        };
         const isExportSafe = (img) => {
           try {
             const testCanvas = document.createElement('canvas');
@@ -1399,18 +1406,37 @@ export default function App() {
         
         const tryLoad = (src) => new Promise((resolve, reject) => {
           const img = new Image();
+          let done = false;
+          const timer = setTimeout(() => {
+            if (done) return;
+            done = true;
+            reject(new Error('Image load timeout'));
+          }, IMAGE_TIMEOUT_MS);
           img.crossOrigin = 'anonymous';
           img.referrerPolicy = 'no-referrer';
-          img.onload = () => resolve(img);
-          img.onerror = () => reject(new Error('Load failed'));
+          img.onload = () => {
+            if (done) return;
+            done = true;
+            clearTimeout(timer);
+            resolve(img);
+          };
+          img.onerror = () => {
+            if (done) return;
+            done = true;
+            clearTimeout(timer);
+            reject(new Error('Load failed'));
+          };
           img.src = src;
         });
+        const driveImageId = extractDriveImageId(url);
+        const directDriveUrl = driveImageId ? `https://lh3.googleusercontent.com/d/${driveImageId}=w1000` : null;
         const proxies = [
+          directDriveUrl,
           url,
           `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
           `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
           `https://corsproxy.io/?${encodeURIComponent(url)}`
-        ];
+        ].filter((src, index, arr) => src && arr.indexOf(src) === index);
         for (const proxyUrl of proxies) {
           try {
             const img = await tryLoad(proxyUrl);
@@ -1422,7 +1448,10 @@ export default function App() {
         
         // Последний fallback: получение base64 через JSON
         try {
-          const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS);
+          const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { signal: controller.signal });
+          clearTimeout(timer);
           if (res.ok) {
             const data = await res.json();
             if (data && data.contents) {
@@ -1455,8 +1484,12 @@ export default function App() {
       const imageCache = {};
       const sources = new Set();
       sorted.forEach(el => {
-        if (el.img) sources.add(el.img);
-        if (el.backImg) sources.add(el.backImg);
+        if (el.type === 'card') {
+          const visibleSrc = el.isFlipped ? el.backImg : el.img;
+          if (visibleSrc) sources.add(visibleSrc);
+        } else if (el.type === 'field' && el.img) {
+          sources.add(el.img);
+        }
       });
       await Promise.all(Array.from(sources).map(async src => {
         imageCache[src] = await loadImageSafe(src);
