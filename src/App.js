@@ -2091,6 +2091,109 @@ export default function App() {
       }
     }
   };
+  const toggleDeckFavorite = (item) => {
+    const isFavorite = favoriteDeckIds.includes(item.id);
+    setFavoriteDeckIds(prev => isFavorite ? prev.filter(id => id !== item.id) : [item.id, ...prev]);
+    if (!isFavorite && hiddenDeckIds.includes(item.id)) {
+      setHiddenDeckIds(prev => prev.filter(id => id !== item.id));
+    }
+    notify(isFavorite ? "Убрано из избранного" : "Колода закреплена в избранном ✓");
+  };
+  const toggleDeckHidden = (item) => {
+    const isHidden = hiddenDeckIds.includes(item.id);
+    if (isHidden) {
+      setHiddenDeckIds(prev => prev.filter(id => id !== item.id));
+      notify("Колода снова видна ✓");
+    } else {
+      setHiddenDeckIds(prev => [item.id, ...prev]);
+      setFavoriteDeckIds(prev => prev.filter(id => id !== item.id));
+      notify("Колода скрыта. Ее можно вернуть через «Показать скрытые»");
+    }
+  };
+  const matchesDeckSearch = (item) => {
+    const query = deckSearch.trim().toLowerCase();
+    if (!query) return true;
+    const source = item.isPlatformDeck ? 'платформа база' : item.isBaseDeck ? 'google drive облако' : 'мои личные';
+    return `${item.name || ''} ${source}`.toLowerCase().includes(query);
+  };
+  const allLibraryDecks = [...platformDecks, ...baseDecks, ...cloudDecks, ...localDecks];
+  const currentLibraryDecks = activeTab === 'platform' ? platformDecks : activeTab === 'local' ? localDecks : [...baseDecks, ...cloudDecks];
+  const favoriteDecks = favoriteDeckIds
+    .map(id => allLibraryDecks.find(deck => deck.id === id))
+    .filter(Boolean)
+    .filter(item => matchesDeckSearch(item))
+    .filter(item => showHiddenDecks || !hiddenDeckIds.includes(item.id));
+  const visibleLibraryDecks = currentLibraryDecks
+    .filter(item => !favoriteDeckIds.includes(item.id))
+    .filter(item => matchesDeckSearch(item))
+    .filter(item => showHiddenDecks || !hiddenDeckIds.includes(item.id));
+  const hiddenDecksCount = currentLibraryDecks.filter(item => hiddenDeckIds.includes(item.id)).length;
+  const renderDeckItem = (item, area = 'list') => {
+    const isFavorite = favoriteDeckIds.includes(item.id);
+    const isHidden = hiddenDeckIds.includes(item.id);
+    const isLocalOnlyDeck = localDecks.some(deck => deck.id === item.id);
+    const canEditDeck = !item.isBaseDeck && !item.isPlatformDeck;
+    return (
+      <div key={`${area}_${item.id}`} className={`group flex items-center gap-3 p-3 rounded-2xl transition-all relative border flex-shrink-0 ${selectedDeckId === item.id ? 'bg-white shadow-sm border-white' : 'border-transparent hover:bg-black/5'} ${isHidden ? 'opacity-50' : ''}`}>
+        <button onClick={() => selectDeck(item)} className="flex-1 flex items-center gap-3 text-left overflow-hidden hover:opacity-70">
+          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden border flex-shrink-0 shadow-sm" style={{ borderColor: `${COLORS.ink}10` }}>
+            {(item.boxImage || item.backImage) ? <img src={item.boxImage || item.backImage} loading="lazy" decoding="async" className="w-full h-full object-contain" alt="" /> : <FolderOpen size={16} color={`${COLORS.ink}4D`} />}
+          </div>
+          <div className="flex flex-col overflow-hidden">
+            <span className="text-[10px] font-bold truncate uppercase" style={{ color: COLORS.ink }}>{item.name}</span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {isFavorite && <span className="text-[7px] font-black uppercase tracking-widest flex items-center gap-1" style={{ color: COLORS.terra }}><Star size={8} fill={COLORS.terra} /> Избранное</span>}
+              {isHidden && <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: `${COLORS.ink}50` }}>Скрыта</span>}
+              {item.isPlatformDeck && <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: COLORS.forest }}>Платформа</span>}
+              {item.isBaseDeck && <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}50` }}>Google Drive</span>}
+            </div>
+          </div>
+        </button>
+        <div className="flex gap-1 transition-opacity opacity-100 md:opacity-0 md:group-hover:opacity-100">
+          <button onClick={() => toggleDeckFavorite(item)} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: isFavorite ? COLORS.terra : `${COLORS.ink}70` }} title={isFavorite ? "Убрать из избранного" : "Закрепить в избранном"}>
+            <Star size={15} fill={isFavorite ? COLORS.terra : 'none'} />
+          </button>
+          <button onClick={() => toggleDeckHidden(item)} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: isHidden ? COLORS.forest : `${COLORS.ink}70` }} title={isHidden ? "Показать колоду" : "Скрыть колоду"}>
+            {isHidden ? <Eye size={15} /> : <EyeOff size={15} />}
+          </button>
+          {canEditDeck && (
+            <>
+              <button onClick={async () => {
+                const newName = await askPrompt("Новое имя колоды:", item.name);
+                if (!newName || !newName.trim()) return;
+                const trimmed = newName.trim();
+                if (isLocalOnlyDeck) {
+                  setLocalDecks(p => p.map(d => d.id === item.id ? { ...d, name: trimmed } : d));
+                  notify("Имя обновлено ✓");
+                } else {
+                  try {
+                    await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_decks', item.id), { name: trimmed });
+                    notify("Имя обновлено ✓");
+                  } catch (e) {
+                    notify("Ошибка: " + e.message);
+                  }
+                }
+              }} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: COLORS.plum }} title="Переименовать">
+                <Edit2 size={15} />
+              </button>
+              <button onClick={async () => {
+                const ok = await askConfirm("Удалить колоду?");
+                if (ok) {
+                  if (isLocalOnlyDeck) setLocalDecks(p => p.filter(d => d.id !== item.id));
+                  else await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_decks', item.id));
+                  setFavoriteDeckIds(prev => prev.filter(id => id !== item.id));
+                  setHiddenDeckIds(prev => prev.filter(id => id !== item.id));
+                  notify("Удалено");
+                }
+              }} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: COLORS.terra }} title="Удалить">
+                <Trash2 size={15} />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
   if (appLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center text-white gap-4" style={{ backgroundColor: COLORS.ink }}>
       <Loader2 size={40} className="animate-spin text-plum" />
@@ -2916,52 +3019,47 @@ export default function App() {
                   {activeTab === 'platform' && isPlatformDecksLoading && <div className="flex justify-center py-4 flex-shrink-0"><Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} /></div>}
                   {activeTab === 'cloud' && isBaseDecksLoading && <div className="flex justify-center py-4 flex-shrink-0"><Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} /></div>}
                   
-                  {activeTab !== 'sessions' && (activeTab === 'platform' ? platformDecks : activeTab === 'local' ? localDecks : [...baseDecks, ...cloudDecks]).map(item => (
-                    <div key={item.id} className={`group flex items-center gap-3 p-3 rounded-2xl transition-all relative border flex-shrink-0 ${selectedDeckId === item.id ? 'bg-white shadow-sm border-white' : 'border-transparent hover:bg-black/5'}`}>
-                      <button onClick={() => selectDeck(item)} className="flex-1 flex items-center gap-3 text-left overflow-hidden hover:opacity-70">
-                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden border flex-shrink-0 shadow-sm" style={{ borderColor: `${COLORS.ink}10` }}>
-                          {(item.boxImage || item.backImage) ? <img src={item.boxImage || item.backImage} loading="lazy" decoding="async" className="w-full h-full object-contain" alt="" /> : <FolderOpen size={16} color={`${COLORS.ink}4D`} />}
-                        </div>
-                        <div className="flex flex-col overflow-hidden">
-                          <span className="text-[10px] font-bold truncate uppercase" style={{ color: COLORS.ink }}>{item.name}</span>
-                          {item.isPlatformDeck && <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: COLORS.forest }}>Платформа</span>}
-                          {item.isBaseDeck && <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}50` }}>Google Drive</span>}
-                        </div>
+                  {activeTab !== 'sessions' && (
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-2 rounded-2xl px-3 py-2 border bg-white/70" style={{ borderColor: `${COLORS.ink}10` }}>
+                        <Search size={14} style={{ color: `${COLORS.ink}66` }} />
+                        <input
+                          value={deckSearch}
+                          onChange={e => setDeckSearch(e.target.value)}
+                          placeholder="Поиск по колодам"
+                          className="min-w-0 flex-1 bg-transparent outline-none text-[10px] font-bold"
+                          style={{ color: COLORS.ink }}
+                        />
+                        {deckSearch && (
+                          <button onClick={() => setDeckSearch('')} className="p-1 rounded-lg hover:bg-black/5" title="Очистить поиск">
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                      <button onClick={() => setShowHiddenDecks(v => !v)} className="flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-[9px] font-black uppercase tracking-widest transition-colors hover:bg-black/5" style={{ color: showHiddenDecks ? COLORS.forest : `${COLORS.ink}70`, backgroundColor: showHiddenDecks ? `${COLORS.forest}10` : 'transparent' }}>
+                        {showHiddenDecks ? <Eye size={13} /> : <EyeOff size={13} />}
+                        {showHiddenDecks ? "Скрытые показаны" : "Показать скрытые"}
+                        {hiddenDecksCount > 0 && <span className="px-1.5 py-0.5 rounded-full text-[8px] text-white" style={{ backgroundColor: COLORS.terra }}>{hiddenDecksCount}</span>}
                       </button>
-                      {!item.isBaseDeck && !item.isPlatformDeck && (
-                        <div className="opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
-                          <button onClick={async () => {
-                            const newName = await askPrompt("Новое имя колоды:", item.name);
-                            if (!newName || !newName.trim()) return;
-                            const trimmed = newName.trim();
-                            if (activeTab === 'local') {
-                              setLocalDecks(p => p.map(d => d.id === item.id ? { ...d, name: trimmed } : d));
-                              notify("Имя обновлено ✓");
-                            } else {
-                              try {
-                                await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_decks', item.id), { name: trimmed });
-                                notify("Имя обновлено ✓");
-                              } catch (e) {
-                                notify("Ошибка: " + e.message);
-                              }
-                            }
-                          }} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: COLORS.plum }} title="Переименовать">
-                            <Edit2 size={16} />
-                          </button>
-                          <button onClick={async () => {
-                            const ok = await askConfirm("Удалить колоду?");
-                            if (ok) {
-                              if (activeTab === 'local') setLocalDecks(p => p.filter(d => d.id !== item.id));
-                              else await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_decks', item.id));
-                              notify("Удалено");
-                            }
-                          }} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: COLORS.terra }} title="Удалить">
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      )}
                     </div>
-                  ))}
+                  )}
+                  {activeTab !== 'sessions' && favoriteDecks.length > 0 && (
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      <div className="text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: COLORS.terra }}>
+                        <Star size={12} fill={COLORS.terra} /> Избранные колоды
+                      </div>
+                      {favoriteDecks.map(item => renderDeckItem(item, 'favorite'))}
+                    </div>
+                  )}
+                  {activeTab !== 'sessions' && favoriteDecks.length > 0 && (
+                    <div className="text-[9px] font-black uppercase tracking-widest flex-shrink-0" style={{ color: `${COLORS.ink}60` }}>Все колоды</div>
+                  )}
+                  {activeTab !== 'sessions' && visibleLibraryDecks.map(item => renderDeckItem(item))}
+                  {activeTab !== 'sessions' && visibleLibraryDecks.length === 0 && favoriteDecks.length === 0 && !isPlatformDecksLoading && !isBaseDecksLoading && (
+                    <div className="text-[9px] text-center font-bold py-5 px-3 rounded-2xl flex-shrink-0" style={{ color: `${COLORS.ink}55`, backgroundColor: `${COLORS.ink}06` }}>
+                      {deckSearch ? "По этому запросу колод не найдено" : showHiddenDecks ? "В этой вкладке пока нет колод" : "Нет видимых колод. Включите «Показать скрытые», если вы их скрывали."}
+                    </div>
+                  )}
                 </div>
               )}
               
