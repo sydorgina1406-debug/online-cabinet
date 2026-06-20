@@ -18,7 +18,7 @@ import {
   Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
   Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, MessageCircle,
   Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff, Dices, UserMinus, BookOpen,
-  Bold, Italic, Underline, Strikethrough, List, MonitorPlay
+  Bold, Italic, Underline, Strikethrough, List, MonitorPlay, Search, Star
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -552,6 +552,23 @@ const copyToClipboard = async (text) => {
     return false;
   }
 };
+const loadStoredDeckIds = (key) => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(key) || '[]');
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch (e) {
+    return [];
+  }
+};
+const saveStoredDeckIds = (key, ids) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(ids));
+  } catch (e) {
+    console.warn('Не удалось сохранить настройки колод', e);
+  }
+};
 const renderDiceFace = (value, dotColor) => {
   const dots = {
     1: ['col-start-2 row-start-2'],
@@ -728,6 +745,10 @@ export default function App() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [activeTab, setActiveTab] = useState('platform');
+  const [favoriteDeckIds, setFavoriteDeckIds] = useState(() => loadStoredDeckIds('makFavoriteDecksV1'));
+  const [hiddenDeckIds, setHiddenDeckIds] = useState(() => loadStoredDeckIds('makHiddenDecksV1'));
+  const [deckSearch, setDeckSearch] = useState('');
+  const [showHiddenDecks, setShowHiddenDecks] = useState(false);
   const [isDbConnected, setIsDbConnected] = useState(false);
   const [sessionTimer, setSessionTimer] = useState(null);
   const [timerDisplay, setTimerDisplay] = useState('');
@@ -766,43 +787,94 @@ export default function App() {
   };
   const rtcConfig = {
     iceServers: [
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
-    ]
+      {
+        urls: [
+          'stun:stun.l.google.com:19302',
+          'stun:stun1.l.google.com:19302',
+          'stun:stun2.l.google.com:19302',
+          'stun:stun3.l.google.com:19302',
+          'stun:stun4.l.google.com:19302'
+        ]
+      },
+      {
+        urls: [
+          'turn:openrelay.metered.ca:80',
+          'turn:openrelay.metered.ca:443',
+          'turn:openrelay.metered.ca:80?transport=tcp',
+          'turn:openrelay.metered.ca:443?transport=tcp',
+          'turns:openrelay.metered.ca:443?transport=tcp'
+        ],
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      }
+    ],
+    iceCandidatePoolSize: 10,
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require'
+  };
+  const mediaConstraints = {
+    video: {
+      width: { ideal: 640, max: 960 },
+      height: { ideal: 360, max: 540 },
+      frameRate: { ideal: 20, max: 24 },
+      facingMode: 'user'
+    },
+    audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
+    }
+  };
+  const attachVideoStream = (videoEl, stream, shouldMute = false) => {
+    if (!videoEl || !stream) return;
+    videoEl.srcObject = stream;
+    videoEl.muted = shouldMute;
+    videoEl.playsInline = true;
+    videoEl.play().catch(err => console.warn('video play err', err));
+  };
+  const cleanupLocalStream = (stream) => {
+    stream?.getTracks?.().forEach(track => track.stop());
+  };
+  const updateConnectionStatus = (pc, label) => {
+    const connectionState = pc.connectionState;
+    const iceState = pc.iceConnectionState;
+    console.log(`[${label}] connectionState:`, connectionState, 'ice:', iceState);
+    if (connectionState === 'connected' || iceState === 'connected' || iceState === 'completed') {
+      setCallStatus('');
+    } else if (connectionState === 'connecting' || iceState === 'checking') {
+      setCallStatus('Соединение...');
+    } else if (connectionState === 'disconnected' || iceState === 'disconnected') {
+      setCallStatus('Пытаюсь восстановить связь...');
+    } else if (connectionState === 'failed' || iceState === 'failed') {
+      setCallStatus('Связь не восстановилась. Перезапустите звонок.');
+    } else if (connectionState === 'closed') {
+      setCallStatus('');
+    }
   };
   const startNativeCall = async () => {
+    let stream = null;
     try {
       setIsVideoActive(true);
       setCallStatus('Подготовка...');
       processedCandidates.current.clear();
       await new Promise(resolve => setTimeout(resolve, 100));
       setCallStatus('Доступ к камере...');
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      if (localVideoRef.current) {
-         localVideoRef.current.srcObject = stream;
-         localVideoRef.current.play().catch(()=>{});
-      }
+      stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      attachVideoStream(localVideoRef.current, stream, true);
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
       // ВАЖНО: сначала добавляем треки, потом всё остальное
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
       pc.ontrack = (event) => {
         console.log('[PSY] ontrack получен:', event.streams);
-        if (remoteVideoRef.current) {
-           remoteVideoRef.current.srcObject = event.streams[0];
-           remoteVideoRef.current.play().catch(err => console.warn('play err', err));
-        }
+        attachVideoStream(remoteVideoRef.current, event.streams[0]);
         setCallStatus('');
       };
-      pc.onconnectionstatechange = () => {
-        console.log('[PSY] connectionState:', pc.connectionState);
-        if (pc.connectionState === 'connected') setCallStatus('');
-        else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') setCallStatus('Связь прервана...');
-      };
-      pc.oniceconnectionstatechange = () => {
-        console.log('[PSY] iceConnectionState:', pc.iceConnectionState);
+      pc.onconnectionstatechange = () => updateConnectionStatus(pc, 'PSY');
+      pc.oniceconnectionstatechange = () => updateConnectionStatus(pc, 'PSY');
+      pc.onicecandidateerror = (event) => {
+        console.warn('[PSY] ICE candidate error:', event);
+        if (pc.connectionState !== 'connected') setCallStatus('Проверяю соединение...');
       };
       const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
       // Чистим документ перед стартом
@@ -851,6 +923,11 @@ export default function App() {
         }
       });
     } catch (err) {
+      cleanupLocalStream(stream);
+      if (pcRef.current) {
+        pcRef.current.close();
+        pcRef.current = null;
+      }
       setCallStatus('');
       setIsVideoActive(false);
       notify("Ошибка видеосвязи: " + err.message, 8000);
@@ -858,36 +935,29 @@ export default function App() {
     }
   };
   const joinNativeCall = async () => {
+    let stream = null;
     try {
       setIsVideoActive(true);
       setCallStatus('Подготовка...');
       processedCandidates.current.clear();
       await new Promise(resolve => setTimeout(resolve, 100));
       setCallStatus('Доступ к камере...');
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      if (localVideoRef.current) {
-         localVideoRef.current.srcObject = stream;
-         localVideoRef.current.play().catch(()=>{});
-      }
+      stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      attachVideoStream(localVideoRef.current, stream, true);
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
       // ВАЖНО: сначала добавляем треки
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
       pc.ontrack = (event) => {
         console.log('[CLIENT] ontrack получен:', event.streams);
-        if (remoteVideoRef.current) {
-           remoteVideoRef.current.srcObject = event.streams[0];
-           remoteVideoRef.current.play().catch(err => console.warn('play err', err));
-        }
+        attachVideoStream(remoteVideoRef.current, event.streams[0]);
         setCallStatus('');
       };
-      pc.onconnectionstatechange = () => {
-        console.log('[CLIENT] connectionState:', pc.connectionState);
-        if (pc.connectionState === 'connected') setCallStatus('');
-        else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') setCallStatus('Связь прервана...');
-      };
-      pc.oniceconnectionstatechange = () => {
-        console.log('[CLIENT] iceConnectionState:', pc.iceConnectionState);
+      pc.onconnectionstatechange = () => updateConnectionStatus(pc, 'CLIENT');
+      pc.oniceconnectionstatechange = () => updateConnectionStatus(pc, 'CLIENT');
+      pc.onicecandidateerror = (event) => {
+        console.warn('[CLIENT] ICE candidate error:', event);
+        if (pc.connectionState !== 'connected') setCallStatus('Проверяю соединение...');
       };
       const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
       pc.onicecandidate = (event) => {
@@ -936,6 +1006,11 @@ export default function App() {
         }
       });
     } catch (err) {
+      cleanupLocalStream(stream);
+      if (pcRef.current) {
+        pcRef.current.close();
+        pcRef.current = null;
+      }
       setCallStatus('');
       setIsVideoActive(false);
       notify("Ошибка видеосвязи: " + err.message, 8000);
@@ -1096,6 +1171,12 @@ export default function App() {
     };
     init();
   }, []);
+  useEffect(() => {
+    saveStoredDeckIds('makFavoriteDecksV1', favoriteDeckIds);
+  }, [favoriteDeckIds]);
+  useEffect(() => {
+    saveStoredDeckIds('makHiddenDecksV1', hiddenDeckIds);
+  }, [hiddenDeckIds]);
   useEffect(() => {
     if (inRoom && !isClientMode) {
       setIsPlatformDecksLoading(true);
@@ -2369,15 +2450,7 @@ export default function App() {
              <button
                 onMouseDown={e => e.stopPropagation()}
                 onTouchStart={e => e.stopPropagation()}
-                onClick={() => {
-                  if (isClientMode) {
-                     setIsVideoActive(false);
-                     if (pcRef.current) pcRef.current.close();
-                     if (localVideoRef.current?.srcObject) localVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
-                  } else {
-                     endNativeCall();
-                  }
-                }}
+                onClick={endNativeCall}
                 className="bg-red-500/80 p-1.5 rounded-full text-white hover:bg-red-600 transition-colors pointer-events-auto shadow-md"
              >
                 <X size={14} />
