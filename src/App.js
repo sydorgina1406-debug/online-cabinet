@@ -380,6 +380,48 @@ const getDeckCardBackImage = (deck, cardImg, cardIndex = -1) => {
   const index = cardIndex >= 0 ? cardIndex : (deck?.cards || []).indexOf(cardImg);
   return cardBacks[index] || deck?.backImage || null;
 };
+const imagePreloadCache = new Map();
+const preloadImage = (src, timeout = 5000) => {
+  if (!src || typeof window === 'undefined') return Promise.resolve(null);
+  if (imagePreloadCache.has(src)) return imagePreloadCache.get(src);
+  const promise = new Promise((resolve) => {
+    const img = new Image();
+    let done = false;
+    const finish = (value) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish(null), timeout);
+    img.crossOrigin = 'anonymous';
+    img.referrerPolicy = 'no-referrer';
+    img.decoding = 'async';
+    img.onload = () => finish(img);
+    img.onerror = () => finish(null);
+    img.src = src;
+  });
+  imagePreloadCache.set(src, promise);
+  return promise;
+};
+const getImageDimensionsFast = async (src) => {
+  const img = await preloadImage(src, 900);
+  return img ? { w: img.naturalWidth || img.width, h: img.naturalHeight || img.height } : null;
+};
+const preloadDeckImages = (deck, limit = 12) => {
+  if (!deck || typeof window === 'undefined') return;
+  const urls = new Set();
+  if (deck.boxImage) urls.add(deck.boxImage);
+  if (deck.backImage) urls.add(deck.backImage);
+  (deck.cards || []).slice(0, limit).forEach((img, idx) => {
+    if (img) urls.add(img);
+    const backImg = getDeckCardBackImage(deck, img, idx);
+    if (backImg) urls.add(backImg);
+  });
+  Array.from(urls).forEach((src, idx) => {
+    setTimeout(() => preloadImage(src), idx * 120);
+  });
+};
 const loadDriveFolderFiles = async (folderId, apiKey, imagesOnly = true) => {
   const mimeFilter = imagesOnly ? "mimeType contains 'image/' and " : "";
   const q = `'${folderId}' in parents and ${mimeFilter}trashed = false`;
@@ -1170,6 +1212,7 @@ export default function App() {
     if (isClientMode) return;
     setSelectedDeckId(deck.id);
     setActiveDeckData(deck);
+    preloadDeckImages(deck);
     const currentRoomId = roomIdRef.current || roomId;
     if (!currentRoomId) {
       notify("Ошибка: сессия не найдена. Перезайдите.");
@@ -1834,13 +1877,10 @@ export default function App() {
     let width = isField ? 800 : (type === 'figure' ? 80 : (type === 'arrow' ? 60 : (type === 'token' ? 45 : (type === 'text' || type === 'private-text' ? 200 : 160))));
     let height = isField ? 600 : (type === 'figure' ? 80 : (type === 'arrow' ? 60 : (type === 'token' ? 45 : (type === 'text' || type === 'private-text' ? 100 : 240))));
     if (type === 'card' && data.img) {
+      preloadImage(data.img);
+      preloadImage(data.backImg);
       try {
-        const dims = await new Promise((resolve) => {
-          const i = new Image();
-          i.onload = () => resolve({ w: i.width, h: i.height });
-          i.onerror = () => resolve(null);
-          i.src = data.img;
-        });
+        const dims = await getImageDimensionsFast(data.img);
         if (dims && dims.w > dims.h) { width = 240; height = 160; }
       } catch (e) {}
     }
@@ -2807,7 +2847,7 @@ export default function App() {
                     <div key={item.id} className={`group flex items-center gap-3 p-3 rounded-2xl transition-all relative border flex-shrink-0 ${selectedDeckId === item.id ? 'bg-white shadow-sm border-white' : 'border-transparent hover:bg-black/5'}`}>
                       <button onClick={() => selectDeck(item)} className="flex-1 flex items-center gap-3 text-left overflow-hidden hover:opacity-70">
                         <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden border flex-shrink-0 shadow-sm" style={{ borderColor: `${COLORS.ink}10` }}>
-                          {(item.boxImage || item.backImage) ? <img src={item.boxImage || item.backImage} className="w-full h-full object-contain" alt="" /> : <FolderOpen size={16} color={`${COLORS.ink}4D`} />}
+                          {(item.boxImage || item.backImage) ? <img src={item.boxImage || item.backImage} loading="lazy" decoding="async" className="w-full h-full object-contain" alt="" /> : <FolderOpen size={16} color={`${COLORS.ink}4D`} />}
                         </div>
                         <div className="flex flex-col overflow-hidden">
                           <span className="text-[10px] font-bold truncate uppercase" style={{ color: COLORS.ink }}>{item.name}</span>
@@ -2888,9 +2928,9 @@ export default function App() {
                             if (isLibraryFullscreen) toggleLibrary();
                           }} className={`relative flex-shrink-0 h-36 md:h-40 rounded-2xl group transition-all flex items-center justify-center ${isUsed ? 'opacity-40 cursor-not-allowed grayscale' : 'shadow-sm hover:shadow-lg hover:scale-105'}`}>
                             {isLibraryDeckFlipped
-                              ? <img src={img} className="h-full w-auto min-w-[5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
+                              ? <img src={img} loading="lazy" decoding="async" className="h-full w-auto min-w-[5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
                               : <div className="h-full w-24 md:w-28 flex items-center justify-center rounded-2xl overflow-hidden relative shadow-sm border border-white/20" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
-                                {cardBackImage ? <img src={cardBackImage} className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" /> : <Layers size={40} className="text-white opacity-30" />}
+                                {cardBackImage ? <img src={cardBackImage} loading="lazy" decoding="async" className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" /> : <Layers size={40} className="text-white opacity-30" />}
                               </div>}
                             <div className="absolute top-2 left-2 text-white text-[10px] font-black px-2 py-0.5 rounded-md z-10 pointer-events-none backdrop-blur-md bg-black/40 border border-white/20 shadow-sm">{idx + 1}</div>
                             {isUsed && (
@@ -2946,7 +2986,7 @@ export default function App() {
           <button className="absolute top-6 right-6 text-white p-2 rounded-full transition-all hover:opacity-70" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
             <X size={40} />
           </button>
-          <img src={previewCard.img} className="max-h-[85vh] max-w-[90vw] h-auto w-auto rounded-2xl shadow-2xl bg-white object-contain" style={{ animation: 'scaleIn 0.2s ease-out' }} alt="Карта" />
+          <img src={previewCard.img} decoding="async" className="max-h-[85vh] max-w-[90vw] h-auto w-auto rounded-2xl shadow-2xl bg-white object-contain" style={{ animation: 'scaleIn 0.2s ease-out' }} alt="Карта" />
         </div>
       )}
       <style>{`
@@ -3265,15 +3305,15 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         ) : (
           <div className="relative w-full h-full" style={isField ? {} : { transformStyle: 'preserve-3d', transition: 'transform 0.6s ease', transform: element.isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }} onMouseDown={handleDragStart} onTouchStart={handleDragStart}>
             {isField ? (
-              <img src={element.img} className="w-full h-full object-contain pointer-events-none" alt="Игровое поле" />
+              <img src={element.img} decoding="async" className="w-full h-full object-contain pointer-events-none" alt="Игровое поле" />
             ) : (
               <>
                 <div className="absolute inset-0 rounded-[1rem] overflow-hidden flex items-center justify-center bg-white border border-black/5" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                  <img src={element.img} className="w-full h-full object-contain pointer-events-none" alt="Карта" />
+                  <img src={element.img} decoding="async" fetchPriority="high" className="w-full h-full object-contain pointer-events-none" alt="Карта" />
                 </div>
                 <div className="absolute inset-0 rounded-[1rem] overflow-hidden flex items-center justify-center border border-white/10" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
                   {element.backImg
-                    ? <img src={element.backImg} className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" />
+                    ? <img src={element.backImg} decoding="async" fetchPriority="high" className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" />
                     : <div className="flex flex-col items-center justify-center gap-2 opacity-30"><Layers size={40} className="text-white" /><span className="text-[10px] text-white font-black uppercase tracking-widest leading-none">MAK SPACE</span></div>}
                 </div>
               </>
