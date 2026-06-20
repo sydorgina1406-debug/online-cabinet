@@ -1383,10 +1383,24 @@ export default function App() {
       
       const loadImageSafe = async (url) => {
         if (!url) return null;
+        const isExportSafe = (img) => {
+          try {
+            const testCanvas = document.createElement('canvas');
+            testCanvas.width = 1;
+            testCanvas.height = 1;
+            const testCtx = testCanvas.getContext('2d');
+            testCtx.drawImage(img, 0, 0, 1, 1);
+            testCanvas.toDataURL('image/png');
+            return true;
+          } catch (e) {
+            return false;
+          }
+        };
         
         const tryLoad = (src) => new Promise((resolve, reject) => {
           const img = new Image();
           img.crossOrigin = 'anonymous';
+          img.referrerPolicy = 'no-referrer';
           img.onload = () => resolve(img);
           img.onerror = () => reject(new Error('Load failed'));
           img.src = src;
@@ -1400,7 +1414,7 @@ export default function App() {
         for (const proxyUrl of proxies) {
           try {
             const img = await tryLoad(proxyUrl);
-            if (img && img.naturalWidth > 0) return img;
+            if (img && img.naturalWidth > 0 && isExportSafe(img)) return img;
           } catch (e) {
             // Переходим к следующему прокси
           }
@@ -1414,7 +1428,9 @@ export default function App() {
             if (data && data.contents) {
               return await new Promise((resolve) => {
                 const img = new Image();
-                img.onload = () => resolve(img);
+                img.crossOrigin = 'anonymous';
+                img.referrerPolicy = 'no-referrer';
+                img.onload = () => resolve(isExportSafe(img) ? img : null);
                 img.onerror = () => resolve(null);
                 img.src = data.contents;
               });
@@ -1756,12 +1772,20 @@ export default function App() {
         }
         ctx.restore();
       }
-      const dataUrl = canvas.toDataURL('image/png');
+      let dataUrl;
+      try {
+        dataUrl = canvas.toDataURL('image/png');
+      } catch (exportErr) {
+        console.warn('Screenshot export blocked by image source:', exportErr);
+        throw new Error('браузер заблокировал одну из картинок. Попробуйте повторить после обновления страницы');
+      }
       const link = document.createElement('a');
       const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-');
       link.download = `Сессия_${dateStr}.png`;
       link.href = dataUrl;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       notify("Скриншот сохранен! ✓");
     } catch (e) {
       console.error('Screenshot error:', e);
