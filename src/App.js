@@ -17,7 +17,7 @@ import {
   Volume2, VolumeX, ArrowUp, ArrowDown, ArrowUpToLine, Save, MousePointer2, UserCircle, UserPlus,
   Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
   Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, MessageCircle,
-  Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff, Dices, UserMinus, BookOpen,
+  Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff, Dices, UserMinus, BookOpen, Mic,
   Bold, Italic, Underline, Strikethrough, List, MonitorPlay, Search, Star
 } from 'lucide-react';
 
@@ -620,6 +620,12 @@ export default function App() {
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [isVideoCallReady, setIsVideoCallReady] = useState(false);
   const [callStatus, setCallStatus] = useState('');
+  const [callMediaMode, setCallMediaMode] = useState('video');
+  const [videoDevices, setVideoDevices] = useState([]);
+  const [audioDevices, setAudioDevices] = useState([]);
+  const [selectedVideoDeviceId, setSelectedVideoDeviceId] = useState(() => typeof window !== 'undefined' ? (window.localStorage.getItem('makVideoDeviceId') || '') : '');
+  const [selectedAudioDeviceId, setSelectedAudioDeviceId] = useState(() => typeof window !== 'undefined' ? (window.localStorage.getItem('makAudioDeviceId') || '') : '');
+  const [isLoadingMediaDevices, setIsLoadingMediaDevices] = useState(false);
   const videoDragRef = useRef({ isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 });
   const videoResizeRef = useRef({ isResizing: false, startX: 0, startY: 0, startW: 320, startH: 420 });
   const [videoPos, setVideoPos] = useState({ x: 20, y: 20 });
@@ -825,6 +831,28 @@ export default function App() {
       autoGainControl: true
     }
   };
+  const getMediaErrorText = (err) => {
+    if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') return 'доступ к камере или микрофону запрещён в браузере';
+    if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') return 'камера или микрофон не найдены';
+    if (err?.name === 'NotReadableError' || err?.name === 'TrackStartError') return 'камера или микрофон заняты другой программой';
+    if (err?.name === 'OverconstrainedError' || err?.name === 'ConstraintNotSatisfiedError') return 'выбранная камера не поддерживает нужные параметры';
+    if (err?.name === 'SecurityError') return 'браузер заблокировал камеру из-за настроек безопасности';
+    return err?.message || 'неизвестная ошибка камеры';
+  };
+  const buildMediaConstraints = (mode = callMediaMode) => ({
+    video: mode === 'audio' ? false : {
+      ...mediaConstraints.video,
+      ...(selectedVideoDeviceId ? { deviceId: { exact: selectedVideoDeviceId } } : {})
+    },
+    audio: {
+      ...mediaConstraints.audio,
+      ...(selectedAudioDeviceId ? { deviceId: { exact: selectedAudioDeviceId } } : {})
+    }
+  });
+  const getDefaultMediaConstraints = (mode = callMediaMode) => ({
+    video: mode === 'audio' ? false : mediaConstraints.video,
+    audio: mediaConstraints.audio
+  });
   const attachVideoStream = (videoEl, stream, shouldMute = false) => {
     if (!videoEl || !stream) return;
     videoEl.srcObject = stream;
@@ -834,6 +862,57 @@ export default function App() {
   };
   const cleanupLocalStream = (stream) => {
     stream?.getTracks?.().forEach(track => track.stop());
+  };
+  const refreshMediaDevices = async (requestAccess = false, mode = callMediaMode) => {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      notify("Браузер не поддерживает выбор камеры");
+      return;
+    }
+    let tempStream = null;
+    setIsLoadingMediaDevices(true);
+    try {
+      if (requestAccess) {
+        try {
+          tempStream = await navigator.mediaDevices.getUserMedia(mode === 'audio' ? { video: false, audio: true } : { video: true, audio: true });
+        } catch (err) {
+          if (mode !== 'audio') {
+            tempStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true }).catch(() => null);
+          }
+          if (!tempStream) throw err;
+        }
+      }
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cameras = devices.filter(device => device.kind === 'videoinput');
+      const microphones = devices.filter(device => device.kind === 'audioinput');
+      setVideoDevices(cameras);
+      setAudioDevices(microphones);
+      if (selectedVideoDeviceId && !cameras.some(device => device.deviceId === selectedVideoDeviceId)) {
+        setSelectedVideoDeviceId('');
+      }
+      if (selectedAudioDeviceId && !microphones.some(device => device.deviceId === selectedAudioDeviceId)) {
+        setSelectedAudioDeviceId('');
+      }
+      if (requestAccess) notify(mode === 'audio' ? "Микрофоны обновлены ✓" : "Камеры и микрофоны обновлены ✓");
+    } catch (err) {
+      notify("Не удалось получить список устройств: " + getMediaErrorText(err), 8000);
+    } finally {
+      cleanupLocalStream(tempStream);
+      setIsLoadingMediaDevices(false);
+    }
+  };
+  const getPreferredMediaStream = async (mode = callMediaMode) => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error('браузер не поддерживает видеосвязь');
+    }
+    try {
+      return await navigator.mediaDevices.getUserMedia(buildMediaConstraints(mode));
+    } catch (err) {
+      if (selectedVideoDeviceId || selectedAudioDeviceId) {
+        notify(mode === 'audio' ? "Выбранный микрофон не открылся, пробую микрофон по умолчанию..." : "Выбранная камера или микрофон не открылись, пробую устройство по умолчанию...", 6000);
+        return await navigator.mediaDevices.getUserMedia(getDefaultMediaConstraints(mode));
+      }
+      throw err;
+    }
   };
   const updateConnectionStatus = (pc, label) => {
     const connectionState = pc.connectionState;
@@ -851,15 +930,18 @@ export default function App() {
       setCallStatus('');
     }
   };
-  const startNativeCall = async () => {
+  const startNativeCall = async (mode = callMediaMode) => {
+    const modeToUse = mode === 'audio' ? 'audio' : 'video';
     let stream = null;
     try {
+      setCallMediaMode(modeToUse);
       setIsVideoActive(true);
       setCallStatus('Подготовка...');
       processedCandidates.current.clear();
       await new Promise(resolve => setTimeout(resolve, 100));
-      setCallStatus('Доступ к камере...');
-      stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      setCallStatus(modeToUse === 'audio' ? 'Доступ к микрофону...' : 'Доступ к камере...');
+      stream = await getPreferredMediaStream(modeToUse);
+      refreshMediaDevices(false, modeToUse);
       attachVideoStream(localVideoRef.current, stream, true);
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
@@ -889,7 +971,7 @@ export default function App() {
       await pc.setLocalDescription(offer);
       await updateDoc(callDoc, { offer: { type: offer.type, sdp: offer.sdp } });
       // Только после создания offer оповещаем клиента
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: true }, { merge: true });
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: true, callMediaMode: modeToUse }, { merge: true });
       setCallStatus('Ожидание клиента...');
       if (callSnapshotUnsubRef.current) callSnapshotUnsubRef.current();
       let answerSet = false;
@@ -930,19 +1012,21 @@ export default function App() {
       }
       setCallStatus('');
       setIsVideoActive(false);
-      notify("Ошибка видеосвязи: " + err.message, 8000);
+      notify("Ошибка видеосвязи: " + getMediaErrorText(err), 8000);
       console.error("WebRTC Error:", err);
     }
   };
   const joinNativeCall = async () => {
+    const modeToUse = callMediaMode === 'audio' ? 'audio' : 'video';
     let stream = null;
     try {
       setIsVideoActive(true);
       setCallStatus('Подготовка...');
       processedCandidates.current.clear();
       await new Promise(resolve => setTimeout(resolve, 100));
-      setCallStatus('Доступ к камере...');
-      stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      setCallStatus(modeToUse === 'audio' ? 'Доступ к микрофону...' : 'Доступ к камере...');
+      stream = await getPreferredMediaStream(modeToUse);
+      refreshMediaDevices(false, modeToUse);
       attachVideoStream(localVideoRef.current, stream, true);
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
@@ -1013,7 +1097,7 @@ export default function App() {
       }
       setCallStatus('');
       setIsVideoActive(false);
-      notify("Ошибка видеосвязи: " + err.message, 8000);
+      notify("Ошибка видеосвязи: " + getMediaErrorText(err), 8000);
       console.error("WebRTC Error:", err);
     }
   };
@@ -1037,7 +1121,7 @@ export default function App() {
     setIsVideoActive(false);
     setCallStatus('');
     if (!isClientMode) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: false }, { merge: true });
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: false, callMediaMode: 'video' }, { merge: true });
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc'));
     }
   };
@@ -1172,6 +1256,15 @@ export default function App() {
     init();
   }, []);
   useEffect(() => {
+    if (typeof window !== 'undefined') window.localStorage.setItem('makVideoDeviceId', selectedVideoDeviceId || '');
+  }, [selectedVideoDeviceId]);
+  useEffect(() => {
+    if (typeof window !== 'undefined') window.localStorage.setItem('makAudioDeviceId', selectedAudioDeviceId || '');
+  }, [selectedAudioDeviceId]);
+  useEffect(() => {
+    if (isVideoModalOpen) refreshMediaDevices(false, callMediaMode);
+  }, [isVideoModalOpen, callMediaMode]);
+  useEffect(() => {
     saveStoredDeckIds('makFavoriteDecksV1', favoriteDeckIds);
   }, [favoriteDeckIds]);
   useEffect(() => {
@@ -1218,6 +1311,7 @@ export default function App() {
           if (d.data().tableBg && typeof d.data().tableBg === 'object') setTableBg(d.data().tableBg);
           if (d.data().figureViewMode) setFigureViewMode(d.data().figureViewMode);
           if (d.data().isVideoCallReady !== undefined) setIsVideoCallReady(d.data().isVideoCallReady);
+          if (d.data().callMediaMode) setCallMediaMode(d.data().callMediaMode === 'audio' ? 'audio' : 'video');
         }
         else if (d.id === '_library_state') {
           const libraryData = d.data();
@@ -2429,9 +2523,9 @@ export default function App() {
                 Для стабильной работы платформы (независимо от того, используете вы телефон или ПК) <b>строго соблюдайте этот порядок</b>:
               </p>
               <ol className="list-decimal list-inside text-sm text-red-800 mt-2 font-bold space-y-2">
-                <li><b>Сначала включите видеосвязь</b> (кнопка с камерой).</li>
+                <li><b>Сначала включите связь</b> (кнопка с камерой): выберите <b>Видео</b> или <b>Только микрофон</b>.</li>
                 <li><b>Только после этого копируйте и отправляйте ссылку клиенту.</b></li>
-                <li>Если клиент заходит <b>с телефона</b>, ему нужно сначала развернуть верхнюю панель (нажав на стрелочку <ChevronDown size={14} className="inline text-red-700"/> справа вверху), а затем нажать зеленую кнопку <b>«Подключиться к видео»</b>.</li>
+                <li>Если клиент заходит <b>с телефона</b>, ему нужно сначала развернуть верхнюю панель (нажав на стрелочку <ChevronDown size={14} className="inline text-red-700"/> справа вверху), а затем нажать зеленую кнопку <b>«Подключиться к видео»</b> или <b>«Подключиться к аудио»</b>.</li>
               </ol>
               <div className="mt-3 p-2 bg-white/50 rounded-lg text-xs font-bold flex gap-2">
                  <AlertCircle size={16} className="shrink-0 text-red-600" />
@@ -2443,6 +2537,7 @@ export default function App() {
               <div className="space-y-4">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> Клиент и Доступ</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
+                  <p><b>Психолог</b> входит через логин и пароль. <b>Клиент</b> заходит только по вашей ссылке и вводит своё имя.</p>
                   <p>Нажмите <UserPlus size={14} className="inline text-plum"/> <b>«ССЫЛКА ДЛЯ КЛИЕНТА»</b> на верхней панели. Ссылка скопируется — отправьте её клиенту.</p>
                   <p>Клиент переходит по ссылке, вводит своё имя и попадает за ваш стол. <b>Регистрация не нужна.</b></p>
                   <p><b>Права клиента:</b> тянуть карты (если колода открыта), двигать их, писать в желтых заметках, бросать игровые кубики.</p>
@@ -2470,7 +2565,8 @@ export default function App() {
                   <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Настройки Поля:</b> Изменение фона стола (нейро-текстуры) или загрузка своего игрового поля (картинки, на которую можно класть карты).</div></div>
                   <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Очистить стол:</b> Удаляет все незакрепленные объекты. Внизу появится кнопка отмены (действует 10 секунд).</div></div>
                   <div className="flex items-start gap-2"><Timer size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Таймер:</b> Устанавливает общее время (60/90 мин). Синхронизирован с клиентом.</div></div>
-                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Видеосвязь:</b> Встроенная прямо в кабинет. Окно видео можно перемещать и растягивать.</div></div>
+                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Связь:</b> Встроенная прямо в кабинет. В окне можно выбрать <b>Видео</b> или <b>Только микрофон</b>, обновить список устройств, выбрать внешнюю камеру и микрофон. Окно связи можно перемещать и растягивать.</div></div>
+                  <div className="flex items-start gap-2"><Volume2 size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Звуки:</b> Кнопка громкости включает или отключает звуки действий и кубиков.</div></div>
                 </div>
               </div>
               <div className="space-y-4">
@@ -2499,7 +2595,7 @@ export default function App() {
                   </div>
                   <div className="flex items-start gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-blue-700 shrink-0"><Dices size={18} /></div>
-                    <div><b className="text-blue-800">Игровые кубики и фишки:</b> Кнопка с кубиками открывает панель. Доступны цветные маркеры и кубики (d6 и d10). Бросать кубик может и клиент.</div>
+                    <div><b className="text-blue-800">Игровые кубики и фишки:</b> Кнопка с кубиками открывает панель. Доступны цветные маркеры и кубики (d6, d10 и d12). Бросать кубик может и клиент.</div>
                   </div>
                 </div>
               </div>
@@ -2515,6 +2611,7 @@ export default function App() {
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><ArrowUpToLine size={14} className="text-gray-500" /> На передний план</div>
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Lock size={14} className="text-gray-500" /> Закрепить (от сдвигов)</div>
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><EyeOff size={14} className="text-gray-500" /> Уложить/Разбудить (сон/смерть для фигур)</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><UserMinus size={14} className="text-terra" /> Уронить/поднять фигурку в расстановке</div>
                   </div>
                   <p className="mt-3 text-xs bg-gray-50 p-3 rounded-lg flex flex-col gap-2">
                     <span><Move size={14} className="inline text-plum"/> Чтобы <b>изменить размер</b>, потяните за правый нижний угол.</span>
@@ -2535,6 +2632,25 @@ export default function App() {
                   <div className="bg-plum/10 p-3 rounded-lg border border-plum/20 mt-2">
                     <p className="font-bold text-plum mb-1">Как вытаскивать карты?</p>
                     <p className="text-xs">Выберите колоду в левом списке. Нажмите <b>«Наугад»</b> (вытащит случайную рубашкой вверх) или нажмите кнопку <b>«Открыть колоду»</b> справа вверху, чтобы увидеть все изображения и выбрать конкретную.</p>
+                  </div>
+                  <div className="bg-forest/10 p-3 rounded-lg border border-forest/20">
+                    <p className="font-bold text-forest mb-1">Как быстро находить нужные колоды?</p>
+                    <ul className="text-xs space-y-1 list-disc list-inside">
+                      <li><Search size={12} className="inline" /> <b>Поиск по колодам:</b> введите часть названия, чтобы быстро отфильтровать список.</li>
+                      <li><Star size={12} className="inline text-terra" /> <b>Избранные:</b> нажмите звёздочку у часто используемой колоды, и она закрепится сверху.</li>
+                      <li><EyeOff size={12} className="inline" /> <b>Скрыть лишние:</b> нажмите глаз у колоды. Вернуть её можно кнопкой <b>«Показать скрытые»</b>.</li>
+                    </ul>
+                  </div>
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <p className="font-bold text-blue-900 mb-1">Колоды с Google Диска</p>
+                    <ul className="text-xs space-y-1 list-disc list-inside">
+                      <li>Во вкладке <b>МОИ</b> нажмите <b>«Вставить ссылку на папку»</b>.</li>
+                      <li>Карты называйте числами: <b>1</b>, <b>2</b>, <b>3</b> и так далее.</li>
+                      <li>Индивидуальная рубашка пишется строго через <b>-1</b>: <b>1-1</b> для карты <b>1</b>, <b>2-1</b> для карты <b>2</b>, <b>3-1</b> для карты <b>3</b>.</li>
+                      <li>Файл с названием, где есть слово <b>«коробк»</b>, станет картинкой коробки колоды до выбора.</li>
+                      <li>Если файлов <b>1-1</b>, <b>2-1</b> и подобных нет, колода работает как раньше.</li>
+                      <li>Папки Google Диска загружаются постранично, поэтому колоды больше 100 карт тоже подтягиваются, если доступ к папке открыт.</li>
+                    </ul>
                   </div>
                 </div>
               </div>
@@ -2566,11 +2682,24 @@ export default function App() {
                   <span className="text-white text-[9px] font-black tracking-widest uppercase opacity-80">{callStatus}</span>
                </div>
              )}
-             <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
-          </div>
-          <div className="absolute bottom-2 left-2 w-[30%] h-[30%] min-w-[30px] min-h-[40px] bg-gray-800 rounded-lg overflow-hidden shadow-xl border border-white/20 z-50 pointer-events-none">
-             <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100" />
-          </div>
+             {callMediaMode === 'audio' ? (
+               <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white text-center px-6" style={{ background: `linear-gradient(135deg, ${COLORS.forest}, ${COLORS.ink})` }}>
+                 <video ref={remoteVideoRef} autoPlay playsInline className="hidden" />
+                 <div className="w-16 h-16 rounded-full flex items-center justify-center border border-white/20 bg-white/10 shadow-lg">
+                   <Mic size={30} />
+                 </div>
+                 <div className="text-[10px] font-black uppercase tracking-widest opacity-90">Аудиозвонок</div>
+                 <div className="text-[9px] font-bold opacity-60">Камера выключена, работает только микрофон</div>
+               </div>
+             ) : (
+               <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+             )}
+           </div>
+           {callMediaMode !== 'audio' && (
+             <div className="absolute bottom-2 left-2 w-[30%] h-[30%] min-w-[30px] min-h-[40px] bg-gray-800 rounded-lg overflow-hidden shadow-xl border border-white/20 z-50 pointer-events-none">
+                <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100" />
+             </div>
+           )}
           <div
              onMouseDown={handleVideoResizePointerDown}
              onTouchStart={handleVideoResizePointerDown}
@@ -2586,17 +2715,53 @@ export default function App() {
             <button onClick={() => setIsVideoModalOpen(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
               <X size={20} style={{ color: COLORS.ink }} />
             </button>
-            <h2 className="text-xl font-black uppercase mb-4 text-center" style={{ color: COLORS.ink }}>Видеосвязь</h2>
+            <h2 className="text-xl font-black uppercase mb-4 text-center" style={{ color: COLORS.ink }}>Связь</h2>
             <p className="text-[10px] text-center mb-6 font-medium leading-relaxed" style={{ color: `${COLORS.ink}99` }}>
-              Создайте приватную комнату для встроенного звонка. Она появится в плавающем окошке у вас и клиента.
+              Создайте приватную комнату для встроенного звонка. Можно включить видео или оставить только микрофон.
             </p>
+            <div className="flex p-1 rounded-2xl mb-4 bg-black/5">
+              <button onClick={() => setCallMediaMode('video')} className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${callMediaMode === 'video' ? 'bg-white shadow-sm text-forest' : 'text-ink/60 hover:opacity-70'}`}>
+                <Video size={13} /> Видео
+              </button>
+              <button onClick={() => setCallMediaMode('audio')} className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${callMediaMode === 'audio' ? 'bg-white shadow-sm text-forest' : 'text-ink/60 hover:opacity-70'}`}>
+                <Mic size={13} /> Только микрофон
+              </button>
+            </div>
+            <div className="rounded-2xl p-3 mb-4 border text-[10px]" style={{ backgroundColor: `${COLORS.forest}08`, borderColor: `${COLORS.forest}20` }}>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="font-black uppercase tracking-widest" style={{ color: COLORS.forest }}>{callMediaMode === 'audio' ? 'Микрофон' : 'Камера и микрофон'}</div>
+                <button onClick={() => refreshMediaDevices(true, callMediaMode)} disabled={isLoadingMediaDevices} className="px-3 py-1.5 rounded-xl font-black uppercase tracking-widest text-[8px] transition-all hover:opacity-80 disabled:opacity-50 flex items-center gap-1" style={{ backgroundColor: COLORS.forest, color: 'white' }}>
+                  {isLoadingMediaDevices ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+                  Обновить
+                </button>
+              </div>
+              <div className="flex flex-col gap-2">
+                {callMediaMode !== 'audio' && (
+                  <select value={selectedVideoDeviceId} onChange={e => setSelectedVideoDeviceId(e.target.value)} className="w-full px-3 py-2 rounded-xl border outline-none font-bold bg-white" style={{ borderColor: `${COLORS.ink}12`, color: COLORS.ink }}>
+                    <option value="">Камера по умолчанию</option>
+                    {videoDevices.map((device, index) => (
+                      <option key={device.deviceId || index} value={device.deviceId}>{device.label || `Камера ${index + 1}`}</option>
+                    ))}
+                  </select>
+                )}
+                <select value={selectedAudioDeviceId} onChange={e => setSelectedAudioDeviceId(e.target.value)} className="w-full px-3 py-2 rounded-xl border outline-none font-bold bg-white" style={{ borderColor: `${COLORS.ink}12`, color: COLORS.ink }}>
+                  <option value="">Микрофон по умолчанию</option>
+                  {audioDevices.map((device, index) => (
+                    <option key={device.deviceId || index} value={device.deviceId}>{device.label || `Микрофон ${index + 1}`}</option>
+                  ))}
+                </select>
+              </div>
+              <p className="mt-2 leading-relaxed font-medium" style={{ color: `${COLORS.ink}80` }}>
+                {callMediaMode === 'audio' ? 'В этом режиме камера не включается: нужен только микрофон.' : 'Если внешней вебкамеры нет в списке, нажмите «Обновить» и разрешите доступ к камере в браузере.'}
+              </p>
+            </div>
             <button onClick={async () => {
                 setIsVideoModalOpen(false);
-                startNativeCall();
-                notify("Встроенная видеосвязь запущена!");
+                startNativeCall(callMediaMode);
+                notify(callMediaMode === 'audio' ? "Аудиосвязь запущена!" : "Встроенная видеосвязь запущена!");
               }}
               className="w-full py-4 rounded-xl text-white font-black uppercase tracking-widest shadow-md transition-all hover:scale-[1.02] flex items-center justify-center gap-2" style={{ backgroundColor: COLORS.forest }}>
-              <Video size={18} /> Запустить звонок
+              {callMediaMode === 'audio' ? <Mic size={18} /> : <Video size={18} />} {callMediaMode === 'audio' ? 'Запустить аудиозвонок' : 'Запустить звонок'}
             </button>
             <div className="flex gap-3 mt-3">
               {isVideoCallReady && (
@@ -2724,14 +2889,14 @@ export default function App() {
           </div>
           {!isClientMode ? (
             <div className="flex items-center gap-1 bg-white/50 p-1 rounded-[1rem] border shadow-sm" style={{ borderColor: `${COLORS.forest}30`, backgroundColor: `${COLORS.forest}10` }}>
-              <button onClick={() => { setIsVideoModalOpen(true); }} className="p-2 rounded-xl transition-all hover:bg-white text-forest" title="Настроить видеосвязь">
+              <button onClick={() => { setIsVideoModalOpen(true); }} className="p-2 rounded-xl transition-all hover:bg-white text-forest" title="Настроить связь">
                 <Video size={16} />
               </button>
            </div>
           ) : (
             isVideoCallReady && (
               <button onClick={joinNativeCall} className="flex items-center gap-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black text-white shadow-[0_0_15px_rgba(45,74,62,0.4)] transition-all hover:scale-105 uppercase animate-pulse" style={{ backgroundColor: COLORS.forest }}>
-                <Video size={14} /> Подключиться к видео
+                {callMediaMode === 'audio' ? <Mic size={14} /> : <Video size={14} />} {callMediaMode === 'audio' ? 'Подключиться к аудио' : 'Подключиться к видео'}
              </button>
             )
           )}
