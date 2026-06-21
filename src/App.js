@@ -766,6 +766,7 @@ export default function App() {
   const [deckSearch, setDeckSearch] = useState('');
   const [showHiddenDecks, setShowHiddenDecks] = useState(false);
   const [isDbConnected, setIsDbConnected] = useState(false);
+  const [isBrowserOnline, setIsBrowserOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine);
   const [sessionTimer, setSessionTimer] = useState(null);
   const [timerDisplay, setTimerDisplay] = useState('');
   const [timerIsWarning, setTimerIsWarning] = useState(false);
@@ -779,6 +780,29 @@ export default function App() {
     if (notifyTimeoutRef.current) clearTimeout(notifyTimeoutRef.current);
     notifyTimeoutRef.current = setTimeout(() => setNotification(""), time);
   };
+  const isPageSecure = typeof window === 'undefined' || window.isSecureContext || window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+  const clientPanelMessage = isClientMode
+    ? (!roomId
+      ? 'Комната не найдена. Попросите психолога прислать ссылку ещё раз.'
+      : !isBrowserOnline
+        ? 'Нет интернета. Изменения могут не синхронизироваться.'
+        : (!user || !isDbConnected)
+          ? 'Подключаюсь к общему столу...'
+          : !isPageSecure
+            ? 'Откройте защищённую ссылку https, чтобы связь работала стабильно.'
+            : '')
+    : '';
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const updateOnlineStatus = () => setIsBrowserOnline(typeof navigator === 'undefined' ? true : navigator.onLine);
+    updateOnlineStatus();
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    return () => {
+      window.removeEventListener('online', updateOnlineStatus);
+      window.removeEventListener('offline', updateOnlineStatus);
+    };
+  }, []);
   const askPrompt = (title, defaultValue = '', placeholder = '') => {
     return new Promise((resolve) => {
       setCustomDialog({
@@ -1744,7 +1768,7 @@ export default function App() {
     }
     notify(`Ссылка на "${session.name}" скопирована. Откройте эту сессию у себя, чтобы синхронизироваться с клиентом.`, 9000);
     const ok = await askConfirm(`Открыть "${session.name}" у вас сейчас? Тогда вы и клиент будете в одной сессии. Текущий стол будет ОЧИЩЕН и заменён сохранённой сессией.`);
-    if (ok) await loadSavedSession(session, { skipConfirm: true });
+    if (ok) await loadSavedSession(session, { skipConfirm: true, targetRoomId });
   };
   const saveCurrentSession = async () => {
     const defaultName = `Сессия ${new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
@@ -1760,6 +1784,8 @@ export default function App() {
         name: name.trim(),
         elements: elementsToSave,
         roomId,
+        tableBg,
+        activeDeckData,
         activeDeckName: activeDeckData?.name || '',
         counts: { cards: cardCount, figures: figureCount, notes: noteCount, total: elementsToSave.length },
         createdAt: Date.now()
@@ -1770,9 +1796,10 @@ export default function App() {
     }
   };
   const loadSavedSession = async (session, options = {}) => {
-    const targetRoomId = session.roomId || roomId;
+    const targetRoomId = options.targetRoomId || roomId || session.roomId;
+    if (!targetRoomId) return notify("Сначала войдите в сессию");
     if (!options.skipConfirm) {
-      const ok = await askConfirm(`Вы уверены, что хотите загрузить "${session.name}"? ${targetRoomId !== roomId ? 'Вы перейдёте в постоянную комнату этой сессии. ' : ''}Текущий стол будет ОЧИЩЕН.`);
+      const ok = await askConfirm(`Вы уверены, что хотите загрузить "${session.name}"? ${targetRoomId !== roomId ? 'Вы перейдёте в постоянную комнату этой сессии. ' : 'Сессия загрузится в текущую комнату, клиент увидит эти карты. '}Текущий стол будет ОЧИЩЕН.`);
       if (!ok) return;
     }
     notify("Загружаю сессию...");
@@ -1793,6 +1820,12 @@ export default function App() {
         const nextEl = { ...el, id: newId };
         batch.set(getElementDocRef(targetRoomId, nextEl), nextEl);
       });
+      if (session.tableBg) {
+        batch.set(doc(db, 'artifacts', appId, 'public', 'data', `room_${targetRoomId}`, '_settings'), { tableBg: session.tableBg }, { merge: true });
+      }
+      if (session.activeDeckData) {
+        batch.set(doc(db, 'artifacts', appId, 'public', 'data', `room_${targetRoomId}`, '_active_deck'), session.activeDeckData, { merge: true });
+      }
       await batch.commit();
       if (targetRoomId !== roomId) {
         setRoomId(targetRoomId);
@@ -1803,10 +1836,20 @@ export default function App() {
           window.sessionStorage.setItem(ACTIVE_ROOM_SESSION_KEY, targetRoomId);
         } catch (e) {}
       }
-      notify(targetRoomId !== roomId ? "Постоянная комната сессии открыта! ✓" : "Сессия загружена на стол! ✓");
+      notify(targetRoomId !== roomId ? "Постоянная комната сессии открыта! ✓" : "Сессия загружена в текущую комнату. Клиент увидит изменения ✓");
       if (isLibraryOpen) toggleLibrary();
     } catch (e) {
       notify("Ошибка загрузки сессии: " + getFriendlyErrorText(e));
+    }
+  };
+  const renameSavedSession = async (session) => {
+    const newName = await askPrompt("Новое название сессии:", session.name);
+    if (!newName || !newName.trim()) return;
+    try {
+      await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions', session.id), { name: newName.trim() });
+      notify("Название сессии обновлено ✓");
+    } catch (e) {
+      notify("Ошибка переименования: " + getFriendlyErrorText(e));
     }
   };
   const restoreLocalBoardBackup = async () => {
@@ -3279,6 +3322,11 @@ export default function App() {
                 <span className="text-[8px] md:text-[9px] font-bold tracking-widest uppercase flex items-center gap-1" style={{ color: COLORS.plum }}>
                   СЕССИЯ: {roomId} <span className="opacity-50">|</span> ВЫ: {userName}
                 </span>
+                {clientPanelMessage && (
+                  <span className="text-[8px] md:text-[9px] font-black uppercase flex items-center gap-1 px-2 py-1 rounded-full" style={{ color: COLORS.terra, backgroundColor: `${COLORS.terra}12` }}>
+                    <AlertCircle size={10} /> {clientPanelMessage}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -3314,9 +3362,11 @@ export default function App() {
              </button>
             )
           )}
-          <button onClick={runSessionCheck} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5 shadow-sm border" style={{ backgroundColor: 'white', color: COLORS.forest, borderColor: `${COLORS.forest}25` }} title="Проверка перед сессией">
-            <AlertCircle size={18} />
-          </button>
+          {!isClientMode && (
+            <button onClick={runSessionCheck} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5 shadow-sm border" style={{ backgroundColor: 'white', color: COLORS.forest, borderColor: `${COLORS.forest}25` }} title="Проверка перед сессией">
+              <AlertCircle size={18} />
+            </button>
+          )}
           {timerDisplay ? (
             <div className="flex items-center gap-1.5">
               <div className="px-4 py-2 rounded-2xl font-black text-sm tabular-nums tracking-widest flex items-center gap-2 border transition-all" style={{ backgroundColor: timerIsWarning ? '#FEE2E2' : `${COLORS.plum}12`, color: timerIsWarning ? '#DC2626' : COLORS.plum, borderColor: timerIsWarning ? '#FCA5A5' : `${COLORS.plum}30` }}>
@@ -3564,7 +3614,7 @@ export default function App() {
                       <div className="text-[10px] font-bold text-center mb-2" style={{ color: COLORS.ink }}>СОХРАНЕННЫЕ СЕССИИ</div>
                       <div className="rounded-2xl p-3 text-[9px] leading-relaxed border" style={{ backgroundColor: `${COLORS.forest}08`, color: `${COLORS.ink}AA`, borderColor: `${COLORS.forest}20` }}>
                         <div className="font-black uppercase tracking-widest mb-1 flex items-center gap-1" style={{ color: COLORS.forest }}><Save size={11} /> История и восстановление</div>
-                        <div>Кнопка сохранения записывает текущий расклад в историю. У каждой сохранённой сессии есть постоянная ссылка для психолога и клиента. Если копируете ссылку старой сессии, платформа предложит открыть её у вас, чтобы вы были в одной комнате с клиентом.</div>
+                        <div>Кнопка сохранения записывает текущий расклад в историю. Зеленая кнопка загружает сохранение в текущую комнату, поэтому клиент увидит карты. Название можно поменять карандашом.</div>
                         {hasLocalBoardBackup && (
                           <button onClick={restoreLocalBoardBackup} className="mt-3 w-full py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.02]" style={{ backgroundColor: COLORS.forest }}>
                             <UploadCloud size={12} /> Восстановить локальную копию
@@ -3578,9 +3628,10 @@ export default function App() {
                               <div className="text-[10px] font-bold" style={{ color: COLORS.ink }}>{session.name}</div>
                               <div className="text-[8px] text-gray-500">{new Date(session.createdAt).toLocaleDateString()} {session.counts?.total ? `| ${session.counts.total} объектов` : ''}</div>
                               {session.activeDeckName && <div className="text-[8px] text-gray-400 truncate max-w-[150px]">Колода: {session.activeDeckName}</div>}
-                           </div>
-                           <div className="flex gap-1">
-                              <button onClick={() => loadSavedSession(session)} className="p-2 text-forest hover:bg-forest/10 rounded-lg transition-colors" title="Загрузить на стол"><UploadCloud size={14}/></button>
+                            </div>
+                            <div className="flex gap-1">
+                              <button onClick={() => renameSavedSession(session)} className="p-2 text-ink/70 hover:bg-black/5 rounded-lg transition-colors" title="Переименовать сессию"><Edit2 size={14}/></button>
+                              <button onClick={() => loadSavedSession(session)} className="p-2 text-forest hover:bg-forest/10 rounded-lg transition-colors" title="Загрузить в текущую комнату"><UploadCloud size={14}/></button>
                               <button onClick={() => copySavedSessionLink(session)} className="p-2 text-plum hover:bg-plum/10 rounded-lg transition-colors" title="Скопировать ссылку и открыть эту сессию у себя"><LinkIcon size={14}/></button>
                               <button onClick={async () => {
                                 const ok = await askConfirm('Удалить эту сессию навсегда?');
