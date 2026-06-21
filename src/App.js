@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import {
   getFirestore, doc, onSnapshot, setDoc, getDoc,
-  updateDoc, collection, deleteDoc, addDoc, writeBatch, arrayUnion
+  updateDoc, collection, deleteDoc, addDoc, writeBatch, arrayUnion, getDocs
 } from 'firebase/firestore';
 import {
   getAuth, signInAnonymously, onAuthStateChanged
@@ -14,7 +14,7 @@ import {
   Plus, Layers, RotateCw, RotateCcw, Trash2, Maximize2, Minimize2, X, ChevronUp, ChevronDown,
   FolderOpen, LayoutGrid, Move, Cloud, Copy, CheckCircle,
   Users, LogOut, AlertCircle, ExternalLink, Image as ImageIcon,
-  Volume2, VolumeX, ArrowUp, ArrowDown, ArrowUpToLine, Save, MousePointer2, UserCircle, UserPlus,
+  Volume2, VolumeX, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ArrowUpToLine, Save, MousePointer2, UserCircle, UserPlus,
   Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
   Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, MessageCircle,
   Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff, Dices, UserMinus, BookOpen, Mic,
@@ -55,170 +55,151 @@ const ArrowElementIcon = ({ color, rotation = 0, className }) => (
 
 const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '', isMenu = false, isLaying = false, className }) => {
   const isMale = gender === 'male';
+  const safeName = String(name || '').slice(0, 14);
+  const rot = ((rotation % 360) + 360) % 360;
+  const hexColor = String(color || '#8B3252').replace('#', '').replace(/[^a-zA-Z0-9]/g, '');
+  const bodyGradientId = `figureBody-${hexColor}-${gender}`;
+  const bodySideId = `figureSide-${hexColor}-${gender}`;
+  const headGradientId = `figureHead-${hexColor}-${gender}`;
+  const glossGradientId = `figureGloss-${hexColor}-${gender}`;
+  const eyeOffset = {
+    x: rot >= 45 && rot < 135 ? 2.4 : (rot > 225 && rot < 315 ? -2.4 : 0),
+    y: rot >= 135 && rot <= 225 ? 2 : (rot < 45 || rot >= 315 ? -2 : 0)
+  };
 
   if (isMenu) {
     return (
-      <svg viewBox="0 0 100 100" className={className} style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.15))' }}>
-        <circle cx="50" cy="20" r="15" fill="#C99454" />
+      <svg viewBox="0 0 100 100" className={className} style={{ overflow: 'visible', filter: 'drop-shadow(0px 3px 6px rgba(0,0,0,0.22))' }}>
+        <defs>
+          <linearGradient id={`${bodyGradientId}-menu`} x1="18%" y1="0%" x2="86%" y2="100%">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.45" />
+            <stop offset="35%" stopColor={color} />
+            <stop offset="100%" stopColor="#000000" stopOpacity="0.28" />
+          </linearGradient>
+          <radialGradient id={`${headGradientId}-menu`} cx="35%" cy="25%" r="70%">
+            <stop offset="0%" stopColor="#F6D0A1" />
+            <stop offset="70%" stopColor="#C99454" />
+            <stop offset="100%" stopColor="#9B6436" />
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="28" ry="6" fill="rgba(0,0,0,0.20)" />
         {isMale ? (
-          <rect x="25" y="40" width="50" height="55" rx="8" fill={color} />
+          <path d="M28 44 Q28 36 36 36 L64 36 Q72 36 72 44 L66 88 Q65 94 58 94 L42 94 Q35 94 34 88 Z" fill={`url(#${bodyGradientId}-menu)`} />
         ) : (
-          <path d="M 50,35 L 85,95 L 15,95 Z" fill={color} />
+          <path d="M50 35 C66 48 78 72 84 94 L16 94 C22 72 34 48 50 35 Z" fill={`url(#${bodyGradientId}-menu)`} />
         )}
+        <circle cx="50" cy="24" r="17" fill={`url(#${headGradientId}-menu)`} stroke="rgba(255,255,255,0.7)" strokeWidth="2" />
+        <path d="M40 20 Q50 12 60 20" stroke="rgba(255,255,255,0.45)" strokeWidth="3" fill="none" strokeLinecap="round" />
       </svg>
     );
   }
 
   const isSide = viewMode === 'side';
-  const rot = ((rotation % 360) + 360) % 360;
-
-  let dir = 'up';
-  if (rot >= 45 && rot < 135) dir = 'right';
-  else if (rot >= 135 && rot <= 225) dir = 'down';
-  else if (rot > 225 && rot < 315) dir = 'left';
-
-  const hexColor = color.replace('#', '');
-  const gradientId = `grad-${hexColor}-${gender}`;
-  const shadowStyle = isLaying ? 'drop-shadow(0px 1px 3px rgba(0,0,0,0.4))' : 'drop-shadow(0px 6px 12px rgba(0,0,0,0.3))';
-
-  const drawEyes = (cx1, cy1, cx2, cy2, r) => {
+  const shadowStyle = isLaying ? 'drop-shadow(0px 2px 4px rgba(0,0,0,0.35))' : 'drop-shadow(0px 10px 16px rgba(0,0,0,0.28))';
+  const drawEyes = (cx1, cy1, cx2, cy2, r = 1.8) => {
     if (isLaying) {
       return (
         <>
-          <path d={`M ${cx1-3},${cy1} Q ${cx1},${cy1+3} ${cx1+3},${cy1}`} stroke="#333" strokeWidth="2" fill="none" strokeLinecap="round" />
-          <path d={`M ${cx2-3},${cy2} Q ${cx2},${cy2+3} ${cx2+3},${cy2}`} stroke="#333" strokeWidth="2" fill="none" strokeLinecap="round" />
+          <path d={`M ${cx1 - 3},${cy1} Q ${cx1},${cy1 + 2.8} ${cx1 + 3},${cy1}`} stroke="#2D241C" strokeWidth="2" fill="none" strokeLinecap="round" />
+          <path d={`M ${cx2 - 3},${cy2} Q ${cx2},${cy2 + 2.8} ${cx2 + 3},${cy2}`} stroke="#2D241C" strokeWidth="2" fill="none" strokeLinecap="round" />
         </>
       );
     }
     return (
       <>
-        <circle cx={cx1} cy={cy1} r={r} fill="#222" />
-        <circle cx={cx2} cy={cy2} r={r} fill="#222" />
+        <circle cx={cx1 + eyeOffset.x} cy={cy1 + eyeOffset.y} r={r} fill="#1B1720" />
+        <circle cx={cx2 + eyeOffset.x} cy={cy2 + eyeOffset.y} r={r} fill="#1B1720" />
+        <circle cx={cx1 + eyeOffset.x + 0.5} cy={cy1 + eyeOffset.y - 0.5} r="0.45" fill="white" opacity="0.8" />
+        <circle cx={cx2 + eyeOffset.x + 0.5} cy={cy2 + eyeOffset.y - 0.5} r="0.45" fill="white" opacity="0.8" />
       </>
     );
-  };
-
-  const drawProfileEye = (cx, cy, r) => {
-    if (isLaying) {
-      return <path d={`M ${cx-3},${cy} Q ${cx},${cy+3} ${cx+3},${cy}`} stroke="#333" strokeWidth="2" fill="none" strokeLinecap="round" />;
-    }
-    return <circle cx={cx} cy={cy} r={r} fill="#222" />;
   };
 
   return (
     <svg viewBox="0 0 100 100" className={className} style={{ overflow: 'visible', filter: shadowStyle }}>
       <defs>
-        <radialGradient id="woodHead" cx="50%" cy="50%" r="50%" fx="30%" fy="30%">
-          <stop offset="0%" stopColor="#E6B981" />
+        <radialGradient id={headGradientId} cx="34%" cy="25%" r="72%">
+          <stop offset="0%" stopColor="#F9D7A9" />
           <stop offset="70%" stopColor="#C99454" />
-          <stop offset="100%" stopColor="#A67C52" />
+          <stop offset="100%" stopColor="#8D5B32" />
         </radialGradient>
-        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.25)" />
-          <stop offset="50%" stopColor="rgba(255,255,255,0)" />
-          <stop offset="100%" stopColor="rgba(0,0,0,0.3)" />
+        <linearGradient id={bodyGradientId} x1="18%" y1="0%" x2="88%" y2="100%">
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.52" />
+          <stop offset="34%" stopColor={color} />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.32" />
+        </linearGradient>
+        <linearGradient id={bodySideId} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#000000" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.44" />
+        </linearGradient>
+        <linearGradient id={glossGradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.62" />
+          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
         </linearGradient>
       </defs>
 
       {isSide ? (
         <g>
-          <g transform={`rotate(${rot}, 50, 24)`} opacity="0.6">
-            <line x1="50" y1="24" x2="50" y2="-36" stroke={color} strokeWidth="1.5" strokeDasharray="3 3" />
-            <polygon points="50,-42 47,-34 53,-34" fill={color} />
+          <ellipse cx="50" cy="89" rx="31" ry="7" fill="rgba(0,0,0,0.20)" />
+          <g transform={`rotate(${rot}, 50, 25)`} opacity={isLaying ? 0.28 : 0.82}>
+            <line x1="50" y1="21" x2="50" y2="-6" stroke="#F7C948" strokeWidth="3" strokeLinecap="round" />
+            <polygon points="50,-14 44,-3 56,-3" fill="#F7C948" stroke="white" strokeWidth="1" />
           </g>
-          
-          <ellipse cx="50" cy="85" rx="25" ry="8" fill="rgba(0,0,0,0.2)" />
-          {(dir === 'left' || dir === 'right') && (
-            <g transform={dir === 'left' ? "scale(-1, 1) translate(-100, 0)" : ""}>
-              {isMale ? (
-                <>
-                  <rect x="38" y="38" width="24" height="47" rx="4" fill={color} />
-                  <rect x="38" y="38" width="24" height="47" rx="4" fill={`url(#${gradientId})`} />
-                </>
-              ) : (
-                <>
-                  <path d="M 50,35 L 70,85 L 30,85 Z" fill={color} />
-                  <path d="M 50,35 L 70,85 L 30,85 Z" fill={`url(#${gradientId})`} />
-                </>
-              )}
-              <circle cx="50" cy="24" r="14" fill="url(#woodHead)" />
-              <polygon points="62,23 68,26 62,28" fill="#B3783A" />
-              {drawProfileEye(56, 22, 1.8)}
-            </g>
+          {isMale ? (
+            <>
+              <path d="M31 42 Q31 35 39 35 L61 35 Q69 35 69 42 L64 84 Q63 90 57 90 L43 90 Q37 90 36 84 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
+              <path d="M61 36 Q69 36 69 43 L64 84 Q63 89 58 90 L56 90 Q61 61 61 36 Z" fill={`url(#${bodySideId})`} opacity="0.75" />
+              <path d="M39 39 Q45 36 54 37 L50 84 Q45 88 40 84 Z" fill={`url(#${glossGradientId})`} opacity="0.38" />
+            </>
+          ) : (
+            <>
+              <path d="M50 33 C63 45 74 68 80 90 L20 90 C26 68 37 45 50 33 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
+              <path d="M52 35 C65 48 75 70 80 90 L58 90 C57 68 55 50 52 35 Z" fill={`url(#${bodySideId})`} opacity="0.65" />
+              <path d="M47 38 C39 51 32 72 28 87" stroke="white" strokeWidth="4" strokeOpacity="0.22" strokeLinecap="round" />
+            </>
           )}
-
-          {dir === 'down' && (
-            <g>
-              {isMale ? (
-                <>
-                  <path d="M 32,38 L 68,38 L 60,85 L 40,85 Z" fill={color} />
-                  <path d="M 32,38 L 68,38 L 60,85 L 40,85 Z" fill={`url(#${gradientId})`} />
-                </>
-              ) : (
-                <>
-                  <path d="M 50,35 L 75,85 L 25,85 Z" fill={color} />
-                  <path d="M 50,35 L 75,85 L 25,85 Z" fill={`url(#${gradientId})`} />
-                </>
-              )}
-              <circle cx="50" cy="24" r="14" fill="url(#woodHead)" />
-              <polygon points="50,26 47,30 53,30" fill="#A67C52" />
-              {drawEyes(44, 24, 56, 24, 1.5)}
-            </g>
-          )}
-
-          {dir === 'up' && (
-            <g>
-              {isMale ? (
-                <>
-                  <path d="M 32,38 L 68,38 L 60,85 L 40,85 Z" fill={color} />
-                  <path d="M 32,38 L 68,38 L 60,85 L 40,85 Z" fill={`url(#${gradientId})`} />
-                </>
-              ) : (
-                <>
-                  <path d="M 50,35 L 75,85 L 25,85 Z" fill={color} />
-                  <path d="M 50,35 L 75,85 L 25,85 Z" fill={`url(#${gradientId})`} />
-                </>
-              )}
-              <circle cx="50" cy="24" r="14" fill="url(#woodHead)" />
-            </g>
-          )}
-
-          {name && (
+          <ellipse cx="50" cy="25" rx="16.5" ry="15.5" fill={`url(#${headGradientId})`} stroke="rgba(255,255,255,0.75)" strokeWidth="2" />
+          <path d="M39 21 Q50 13 61 21" stroke="rgba(255,255,255,0.42)" strokeWidth="3" fill="none" strokeLinecap="round" />
+          <path d={`M50,27 q${eyeOffset.x * 0.45},2 0,4`} stroke="#9B6436" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+          {drawEyes(44, 25, 56, 25)}
+          {safeName && (
             <text
-              x="50" y="65" textAnchor="middle" fontSize={dir === 'left' || dir === 'right' ? "7" : "10"}
+              x="50" y="66" textAnchor="middle" fontSize="9"
               fontWeight="900" fill="rgba(255,255,255,0.95)" style={{ textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }}
-              textLength={name.length > 4 ? (dir === 'left' || dir === 'right' ? "18" : "28") : undefined} lengthAdjust="spacingAndGlyphs"
+              textLength={safeName.length > 5 ? "28" : undefined} lengthAdjust="spacingAndGlyphs"
             >
-              {name}
+              {safeName}
             </text>
           )}
         </g>
       ) : (
         <g>
           <g transform={`rotate(${rot}, 50, 50)`}>
-            <circle cx="50" cy="50" r="30" fill="rgba(0,0,0,0.15)" />
+            <ellipse cx="50" cy="55" rx="34" ry="28" fill="rgba(0,0,0,0.13)" />
             {isMale ? (
               <>
-                <rect x="25" y="30" width="50" height="40" rx="6" fill={color} />
-                <rect x="25" y="30" width="50" height="40" rx="6" fill={`url(#${gradientId})`} />
+                <rect x="23" y="31" width="54" height="42" rx="11" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.65)" strokeWidth="1.6" />
+                <path d="M60 32 Q77 34 77 45 L73 67 Q69 74 58 73 Z" fill={`url(#${bodySideId})`} opacity="0.45" />
               </>
             ) : (
               <>
-                <circle cx="50" cy="50" r="28" fill={color} />
-                <circle cx="50" cy="50" r="28" fill={`url(#${gradientId})`} />
+                <path d="M50 20 C68 31 80 47 79 67 C61 76 39 76 21 67 C20 47 32 31 50 20 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.65)" strokeWidth="1.6" />
+                <path d="M55 24 C70 35 79 50 79 67 C72 71 63 74 55 75 Z" fill={`url(#${bodySideId})`} opacity="0.42" />
               </>
             )}
-            <circle cx="50" cy="50" r="14" fill="url(#woodHead)" stroke="rgba(0,0,0,0.1)" strokeWidth="1" />
-            <polygon points="50,45 47,49 53,49" fill="#B3783A" />
-            {drawEyes(45, 52, 55, 52, 1.8)}
+            <path d="M50 20 L43 34 L57 34 Z" fill="#F7C948" stroke="white" strokeWidth="1" />
+            <circle cx="50" cy="50" r="15" fill={`url(#${headGradientId})`} stroke="rgba(255,255,255,0.75)" strokeWidth="2" />
+            <path d="M42 46 Q50 40 58 46" stroke="rgba(255,255,255,0.45)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+            <path d="M50,51 q0,2 0,4" stroke="#9B6436" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+            {drawEyes(45, 51, 55, 51)}
           </g>
 
-          {name && (
+          {safeName && (
             <text
               x="50" y="85" textAnchor="middle" fontSize="10" fontWeight="900" fill="rgba(255,255,255,0.95)"
-              style={{ textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }} textLength={name.length > 5 ? "35" : undefined} lengthAdjust="spacingAndGlyphs"
+              style={{ textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }} textLength={safeName.length > 5 ? "35" : undefined} lengthAdjust="spacingAndGlyphs"
             >
-              {name}
+              {safeName}
             </text>
           )}
         </g>
@@ -277,6 +258,31 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+const LAST_ROOM_STORAGE_KEY = 'makLastRoomV1';
+const ACTIVE_ROOM_SESSION_KEY = 'makActiveRoomSessionV1';
+const LAST_CLIENT_ROOM_STORAGE_KEY = 'makLastClientRoomV1';
+const ACTIVE_CLIENT_ROOM_SESSION_KEY = 'makActiveClientRoomSessionV1';
+const BOARD_BACKUP_PREFIX = 'makBoardBackupV1_';
+const LAST_ROOM_TTL_MS = 2 * 60 * 60 * 1000;
+
+const readJsonStorage = (key, fallback = null) => {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+};
+
+const writeJsonStorage = (key, value) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {}
+};
+
+const getBoardBackupKey = (id) => `${BOARD_BACKUP_PREFIX}${id}`;
 const myCursorColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
 const extractDriveFileId = (url) => {
   if (!url) return null;
@@ -609,7 +615,7 @@ export default function App() {
   const [isLaserMode, setIsLaserMode] = useState(false);
   const [isCheckingKey, setIsCheckingKey] = useState(false);
   const [appLoading, setAppLoading] = useState(true);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [platformName, setPlatformName] = useState("ОНЛАЙН КАБИНЕТ");
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -618,6 +624,10 @@ export default function App() {
   const callSnapshotUnsubRef = useRef(null);
   const [isVideoActive, setIsVideoActive] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [isSessionCheckOpen, setIsSessionCheckOpen] = useState(false);
+  const [sessionCheckResults, setSessionCheckResults] = useState([]);
+  const [isRunningSessionCheck, setIsRunningSessionCheck] = useState(false);
+  const [hasLocalBoardBackup, setHasLocalBoardBackup] = useState(false);
   const [isVideoCallReady, setIsVideoCallReady] = useState(false);
   const [callStatus, setCallStatus] = useState('');
   const [callMediaMode, setCallMediaMode] = useState('video');
@@ -689,7 +699,7 @@ export default function App() {
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
       window.removeEventListener('touchmove', handleMove);
-      window.removeEventListener('touchmove', handleUp);
+      window.removeEventListener('touchend', handleUp);
     };
   }, [videoPos, videoDim]);
   const [isDicePanelOpen, setIsDicePanelOpen] = useState(false);
@@ -839,6 +849,16 @@ export default function App() {
     if (err?.name === 'SecurityError') return 'браузер заблокировал камеру из-за настроек безопасности';
     return err?.message || 'неизвестная ошибка камеры';
   };
+  const getFriendlyErrorText = (err, fallback = 'неизвестная ошибка') => {
+    const message = String(err?.message || '');
+    const code = String(err?.code || '');
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'похоже, пропал интернет. Проверьте подключение и повторите действие';
+    if (code.includes('permission-denied') || message.includes('Missing or insufficient permissions')) return 'нет доступа к данным. Перезайдите в кабинет и попробуйте снова';
+    if (code.includes('unavailable') || message.includes('unavailable')) return 'сервер временно недоступен. Подождите минуту и повторите действие';
+    if (message.includes('Failed to fetch') || message.includes('NetworkError')) return 'браузер не смог соединиться с сервером. Проверьте интернет или блокировщики';
+    if (message.includes('quota') || code.includes('resource-exhausted')) return 'превышен лимит хранения. Удалите лишние данные или попробуйте позже';
+    return message || fallback;
+  };
   const buildMediaConstraints = (mode = callMediaMode) => ({
     video: mode === 'audio' ? false : {
       ...mediaConstraints.video,
@@ -913,6 +933,101 @@ export default function App() {
       }
       throw err;
     }
+  };
+  const runSessionCheck = async () => {
+    setIsSessionCheckOpen(true);
+    setIsRunningSessionCheck(true);
+    setSessionCheckResults([]);
+    const results = [];
+    const pushResult = (item) => {
+      results.push(item);
+      setSessionCheckResults([...results]);
+    };
+    const modeLabel = callMediaMode === 'audio' ? 'микрофон' : 'камера и микрофон';
+    
+    pushResult({
+      id: 'room',
+      title: 'Комната сессии',
+      status: roomId ? 'ok' : 'error',
+      details: roomId ? `Комната найдена: ${roomId}` : 'Комната не создана. Войдите как психолог или откройте ссылку клиента.'
+    });
+    pushResult({
+      id: 'server',
+      title: 'Синхронизация',
+      status: user && isDbConnected ? 'ok' : 'warn',
+      details: user && isDbConnected ? 'Связь с базой активна, стол должен синхронизироваться.' : 'База ещё не подключилась. Если это не проходит, обновите страницу.'
+    });
+    const isSecure = typeof window !== 'undefined' && (window.isSecureContext || window.location.protocol === 'https:' || window.location.hostname === 'localhost');
+    pushResult({
+      id: 'secure',
+      title: 'Доступ браузера',
+      status: isSecure ? 'ok' : 'error',
+      details: isSecure ? 'Страница открыта безопасно, камера и микрофон могут работать.' : 'Камера и микрофон работают только на https-странице.'
+    });
+    
+    let stream = null;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      pushResult({
+        id: 'media',
+        title: 'Камера и микрофон',
+        status: 'error',
+        details: 'Этот браузер не поддерживает встроенную связь. Лучше открыть в Chrome, Edge или Safari.'
+      });
+    } else {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(buildMediaConstraints(callMediaMode));
+        const videoOk = callMediaMode === 'audio' || stream.getVideoTracks().length > 0;
+        const audioOk = stream.getAudioTracks().length > 0;
+        pushResult({
+          id: 'media',
+          title: 'Камера и микрофон',
+          status: videoOk && audioOk ? 'ok' : 'warn',
+          details: videoOk && audioOk ? `${modeLabel} работают. Можно запускать связь.` : `Проверьте ${modeLabel}: браузер не выдал все нужные устройства.`
+        });
+        refreshMediaDevices(false, callMediaMode);
+      } catch (err) {
+        pushResult({
+          id: 'media',
+          title: 'Камера и микрофон',
+          status: 'error',
+          details: `${getMediaErrorText(err)}. Закройте Zoom/Telegram/браузерные вкладки с камерой и разрешите доступ в адресной строке.`
+        });
+      } finally {
+        cleanupLocalStream(stream);
+      }
+    }
+    
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 2;
+      canvas.height = 2;
+      canvas.getContext('2d').fillRect(0, 0, 2, 2);
+      canvas.toDataURL('image/png');
+      const canDownload = 'download' in document.createElement('a');
+      pushResult({
+        id: 'screenshot',
+        title: 'Скриншоты',
+        status: canDownload ? 'ok' : 'warn',
+        details: canDownload ? 'Снимки стола должны скачиваться на устройство.' : 'Браузер может не скачать файл автоматически. Если не получится, откройте платформу в Chrome или Edge.'
+      });
+    } catch (err) {
+      pushResult({
+        id: 'screenshot',
+        title: 'Скриншоты',
+        status: 'error',
+        details: 'Браузер блокирует создание снимка. Обновите страницу и повторите проверку.'
+      });
+    }
+    
+    const backup = roomId ? readJsonStorage(getBoardBackupKey(roomId)) : null;
+    pushResult({
+      id: 'backup',
+      title: 'Резервная копия стола',
+      status: backup?.elements?.length ? 'ok' : 'warn',
+      details: backup?.elements?.length ? `Есть локальная копия: ${backup.elements.length} объектов.` : 'Копия появится автоматически, когда на столе будут карты или фигурки.'
+    });
+    setIsRunningSessionCheck(false);
+    notify("Проверка завершена");
   };
   const updateConnectionStatus = (pc, label) => {
     const connectionState = pc.connectionState;
@@ -1251,6 +1366,37 @@ export default function App() {
         roomIdRef.current = roomParam;
         setIsClientMode(true);
         window._isClientMode = true;
+        const lastClientRoom = readJsonStorage(LAST_CLIENT_ROOM_STORAGE_KEY);
+        const activeClientRoomInTab = (() => {
+          try { return window.sessionStorage.getItem(ACTIVE_CLIENT_ROOM_SESSION_KEY); } catch (e) { return ''; }
+        })();
+        const canRestoreClient = lastClientRoom?.id === roomParam && activeClientRoomInTab === roomParam && lastClientRoom?.updatedAt && (Date.now() - lastClientRoom.updatedAt < LAST_ROOM_TTL_MS);
+        if (canRestoreClient && lastClientRoom.userName) {
+          setClientNameInput(lastClientRoom.userName);
+          setUserName(lastClientRoom.userName);
+          setIsAuthorized(true);
+          setInRoom(true);
+        } else if (lastClientRoom?.id === roomParam && lastClientRoom?.updatedAt && (Date.now() - lastClientRoom.updatedAt < LAST_ROOM_TTL_MS) && lastClientRoom.userName) {
+          setClientNameInput(lastClientRoom.userName);
+        }
+      } else {
+        const lastClientRoom = readJsonStorage(LAST_CLIENT_ROOM_STORAGE_KEY);
+        const activeClientRoomInTab = (() => {
+          try { return window.sessionStorage.getItem(ACTIVE_CLIENT_ROOM_SESSION_KEY); } catch (e) { return ''; }
+        })();
+        const canRestoreClient = lastClientRoom?.id && activeClientRoomInTab === lastClientRoom.id && lastClientRoom?.updatedAt && (Date.now() - lastClientRoom.updatedAt < LAST_ROOM_TTL_MS);
+        if (canRestoreClient) {
+          setRoomId(lastClientRoom.id);
+          roomIdRef.current = lastClientRoom.id;
+          setIsClientMode(true);
+          window._isClientMode = true;
+          if (lastClientRoom.userName) {
+            setClientNameInput(lastClientRoom.userName);
+            setUserName(lastClientRoom.userName);
+            setIsAuthorized(true);
+            setInRoom(true);
+          }
+        }
       }
     };
     init();
@@ -1262,6 +1408,43 @@ export default function App() {
     if (typeof window !== 'undefined') window.localStorage.setItem('makAudioDeviceId', selectedAudioDeviceId || '');
   }, [selectedAudioDeviceId]);
   useEffect(() => {
+    if (!roomId || isClientMode) return;
+    writeJsonStorage(LAST_ROOM_STORAGE_KEY, {
+      id: roomId,
+      updatedAt: Date.now(),
+      userName
+    });
+    try {
+      window.sessionStorage.setItem(ACTIVE_ROOM_SESSION_KEY, roomId);
+    } catch (e) {}
+  }, [roomId, isClientMode, userName]);
+  useEffect(() => {
+    if (!roomId || !isClientMode || !isAuthorized || !userName) return;
+    writeJsonStorage(LAST_CLIENT_ROOM_STORAGE_KEY, {
+      id: roomId,
+      updatedAt: Date.now(),
+      userName
+    });
+    try {
+      window.sessionStorage.setItem(ACTIVE_CLIENT_ROOM_SESSION_KEY, roomId);
+    } catch (e) {}
+  }, [roomId, isClientMode, isAuthorized, userName]);
+  useEffect(() => {
+    if (!roomId || !isAuthorized) return;
+    const elementsToBackup = cardsOnTable.filter(c => !c.id?.startsWith('_'));
+    const backup = readJsonStorage(getBoardBackupKey(roomId));
+    setHasLocalBoardBackup(Boolean(backup?.elements?.length));
+    if (elementsToBackup.length === 0) return;
+    writeJsonStorage(getBoardBackupKey(roomId), {
+      roomId,
+      elements: elementsToBackup,
+      tableBg,
+      activeDeckData,
+      updatedAt: Date.now()
+    });
+    setHasLocalBoardBackup(true);
+  }, [roomId, isAuthorized, cardsOnTable, tableBg, activeDeckData]);
+  useEffect(() => {
     if (isVideoModalOpen) refreshMediaDevices(false, callMediaMode);
   }, [isVideoModalOpen, callMediaMode]);
   useEffect(() => {
@@ -1270,6 +1453,17 @@ export default function App() {
   useEffect(() => {
     saveStoredDeckIds('makHiddenDecksV1', hiddenDeckIds);
   }, [hiddenDeckIds]);
+  const publicRoomCollectionRef = (targetRoomId = roomId) => collection(db, 'artifacts', appId, 'public', 'data', `room_${targetRoomId}`);
+  const publicRoomDocRef = (targetRoomId, elementId) => doc(db, 'artifacts', appId, 'public', 'data', `room_${targetRoomId}`, elementId);
+  const privateRoomNotesCollectionRef = (targetRoomId = roomId) => collection(db, 'artifacts', appId, 'users', user.uid, 'private_room_notes', targetRoomId, 'items');
+  const privateRoomNoteDocRef = (targetRoomId, elementId) => doc(db, 'artifacts', appId, 'users', user.uid, 'private_room_notes', targetRoomId, 'items', elementId);
+  const isPrivateElement = (element) => element?.type === 'private-text';
+  const getElementDocRef = (targetRoomId, element) => (isPrivateElement(element) && user?.uid)
+    ? privateRoomNoteDocRef(targetRoomId, element.id)
+    : publicRoomDocRef(targetRoomId, element.id);
+  const writeElementToRoom = (targetRoomId, element) => setDoc(getElementDocRef(targetRoomId, element), element);
+  const updateElementOnTable = (element, updates) => updateDoc(getElementDocRef(roomId, element), updates).catch(e => notify("Ошибка сохранения объекта: " + getFriendlyErrorText(e)));
+  const deleteElementFromRoom = (targetRoomId, element) => deleteDoc(getElementDocRef(targetRoomId, element));
   useEffect(() => {
     if (inRoom && !isClientMode) {
       setIsPlatformDecksLoading(true);
@@ -1299,38 +1493,59 @@ export default function App() {
   }, [user, isDbConnected, isClientMode]);
   useEffect(() => {
     if (!user || !isAuthorized || !roomId) return;
-    const tUnsub = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`), (snap) => {
+    let publicElements = [];
+    let privateElements = [];
+    const mergeElements = () => setCardsOnTable([...publicElements, ...privateElements]);
+    const tUnsub = onSnapshot(publicRoomCollectionRef(roomId), (snap) => {
       const cards = [];
       snap.docs.forEach(d => {
-        if (d.id === '_dice_state') setDice({ value: d.data().value, timestamp: d.data().timestamp });
-        else if (d.id === '_dice_d10_state') setDiceD10({ value: d.data().value, timestamp: d.data().timestamp });
-        else if (d.id === '_dice_d12_state') setDiceD12({ value: d.data().value, timestamp: d.data().timestamp });
-        else if (d.id === '_dice_type') setDiceType(d.data().type || 6);
+        const data = d.data();
+        if (d.id === '_dice_state') setDice({ value: data.value, timestamp: data.timestamp });
+        else if (d.id === '_dice_d10_state') setDiceD10({ value: data.value, timestamp: data.timestamp });
+        else if (d.id === '_dice_d12_state') setDiceD12({ value: data.value, timestamp: data.timestamp });
+        else if (d.id === '_dice_type') setDiceType(data.type || 6);
         else if (d.id === '_settings') {
-          if (d.data().platformName) setPlatformName(d.data().platformName);
-          if (d.data().tableBg && typeof d.data().tableBg === 'object') setTableBg(d.data().tableBg);
-          if (d.data().figureViewMode) setFigureViewMode(d.data().figureViewMode);
-          if (d.data().isVideoCallReady !== undefined) setIsVideoCallReady(d.data().isVideoCallReady);
-          if (d.data().callMediaMode) setCallMediaMode(d.data().callMediaMode === 'audio' ? 'audio' : 'video');
+          if (data.platformName) setPlatformName(data.platformName);
+          if (data.tableBg && typeof data.tableBg === 'object') setTableBg(data.tableBg);
+          if (data.figureViewMode) setFigureViewMode(data.figureViewMode);
+          if (data.isVideoCallReady !== undefined) setIsVideoCallReady(data.isVideoCallReady);
+          if (data.callMediaMode) setCallMediaMode(data.callMediaMode === 'audio' ? 'audio' : 'video');
         }
         else if (d.id === '_library_state') {
-          const libraryData = d.data();
+          const libraryData = data;
           if (libraryData.isOpen !== undefined && !window._isClientMode) setIsLibraryOpen(libraryData.isOpen);
           if (libraryData.isFullscreen !== undefined && !window._isClientMode) setIsLibraryFullscreen(libraryData.isFullscreen);
           if (libraryData.isFlipped !== undefined) setIsLibraryDeckFlipped(libraryData.isFlipped);
         }
-        else if (d.id === '_active_deck') { setActiveDeckData(d.data()); }
-        else if (d.id === '_timer_state') { setSessionTimer(d.data()); }
-        else if (!d.id.startsWith('_')) cards.push({ id: d.id, ...d.data() });
+        else if (d.id === '_active_deck') { setActiveDeckData(data); }
+        else if (d.id === '_timer_state') { setSessionTimer(data); }
+        else if (!d.id.startsWith('_')) {
+          if (data.type === 'private-text') {
+            if (!isClientMode && user?.uid) {
+              setDoc(privateRoomNoteDocRef(roomId, d.id), { ...data, id: d.id, type: 'private-text' })
+                .then(() => deleteDoc(publicRoomDocRef(roomId, d.id)))
+                .catch(() => {});
+            }
+          } else {
+            cards.push({ id: d.id, ...data });
+          }
+        }
       });
-      setCardsOnTable(cards);
+      publicElements = cards;
+      mergeElements();
     });
+    const pUnsub = !isClientMode && user?.uid
+      ? onSnapshot(privateRoomNotesCollectionRef(roomId), (snap) => {
+          privateElements = snap.docs.map(d => ({ id: d.id, ...d.data(), type: 'private-text' }));
+          mergeElements();
+        })
+      : () => {};
     const cUnsub = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_cursors`), (s) => {
       const cur = {}; const now = Date.now();
       s.docs.forEach(d => { if (d.id !== user.uid && now - d.data().timestamp < 10000) cur[d.id] = d.data(); });
       setCursors(cur);
     });
-    return () => { tUnsub(); cUnsub(); };
+    return () => { tUnsub(); pUnsub(); cUnsub(); };
   }, [user, isAuthorized, roomId, isDbConnected, isClientMode]);
   const handleMouseMove = (e) => {
     if (!isAuthorized || !isDbConnected || !user || !roomId) return;
@@ -1413,8 +1628,15 @@ export default function App() {
     const inputEmail = emailInput.trim().toLowerCase();
     const inputPwd = passwordInput.trim();
     const enterRoomAsPsy = (name) => {
+      let restoredRoom = false;
       if (!roomId) {
-        const newRoomId = `session_${Math.random().toString(36).substr(2, 6)}`;
+        const lastRoom = readJsonStorage(LAST_ROOM_STORAGE_KEY);
+        const activeRoomInTab = (() => {
+          try { return window.sessionStorage.getItem(ACTIVE_ROOM_SESSION_KEY); } catch (e) { return ''; }
+        })();
+        const canRestoreLastRoom = lastRoom?.id && activeRoomInTab === lastRoom.id && lastRoom?.updatedAt && (Date.now() - lastRoom.updatedAt < LAST_ROOM_TTL_MS);
+        const newRoomId = canRestoreLastRoom ? lastRoom.id : `session_${Math.random().toString(36).substr(2, 6)}`;
+        restoredRoom = Boolean(canRestoreLastRoom);
         setRoomId(newRoomId);
         roomIdRef.current = newRoomId;
       } else {
@@ -1422,7 +1644,7 @@ export default function App() {
       }
       setUserName(name + " (Мастер)");
       setIsClientMode(false); window._isClientMode = false; setIsAuthorized(true); setInRoom(true); setShowKeyPrompt(false);
-      notify(`Привет, ${name}! Базовые колоды загружаются...`);
+      notify(restoredRoom ? `Привет, ${name}! Вернула последнюю комнату и загружаю колоды...` : `Привет, ${name}! Базовые колоды загружаются...`);
     };
     if ((inputEmail === "yulia" || inputEmail === "юлия") && inputPwd === "owner777") {
       enterRoomAsPsy("Юлия");
@@ -1485,57 +1707,129 @@ export default function App() {
   };
   const handleClientLogin = () => {
     if (!clientNameInput.trim()) return notify("Укажите ваше имя");
-    setUserName(clientNameInput.trim());
+    const clientName = clientNameInput.trim();
+    setUserName(clientName);
+    writeJsonStorage(LAST_CLIENT_ROOM_STORAGE_KEY, {
+      id: roomId,
+      updatedAt: Date.now(),
+      userName: clientName
+    });
+    try {
+      window.sessionStorage.setItem(ACTIVE_CLIENT_ROOM_SESSION_KEY, roomId);
+    } catch (e) {}
     setIsAuthorized(true);
     setInRoom(true);
     window._isClientMode = true;
   };
+  const buildRoomLink = (targetRoomId = roomId) => `${window.location.origin}${window.location.pathname}?room=${targetRoomId}`;
   const shareLinkToClient = async () => {
-    const url = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
+    const url = buildRoomLink(roomId);
     const success = await copyToClipboard(url);
     if (success !== false) {
       setCopyFeedback(true);
       setTimeout(() => setCopyFeedback(false), 2000);
-      notify('Ссылка скопирована!');
+      notify('Постоянная ссылка скопирована!');
     } else {
       notify('Не удалось скопировать. Скопируйте ссылку вручную из адресной строки.');
     }
   };
+  const copySavedSessionLink = async (session) => {
+    const targetRoomId = session.roomId || roomId;
+    if (!targetRoomId) return notify("У этой сессии пока нет комнаты");
+    const success = await copyToClipboard(buildRoomLink(targetRoomId));
+    notify(success !== false ? `Ссылка на "${session.name}" скопирована` : 'Не удалось скопировать ссылку');
+  };
   const saveCurrentSession = async () => {
-    const name = await askPrompt("Введите название для сохранения текущего стола (например: Сессия с Анной):");
+    const defaultName = `Сессия ${new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
+    const name = await askPrompt("Введите название для сохранения текущего стола (например: Сессия с Анной):", defaultName);
     if (!name || !name.trim()) return;
     notify("Сохраняю сессию...");
     try {
       const elementsToSave = cardsOnTable.filter(c => c.id !== '_settings' && c.id !== '_dice_state' && c.id !== '_dice_type' && c.id !== '_library_state' && !c.id.startsWith('_'));
+      const cardCount = elementsToSave.filter(el => el.type === 'card').length;
+      const figureCount = elementsToSave.filter(el => el.type === 'figure').length;
+      const noteCount = elementsToSave.filter(el => el.type === 'text' || el.type === 'private-text').length;
       await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions'), {
         name: name.trim(),
         elements: elementsToSave,
+        roomId,
+        activeDeckName: activeDeckData?.name || '',
+        counts: { cards: cardCount, figures: figureCount, notes: noteCount, total: elementsToSave.length },
         createdAt: Date.now()
       });
       notify("Сессия успешно сохранена! Ищите ее во вкладке СЕССИИ в библиотеке.");
     } catch (e) {
-      notify("Ошибка сохранения сессии: " + e.message);
+      notify("Ошибка сохранения сессии: " + getFriendlyErrorText(e));
     }
   };
   const loadSavedSession = async (session) => {
-    const ok = await askConfirm(`Вы уверены, что хотите загрузить "${session.name}"? Текущий стол будет ОЧИЩЕН.`);
+    const targetRoomId = session.roomId || roomId;
+    const ok = await askConfirm(`Вы уверены, что хотите загрузить "${session.name}"? ${targetRoomId !== roomId ? 'Вы перейдёте в постоянную комнату этой сессии. ' : ''}Текущий стол будет ОЧИЩЕН.`);
     if (!ok) return;
     notify("Загружаю сессию...");
     try {
       const batch = writeBatch(db);
-      const currentElements = cardsOnTable.filter(c => !c.id.startsWith('_'));
-      currentElements.forEach(el => {
-        batch.delete(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, el.id));
+      const targetSnap = await getDocs(publicRoomCollectionRef(targetRoomId));
+      targetSnap.docs.forEach(d => {
+        if (!d.id.startsWith('_')) {
+          batch.delete(publicRoomDocRef(targetRoomId, d.id));
+        }
       });
-      session.elements.forEach(el => {
+      if (user?.uid) {
+        const privateSnap = await getDocs(privateRoomNotesCollectionRef(targetRoomId));
+        privateSnap.docs.forEach(d => batch.delete(privateRoomNoteDocRef(targetRoomId, d.id)));
+      }
+      (session.elements || []).forEach(el => {
         const newId = `elem_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
-        batch.set(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, newId), { ...el, id: newId });
+        const nextEl = { ...el, id: newId };
+        batch.set(getElementDocRef(targetRoomId, nextEl), nextEl);
       });
       await batch.commit();
-      notify("Сессия загружена на стол! ✓");
+      if (targetRoomId !== roomId) {
+        setRoomId(targetRoomId);
+        roomIdRef.current = targetRoomId;
+        window.history.replaceState({}, '', buildRoomLink(targetRoomId));
+        writeJsonStorage(LAST_ROOM_STORAGE_KEY, { id: targetRoomId, updatedAt: Date.now(), userName });
+        try {
+          window.sessionStorage.setItem(ACTIVE_ROOM_SESSION_KEY, targetRoomId);
+        } catch (e) {}
+      }
+      notify(targetRoomId !== roomId ? "Постоянная комната сессии открыта! ✓" : "Сессия загружена на стол! ✓");
       if (isLibraryOpen) toggleLibrary();
     } catch (e) {
-      notify("Ошибка загрузки сессии: " + e.message);
+      notify("Ошибка загрузки сессии: " + getFriendlyErrorText(e));
+    }
+  };
+  const restoreLocalBoardBackup = async () => {
+    if (!roomId || !user) return notify("Сначала войдите в сессию");
+    const backup = readJsonStorage(getBoardBackupKey(roomId));
+    if (!backup?.elements?.length) return notify("Локальная копия стола не найдена");
+    const date = backup.updatedAt ? new Date(backup.updatedAt).toLocaleString('ru-RU') : 'без даты';
+    const ok = await askConfirm(`Восстановить локальную копию стола от ${date}? Текущий стол будет очищен.`);
+    if (!ok) return;
+    notify("Восстанавливаю стол из локальной копии...");
+    try {
+      const batch = writeBatch(db);
+      const currentElements = cardsOnTable.filter(c => !c.id.startsWith('_'));
+      currentElements.forEach(el => {
+        batch.delete(getElementDocRef(roomId, el));
+      });
+      backup.elements.forEach(el => {
+        const newId = `elem_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+        const nextEl = { ...el, id: newId };
+        batch.set(getElementDocRef(roomId, nextEl), nextEl);
+      });
+      if (backup.tableBg) {
+        batch.set(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { tableBg: backup.tableBg }, { merge: true });
+      }
+      if (backup.activeDeckData) {
+        batch.set(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_active_deck'), backup.activeDeckData, { merge: true });
+      }
+      await batch.commit();
+      notify("Локальная копия восстановлена ✓");
+      if (isLibraryOpen) toggleLibrary();
+    } catch (e) {
+      notify("Не удалось восстановить копию: " + getFriendlyErrorText(e));
     }
   };
   const handleNoteImageUpload = async (e) => {
@@ -1558,6 +1852,11 @@ export default function App() {
       setIsUploadingNoteImage(false);
       e.target.value = '';
     }
+  };
+  const handleNotebookPaste = (e) => {
+    e.preventDefault();
+    const text = e.clipboardData?.getData('text/plain') || '';
+    document.execCommand('insertText', false, text);
   };
   const takeScreenshot = async () => {
     if (!boardRef.current) return;
@@ -2040,7 +2339,7 @@ export default function App() {
       notify("Скриншот сохранен! ✓");
     } catch (e) {
       console.error('Screenshot error:', e);
-      notify("Ошибка скриншота: " + (e.message || 'неизвестная'));
+      notify("Ошибка скриншота: " + getFriendlyErrorText(e, 'не получилось создать снимок'));
     }
   };
   const addElement = async (type, data) => {
@@ -2080,7 +2379,7 @@ export default function App() {
       zIndex: isField ? 0 : maxZ + 1,
       isLocked: false
     };
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, id), elem);
+    await writeElementToRoom(roomId, elem);
   };
   const clearTable = async () => {
     const unlocked = cardsOnTable.filter(c => !c.isLocked);
@@ -2090,7 +2389,7 @@ export default function App() {
       try {
         const batch = writeBatch(db);
         unlocked.forEach(card => {
-          batch.delete(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, card.id));
+          batch.delete(getElementDocRef(roomId, card));
         });
         await batch.commit();
       } catch (e) {}
@@ -2353,6 +2652,11 @@ export default function App() {
               <p className="font-bold text-[10px] uppercase text-center mb-4" style={{ color: COLORS.ink }}>Представьтесь, чтобы зайти за стол:</p>
               <input type="text" value={clientNameInput} onChange={e => setClientNameInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleClientLogin()} placeholder="Ваше Имя" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.forest, color: COLORS.forest, backgroundColor: `${COLORS.forest}10` }} />
               <button onClick={handleClientLogin} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="w-full font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:opacity-90 mt-2">Войти в кабинет</button>
+              {roomId && (
+                <button onClick={() => { setIsClientMode(false); window._isClientMode = false; setShowKeyPrompt(true); }} className="w-full py-3 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all hover:bg-black/5" style={{ color: COLORS.plum }}>
+                  Я психолог, войти в эту же сессию
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -2456,6 +2760,7 @@ export default function App() {
                   <div
                     ref={notebookEditorRef}
                     contentEditable={true}
+                    onPaste={handleNotebookPaste}
                     className="rich-text w-full px-4 py-3 rounded-b-xl border-2 outline-none text-sm custom-scrollbar min-h-[200px] shadow-inner leading-relaxed bg-white"
                     style={{ borderColor: COLORS.haze, color: COLORS.ink }}
                     data-placeholder="Текст техники, алгоритм или вопросы... Выделите текст и используйте кнопки сверху 👆"
@@ -2509,6 +2814,51 @@ export default function App() {
           </div>
         </div>
       )}
+      {isSessionCheckOpen && (
+        <div className="fixed inset-0 z-[320] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }} onClick={() => !isRunningSessionCheck && setIsSessionCheckOpen(false)}>
+          <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-xl w-full shadow-2xl relative" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setIsSessionCheckOpen(false)} disabled={isRunningSessionCheck} className="absolute top-5 right-5 p-2 rounded-full hover:bg-black/5 transition-colors disabled:opacity-30">
+              <X size={22} style={{ color: COLORS.ink }} />
+            </button>
+            <h2 className="text-xl font-black uppercase mb-2 flex items-center gap-3" style={{ color: COLORS.ink }}>
+              <AlertCircle size={22} className="text-plum" /> Проверка перед сессией
+            </h2>
+            <p className="text-sm leading-relaxed mb-5" style={{ color: `${COLORS.ink}99` }}>
+              Быстрая проверка камеры, микрофона, синхронизации, скриншотов и резервной копии стола.
+            </p>
+            <div className="flex flex-col gap-3 mb-6">
+              {sessionCheckResults.length === 0 && (
+                <div className="p-4 rounded-2xl text-sm font-bold text-center" style={{ backgroundColor: `${COLORS.ink}08`, color: `${COLORS.ink}70` }}>
+                  Нажмите «Проверить ещё раз», чтобы запустить диагностику.
+                </div>
+              )}
+              {sessionCheckResults.map(item => {
+                const isOk = item.status === 'ok';
+                const isError = item.status === 'error';
+                return (
+                  <div key={item.id} className="p-4 rounded-2xl border flex items-start gap-3" style={{ backgroundColor: isOk ? '#F0FDF4' : (isError ? '#FEF2F2' : '#FFFBEB'), borderColor: isOk ? '#BBF7D0' : (isError ? '#FECACA' : '#FDE68A') }}>
+                    <div className="mt-0.5">
+                      {isOk ? <CheckCircle size={18} className="text-green-600" /> : <AlertCircle size={18} className={isError ? 'text-red-600' : 'text-yellow-600'} />}
+                    </div>
+                    <div>
+                      <div className="font-black text-sm" style={{ color: COLORS.ink }}>{item.title}</div>
+                      <div className="text-xs leading-relaxed mt-1" style={{ color: `${COLORS.ink}AA` }}>{item.details}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setIsSessionCheckOpen(false)} disabled={isRunningSessionCheck} className="flex-1 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors text-xs font-black uppercase tracking-widest disabled:opacity-30" style={{ color: `${COLORS.ink}AA` }}>
+                Закрыть
+              </button>
+              <button onClick={runSessionCheck} disabled={isRunningSessionCheck} className="flex-[2] py-3 rounded-xl text-white text-xs font-black uppercase tracking-widest shadow-md transition-all hover:scale-[1.02] disabled:opacity-60 flex items-center justify-center gap-2" style={{ backgroundColor: COLORS.forest }}>
+                {isRunningSessionCheck ? <><Loader2 size={16} className="animate-spin" /> Проверяю...</> : <><RefreshCw size={16} /> Проверить ещё раз</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {isHelpOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }} onClick={() => setIsHelpOpen(false)}>
           <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-5xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
@@ -2523,9 +2873,11 @@ export default function App() {
                 Для стабильной работы платформы (независимо от того, используете вы телефон или ПК) <b>строго соблюдайте этот порядок</b>:
               </p>
               <ol className="list-decimal list-inside text-sm text-red-800 mt-2 font-bold space-y-2">
-                <li><b>Сначала включите связь</b> (кнопка с камерой): выберите <b>Видео</b> или <b>Только микрофон</b>.</li>
+                <li><b>Сначала нажмите проверку</b> (значок с восклицательным знаком): платформа проверит связь, скриншоты и резервную копию.</li>
+                <li><b>Потом включите связь</b> (кнопка с камерой): выберите <b>Видео</b> или <b>Только микрофон</b>.</li>
                 <li><b>Только после этого копируйте и отправляйте ссылку клиенту.</b></li>
-                <li>Если клиент заходит <b>с телефона</b>, ему нужно сначала развернуть верхнюю панель (нажав на стрелочку <ChevronDown size={14} className="inline text-red-700"/> справа вверху), а затем нажать зеленую кнопку <b>«Подключиться к видео»</b> или <b>«Подключиться к аудио»</b>.</li>
+                <li>На телефоне верхняя панель открывается сразу. Если она мешает, её можно свернуть стрелкой <ChevronUp size={14} className="inline text-red-700"/> справа вверху.</li>
+                <li>Если клиент заходит <b>с телефона</b>, он увидит зеленую кнопку <b>«Подключиться к видео»</b> или <b>«Подключиться к аудио»</b> в этой верхней панели.</li>
               </ol>
               <div className="mt-3 p-2 bg-white/50 rounded-lg text-xs font-bold flex gap-2">
                  <AlertCircle size={16} className="shrink-0 text-red-600" />
@@ -2538,8 +2890,8 @@ export default function App() {
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> Клиент и Доступ</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
                   <p><b>Психолог</b> входит через логин и пароль. <b>Клиент</b> заходит только по вашей ссылке и вводит своё имя.</p>
-                  <p>Нажмите <UserPlus size={14} className="inline text-plum"/> <b>«ССЫЛКА ДЛЯ КЛИЕНТА»</b> на верхней панели. Ссылка скопируется — отправьте её клиенту.</p>
-                  <p>Клиент переходит по ссылке, вводит своё имя и попадает за ваш стол. <b>Регистрация не нужна.</b></p>
+                  <p>Нажмите <UserPlus size={14} className="inline text-plum"/> <b>«ССЫЛКА»</b> на верхней панели. Это постоянная ссылка на текущую комнату: её можно отправить клиенту и открыть психологу.</p>
+                  <p>Клиент переходит по ссылке, вводит своё имя и попадает за ваш стол. <b>Регистрация не нужна.</b> Если психолог открыл эту же ссылку, он нажимает <b>«Я психолог»</b> и входит логином.</p>
                   <p><b>Права клиента:</b> тянуть карты (если колода открыта), двигать их, писать в желтых заметках, бросать игровые кубики.</p>
                   <p className="text-terra"><b>Клиент НЕ может:</b> видеть фиолетовые заметки, открывать библиотеку и менять колоды, удалять всё со стола, видеть лазерную указку (если она выключена у мастера).</p>
                 </div>
@@ -2559,9 +2911,10 @@ export default function App() {
               <div className="space-y-4">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><LayoutGrid size={16}/> Панель инструментов</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
+                  <div className="flex items-start gap-2"><AlertCircle size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Проверка перед сессией:</b> Проверяет комнату, синхронизацию, камеру/микрофон, скриншоты и локальную копию стола. Если что-то не работает, показывает понятную причину.</div></div>
                   <div className="flex items-start gap-2"><Crosshair size={16} className="text-red-500 mt-0.5 shrink-0"/> <div><b>Лазерная указка:</b> Обычная мышка скрыта от клиента. Указка включает красную точку, которую видят все (удобно показывать детали).</div></div>
                   <div className="flex items-start gap-2"><Camera size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Скриншот:</b> Делает качественный снимок всего рабочего стола и скачивает на ваше устройство.</div></div>
-                  <div className="flex items-start gap-2"><Save size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Сохранить сессию:</b> Сохраняет весь расклад в библиотеку (вкладка СЕССИИ), чтобы загрузить его на следующих встречах.</div></div>
+                  <div className="flex items-start gap-2"><Save size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Сохранить сессию:</b> Сохраняет весь расклад в историю (вкладка СЕССИИ), чтобы загрузить его на следующих встречах. Локальная копия стола обновляется автоматически.</div></div>
                   <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Настройки Поля:</b> Изменение фона стола (нейро-текстуры) или загрузка своего игрового поля (картинки, на которую можно класть карты).</div></div>
                   <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Очистить стол:</b> Удаляет все незакрепленные объекты. Внизу появится кнопка отмены (действует 10 секунд).</div></div>
                   <div className="flex items-start gap-2"><Timer size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Таймер:</b> Устанавливает общее время (60/90 мин). Синхронизирован с клиентом.</div></div>
@@ -2578,7 +2931,7 @@ export default function App() {
                   </div>
                   <div className="flex items-start gap-3 bg-purple-50 p-3 rounded-xl border border-purple-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-purple-600 relative shrink-0"><Type size={16} /><EyeOff size={8} className="absolute bottom-1 right-1" /></div>
-                    <div><b className="text-purple-900">Фиолетовая (Секретная):</b> <b>Видите только вы</b>. На экране клиента её не существует. Идеально для ваших личных скрытых пометок.</div>
+                    <div><b className="text-purple-900">Фиолетовая (Секретная):</b> <b>Видите только вы</b>. Она хранится отдельно в личной области психолога и не попадает в общий стол клиента.</div>
                   </div>
                   <div className="flex items-start gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-blue-600 shrink-0"><BookOpen size={16} /></div>
@@ -2591,7 +2944,7 @@ export default function App() {
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
                   <div className="flex items-start gap-3 bg-emerald-50 p-3 rounded-xl border border-emerald-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-emerald-700 shrink-0"><FigureIcon gender="male" color={COLORS.forest} isMenu={true} className="w-[18px] h-[18px] opacity-80" /></div>
-                    <div><b className="text-emerald-800">Фигурки для расстановок:</b> Кнопка с фигуркой вверху открывает панель. Вы можете выбирать цвет, указывать имя, добавлять мужские/женские фигурки и стрелки. Есть переключатель вида (Сбоку/Сверху).</div>
+                    <div><b className="text-emerald-800">Фигурки для расстановок:</b> Кнопка с фигуркой вверху открывает панель. Вы можете выбирать цвет, указывать имя, добавлять объёмные 3D-фигурки и стрелки. Есть переключатель вида (Сбоку/Сверху).</div>
                   </div>
                   <div className="flex items-start gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-blue-700 shrink-0"><Dices size={18} /></div>
@@ -2612,10 +2965,12 @@ export default function App() {
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Lock size={14} className="text-gray-500" /> Закрепить (от сдвигов)</div>
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><EyeOff size={14} className="text-gray-500" /> Уложить/Разбудить (сон/смерть для фигур)</div>
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><UserMinus size={14} className="text-terra" /> Уронить/поднять фигурку в расстановке</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><ArrowUp size={14} className="text-plum" /> У фигурок есть желтый указатель взгляда: потяните его вокруг фигурки. Кнопки рядом докручивают взгляд на 15 градусов.</div>
                   </div>
                   <p className="mt-3 text-xs bg-gray-50 p-3 rounded-lg flex flex-col gap-2">
                     <span><Move size={14} className="inline text-plum"/> Чтобы <b>изменить размер</b>, потяните за правый нижний угол.</span>
-                    <span><RotateCw size={14} className="inline text-plum"/> Чтобы <b>свободно вращать фигурку</b>, наведите на неё и нажмите на появившийся <b>круг компаса</b> вокруг неё. Для карт используйте кнопки Влево/Вправо в меню.</span>
+                    <span><Maximize2 size={14} className="inline text-plum"/> На телефоне карты и объекты можно <b>увеличивать и уменьшать двумя пальцами</b>, как фото.</span>
+                    <span><RotateCw size={14} className="inline text-plum"/> Чтобы <b>свободно направить взгляд фигурки</b>, потяните желтый указатель вокруг неё. Для карт используйте кнопки Влево/Вправо в меню.</span>
                   </p>
                 </div>
               </div>
@@ -2627,11 +2982,12 @@ export default function App() {
                     <li><b>БАЗА:</b> Стандартные колоды, доступные всегда.</li>
                     <li><b>ОБЛАКО:</b> Колоды, загруженные разработчиком специально для вас.</li>
                     <li><b>МОИ:</b> Ваше личное пространство. Можно добавить колоды ссылкой с вашего Google Диска. Видите их только вы.</li>
-                    <li><b>СЕССИИ:</b> Сохраненные столы (история раскладов).</li>
+                    <li><b>СЕССИИ:</b> Сохраненные столы, история раскладов, постоянные ссылки и восстановление локальной копии.</li>
                   </ul>
                   <div className="bg-plum/10 p-3 rounded-lg border border-plum/20 mt-2">
                     <p className="font-bold text-plum mb-1">Как вытаскивать карты?</p>
                     <p className="text-xs">Выберите колоду в левом списке. Нажмите <b>«Наугад»</b> (вытащит случайную рубашкой вверх) или нажмите кнопку <b>«Открыть колоду»</b> справа вверху, чтобы увидеть все изображения и выбрать конкретную.</p>
+                    <p className="text-xs mt-2"><b>На телефоне:</b> после выбора колоды панель становится компактной горизонтальной лентой карт. Чтобы сменить колоду, нажмите кнопку разворота справа сверху.</p>
                   </div>
                   <div className="bg-forest/10 p-3 rounded-lg border border-forest/20">
                     <p className="font-bold text-forest mb-1">Как быстро находить нужные колоды?</p>
@@ -2755,6 +3111,9 @@ export default function App() {
                 {callMediaMode === 'audio' ? 'В этом режиме камера не включается: нужен только микрофон.' : 'Если внешней вебкамеры нет в списке, нажмите «Обновить» и разрешите доступ к камере в браузере.'}
               </p>
             </div>
+            <button onClick={runSessionCheck} className="w-full py-3 mb-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all hover:bg-black/5 flex items-center justify-center gap-2 border" style={{ color: COLORS.forest, borderColor: `${COLORS.forest}25`, backgroundColor: `${COLORS.forest}08` }}>
+              <AlertCircle size={14} /> Проверить связь перед запуском
+            </button>
             <button onClick={async () => {
                 setIsVideoModalOpen(false);
                 startNativeCall(callMediaMode);
@@ -2900,6 +3259,9 @@ export default function App() {
              </button>
             )
           )}
+          <button onClick={runSessionCheck} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5 shadow-sm border" style={{ backgroundColor: 'white', color: COLORS.forest, borderColor: `${COLORS.forest}25` }} title="Проверка перед сессией">
+            <AlertCircle size={18} />
+          </button>
           {timerDisplay ? (
             <div className="flex items-center gap-1.5">
               <div className="px-4 py-2 rounded-2xl font-black text-sm tabular-nums tracking-widest flex items-center gap-2 border transition-all" style={{ backgroundColor: timerIsWarning ? '#FEE2E2' : `${COLORS.plum}12`, color: timerIsWarning ? '#DC2626' : COLORS.plum, borderColor: timerIsWarning ? '#FCA5A5' : `${COLORS.plum}30` }}>
@@ -2926,8 +3288,8 @@ export default function App() {
           </button>
           
           {!isClientMode && (
-            <button onClick={shareLinkToClient} className="px-3 md:px-4 py-2.5 rounded-[1rem] text-[10px] font-black border flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-105 min-w-[40px]" style={{ backgroundColor: copyFeedback ? COLORS.forest : 'white', borderColor: copyFeedback ? COLORS.forest : `${COLORS.plum}30`, color: copyFeedback ? 'white' : COLORS.plum }} title="Поделиться ссылкой с клиентом">
-              {copyFeedback ? <CheckCircle size={14} /> : <UserPlus size={14} />}
+          <button onClick={shareLinkToClient} className="px-3 md:px-4 py-2.5 rounded-[1rem] text-[10px] font-black border flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-105 min-w-[40px]" style={{ backgroundColor: copyFeedback ? COLORS.forest : 'white', borderColor: copyFeedback ? COLORS.forest : `${COLORS.plum}30`, color: copyFeedback ? 'white' : COLORS.plum }} title="Постоянная ссылка для психолога и клиента">
+            {copyFeedback ? <CheckCircle size={14} /> : <UserPlus size={14} />}
               <span className="ml-1 text-[9px] md:text-[10px] whitespace-nowrap">{copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА"}</span>
             </button>
           )}
@@ -3085,7 +3447,7 @@ export default function App() {
               .filter(elem => !undoStack?.cards.some(c => c.id === elem.id))
               .filter(elem => !(isClientMode && elem.type === 'private-text'))
               .map((elem) => (
-                <DraggableElement key={elem.id} element={elem} globalFigureView={figureViewMode} isClientMode={isClientMode} isMuted={isMuted} isLaserMode={isLaserMode} playSound={playSound} maxZIndex={Math.max(0, ...cardsOnTable.map(c => c.zIndex || 0))} onUpdate={(d) => updateDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, elem.id), d)} onRemove={() => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, elem.id))} onPreview={() => elem.type === 'card' && setPreviewCard(elem)} currentUser={user} currentUserName={userName} onNotify={notify} boardRef={boardRef} />
+                <DraggableElement key={elem.id} element={elem} globalFigureView={figureViewMode} isClientMode={isClientMode} isMuted={isMuted} isLaserMode={isLaserMode} playSound={playSound} maxZIndex={Math.max(0, ...cardsOnTable.map(c => c.zIndex || 0))} onUpdate={(d) => updateElementOnTable(elem, d)} onRemove={() => deleteElementFromRoom(roomId, elem)} onPreview={() => elem.type === 'card' && setPreviewCard(elem)} currentUser={user} currentUserName={userName} onNotify={notify} boardRef={boardRef} />
               ))}
             
             {Object.entries(cursors).map(([id, cur]) => {
@@ -3117,7 +3479,7 @@ export default function App() {
           </div>
         )}
         <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-700 pointer-events-none ${isLibraryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-48px)]'}`}>
-          <div className={`bg-white/90 backdrop-blur-2xl rounded-t-[3rem] shadow-[0_-10px_50px_rgba(0,0,0,0.1)] border-t border-white flex flex-col transition-all duration-500 pointer-events-auto ${isLibraryFullscreen ? 'h-[95vh]' : 'h-[75vh] md:h-80'}`}>
+          <div className={`bg-white/90 backdrop-blur-2xl rounded-t-[3rem] shadow-[0_-10px_50px_rgba(0,0,0,0.1)] border-t border-white flex flex-col transition-all duration-500 pointer-events-auto ${isLibraryFullscreen ? 'h-[95vh]' : (activeDeckData ? 'h-[46vh] md:h-80' : 'h-[75vh] md:h-80')}`}>
             
             <div className="relative w-full flex justify-center py-2 h-12">
               <button onClick={toggleLibrary} className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-black/5 transition-colors rounded-t-[3rem]">
@@ -3133,9 +3495,9 @@ export default function App() {
               )}
             </div>
             
-            <div className="flex flex-1 flex-col md:flex-row p-4 md:p-8 pt-0 gap-4 md:gap-8 min-h-0 overflow-hidden">
+            <div className="flex flex-1 flex-col md:flex-row p-3 md:p-8 pt-0 gap-3 md:gap-8 min-h-0 overflow-hidden">
               {!isClientMode && (
-                <div className="w-full md:w-72 border-b md:border-b-0 md:border-r pb-4 md:pb-0 pr-0 md:pr-6 h-[30%] md:h-auto flex-shrink-0 overflow-y-auto custom-scrollbar flex flex-col gap-3" style={{ borderColor: `${COLORS.ink}10` }}>
+                <div className={`w-full md:w-72 border-b md:border-b-0 md:border-r pb-3 md:pb-0 pr-0 md:pr-6 md:h-auto flex-shrink-0 overflow-y-auto custom-scrollbar flex flex-col gap-3 ${activeDeckData && !isLibraryFullscreen ? 'hidden md:flex' : 'h-[30%]'}`} style={{ borderColor: `${COLORS.ink}10` }}>
                   <div className="flex p-1 rounded-xl mb-1 flex-shrink-0 bg-black/5">
                     <button onClick={() => setActiveTab('platform')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'platform' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>БАЗА</button>
                     <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'cloud' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>ОБЛАКО</button>
@@ -3144,16 +3506,27 @@ export default function App() {
                   </div>
                   {activeTab === 'sessions' && (
                     <div className="flex flex-col gap-2 flex-shrink-0">
-                      <div className="text-[10px] font-bold text-center mb-2" style={{ color: COLORS.ink }}>СОХРАНЕННЫЕ РАССТАНОВКИ</div>
+                      <div className="text-[10px] font-bold text-center mb-2" style={{ color: COLORS.ink }}>СОХРАНЕННЫЕ СЕССИИ</div>
+                      <div className="rounded-2xl p-3 text-[9px] leading-relaxed border" style={{ backgroundColor: `${COLORS.forest}08`, color: `${COLORS.ink}AA`, borderColor: `${COLORS.forest}20` }}>
+                        <div className="font-black uppercase tracking-widest mb-1 flex items-center gap-1" style={{ color: COLORS.forest }}><Save size={11} /> История и восстановление</div>
+                        <div>Кнопка сохранения записывает текущий расклад в историю. У каждой сохранённой сессии есть постоянная ссылка для психолога и клиента.</div>
+                        {hasLocalBoardBackup && (
+                          <button onClick={restoreLocalBoardBackup} className="mt-3 w-full py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.02]" style={{ backgroundColor: COLORS.forest }}>
+                            <UploadCloud size={12} /> Восстановить локальную копию
+                          </button>
+                        )}
+                      </div>
                       {savedSessions.length === 0 && <div className="text-[9px] text-center opacity-50">Нет сохраненных сессий</div>}
                       {savedSessions.map(session => (
                         <div key={session.id} className="group flex items-center justify-between p-3 rounded-2xl border border-gray-100 hover:bg-black/5 transition-colors">
                            <div>
                               <div className="text-[10px] font-bold" style={{ color: COLORS.ink }}>{session.name}</div>
-                              <div className="text-[8px] text-gray-500">{new Date(session.createdAt).toLocaleDateString()}</div>
+                              <div className="text-[8px] text-gray-500">{new Date(session.createdAt).toLocaleDateString()} {session.counts?.total ? `| ${session.counts.total} объектов` : ''}</div>
+                              {session.activeDeckName && <div className="text-[8px] text-gray-400 truncate max-w-[150px]">Колода: {session.activeDeckName}</div>}
                            </div>
                            <div className="flex gap-1">
                               <button onClick={() => loadSavedSession(session)} className="p-2 text-forest hover:bg-forest/10 rounded-lg transition-colors" title="Загрузить на стол"><UploadCloud size={14}/></button>
+                              <button onClick={() => copySavedSessionLink(session)} className="p-2 text-plum hover:bg-plum/10 rounded-lg transition-colors" title="Скопировать постоянную ссылку"><LinkIcon size={14}/></button>
                               <button onClick={async () => {
                                 const ok = await askConfirm('Удалить эту сессию навсегда?');
                                 if(ok) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions', session.id));
@@ -3231,15 +3604,20 @@ export default function App() {
               <div className="flex-1 flex flex-col overflow-hidden">
                 {activeDeckData ? (
                   <>
-                    <div className="flex justify-between items-center mb-3 flex-shrink-0">
-                      <span className="text-sm font-black uppercase" style={{ color: `${COLORS.ink}B3` }}>{activeDeckData.name}</span>
+                    <div className="flex justify-between items-center mb-2 md:mb-3 flex-shrink-0 gap-2">
+                      <div className="min-w-0">
+                        <span className="block text-[11px] md:text-sm font-black uppercase truncate" style={{ color: `${COLORS.ink}B3` }}>{activeDeckData.name}</span>
+                        {!isClientMode && !isLibraryFullscreen && (
+                          <span className="md:hidden text-[8px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}60` }}>Разверните панель, чтобы сменить колоду</span>
+                        )}
+                      </div>
                       {!isClientMode && (
-                        <button onClick={toggleDeckFlip} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:scale-105 transition-all">
+                        <button onClick={toggleDeckFlip} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="px-3 md:px-4 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest shadow-md hover:scale-105 transition-all shrink-0">
                           {isLibraryDeckFlipped ? "Скрыть карты" : "Открыть колоду"}
                         </button>
                       )}
                     </div>
-                    <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar flex gap-4 content-start flex-wrap pb-8 pr-2">
+                    <div className="flex-1 overflow-x-auto overflow-y-hidden md:overflow-y-auto md:overflow-x-hidden custom-scrollbar flex flex-nowrap md:flex-wrap gap-3 md:gap-4 content-start pb-4 md:pb-8 pr-2">
                       <button onClick={() => {
                         const availableCards = activeDeckData.cards.filter(img => !usedImages.has(img));
                         if (availableCards.length === 0) return notify("В колоде больше нет свободных карт!");
@@ -3250,7 +3628,7 @@ export default function App() {
                         const randomCard = availableCards[randomIndex];
                         addElement('card', { img: randomCard, backImg: getDeckCardBackImage(activeDeckData, randomCard) });
                         if (isLibraryFullscreen) toggleLibrary();
-                      }} className="flex-shrink-0 w-24 h-36 md:w-28 md:h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 hover:scale-105 transition-all shadow-sm" style={{ borderColor: `${COLORS.plum}4D`, backgroundColor: `${COLORS.plum}10`, color: COLORS.plum }}>
+                      }} className="flex-shrink-0 w-20 h-28 md:w-28 md:h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 hover:scale-105 transition-all shadow-sm" style={{ borderColor: `${COLORS.plum}4D`, backgroundColor: `${COLORS.plum}10`, color: COLORS.plum }}>
                         <Plus size={28} /><span className="text-[9px] font-black uppercase">Наугад</span>
                       </button>
                       
@@ -3262,10 +3640,10 @@ export default function App() {
                             if (isUsed) return notify("Эта карта уже лежит на столе!");
                             addElement('card', { img, backImg: cardBackImage });
                             if (isLibraryFullscreen) toggleLibrary();
-                          }} className={`relative flex-shrink-0 h-36 md:h-40 rounded-2xl group transition-all flex items-center justify-center ${isUsed ? 'opacity-40 cursor-not-allowed grayscale' : 'shadow-sm hover:shadow-lg hover:scale-105'}`}>
+                          }} className={`relative flex-shrink-0 h-28 md:h-40 rounded-2xl group transition-all flex items-center justify-center ${isUsed ? 'opacity-40 cursor-not-allowed grayscale' : 'shadow-sm hover:shadow-lg hover:scale-105'}`}>
                             {isLibraryDeckFlipped
-                              ? <img src={img} loading="lazy" decoding="async" className="h-full w-auto min-w-[5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
-                              : <div className="h-full w-24 md:w-28 flex items-center justify-center rounded-2xl overflow-hidden relative shadow-sm border border-white/20" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
+                              ? <img src={img} loading="lazy" decoding="async" className="h-full w-auto min-w-[4.5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
+                              : <div className="h-full w-20 md:w-28 flex items-center justify-center rounded-2xl overflow-hidden relative shadow-sm border border-white/20" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
                                 {cardBackImage ? <img src={cardBackImage} loading="lazy" decoding="async" className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" /> : <Layers size={40} className="text-white opacity-30" />}
                               </div>}
                             <div className="absolute top-2 left-2 text-white text-[10px] font-black px-2 py-0.5 rounded-md z-10 pointer-events-none backdrop-blur-md bg-black/40 border border-white/20 shadow-sm">{idx + 1}</div>
@@ -3357,16 +3735,53 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
   const startDim = useRef({ w: 0, h: 0 });
   const hasMoved = useRef(false);
   const clickTimestamp = useRef(0);
+  const pinchState = useRef(null);
+  const textSaveTimeout = useRef(null);
+  const pendingText = useRef(null);
   const COLORS = { plum: '#8B3252', forest: '#2D4A3E', terra: '#C44D29', ink: '#1C1020', haze: '#F2EFF5' };
   const isField = element.type === 'field';
   const isText = element.type === 'text' || element.type === 'private-text';
   const isPrivate = element.type === 'private-text';
   const isLocked = element.isLocked;
+  const getTouchDistance = (touches) => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt((dx * dx) + (dy * dy));
+  };
+  const getMinSize = () => {
+    if (isText) return 150;
+    if (element.type === 'token') return 25;
+    if (element.type === 'arrow') return 30;
+    return 80;
+  };
+  const startPinchResize = (e) => {
+    if (!e.touches || e.touches.length < 2) return false;
+    if (isLocked) return true;
+    if (isField && isClientMode) return true;
+    if (isLaserMode && !isClientMode) return true;
+    e.preventDefault();
+    e.stopPropagation();
+    const distance = getTouchDistance(e.touches);
+    if (!distance) return true;
+    pinchState.current = {
+      distance,
+      width: element.width,
+      height: element.height || element.width,
+      ratio: element.width / Math.max(1, element.height || element.width)
+    };
+    hasMoved.current = true;
+    setIsDragging(false);
+    setIsRotating(false);
+    setIsResizing(true);
+    if (!isField) onUpdate({ zIndex: maxZIndex + 1 });
+    return true;
+  };
   const handleDragStart = (e) => {
+    if (startPinchResize(e)) return;
     if (isResizing || isRotating) return;
     if (isLocked) return;
     if (isField && isClientMode) return;
-    if (isText && e.target.tagName.toLowerCase() === 'textarea') return;
+    if (isText && e.target.closest?.('[contenteditable="true"]')) return;
     if (isLaserMode && !isClientMode) return;
     const cx = e.touches ? e.touches[0].clientX : e.clientX;
     const cy = e.touches ? e.touches[0].clientY : e.clientY;
@@ -3377,6 +3792,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
   };
   const handleResizeStart = (e) => {
     e.stopPropagation();
+    if (startPinchResize(e)) return;
     if (isLocked) return;
     if (isField && isClientMode) return;
     if (isLaserMode && !isClientMode) return;
@@ -3404,9 +3820,33 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
   };
   const handleTextInput = () => {
     if (contentEditableRef.current) {
-      onUpdate({ text: contentEditableRef.current.innerHTML });
+      pendingText.current = contentEditableRef.current.innerHTML;
+      if (textSaveTimeout.current) clearTimeout(textSaveTimeout.current);
+      textSaveTimeout.current = setTimeout(() => {
+        if (pendingText.current !== null) {
+          Promise.resolve(onUpdate({ text: pendingText.current })).catch(() => {});
+          pendingText.current = null;
+        }
+      }, 700);
     }
   };
+  const flushTextInput = () => {
+    if (!contentEditableRef.current) return;
+    if (textSaveTimeout.current) clearTimeout(textSaveTimeout.current);
+    pendingText.current = null;
+    onUpdate({ text: contentEditableRef.current.innerHTML });
+  };
+  const handleTextPaste = (e) => {
+    e.preventDefault();
+    const text = e.clipboardData?.getData('text/plain') || '';
+    document.execCommand('insertText', false, text);
+    handleTextInput();
+  };
+  useEffect(() => {
+    return () => {
+      if (textSaveTimeout.current) clearTimeout(textSaveTimeout.current);
+    };
+  }, []);
   useEffect(() => {
     if (isText && contentEditableRef.current && document.activeElement !== contentEditableRef.current) {
       if (contentEditableRef.current.innerHTML !== (element.text || '')) {
@@ -3418,6 +3858,19 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     const move = (e) => {
       if (isLocked) return;
       if (isLaserMode && !isClientMode) return;
+      if (e.touches && e.touches.length >= 2 && pinchState.current) {
+        e.preventDefault();
+        const distance = getTouchDistance(e.touches);
+        const scale = distance / Math.max(1, pinchState.current.distance);
+        const minSize = getMinSize();
+        const nextWidth = Math.max(minSize, pinchState.current.width * scale);
+        if (isText) {
+          onUpdate({ width: nextWidth });
+        } else {
+          onUpdate({ width: nextWidth, height: nextWidth / Math.max(0.1, pinchState.current.ratio) });
+        }
+        return;
+      }
       const cx = e.touches ? e.touches[0].clientX : e.clientX;
       const cy = e.touches ? e.touches[0].clientY : e.clientY;
       if (isDragging) {
@@ -3447,6 +3900,10 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       }
     };
     const end = () => {
+      if (pinchState.current) {
+        pinchState.current = null;
+        playSound('drop', isMuted);
+      }
       if (isDragging) {
         setIsDragging(false);
         if (hasMoved.current) playSound('drop', isMuted);
@@ -3459,11 +3916,11 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     };
     if (isDragging || isResizing || isRotating) {
       window.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
-      window.addEventListener('touchmove', move, { passive: false }); window.addEventListener('touchend', end);
+      window.addEventListener('touchmove', move, { passive: false }); window.addEventListener('touchend', end); window.addEventListener('touchcancel', end);
     }
     return () => {
       window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', end);
-      window.removeEventListener('touchmove', move); window.removeEventListener('touchmove', end);
+      window.removeEventListener('touchmove', move); window.removeEventListener('touchend', end); window.removeEventListener('touchcancel', end);
     };
   }, [isDragging, isResizing, isRotating, element, onUpdate, playSound, isMuted, isLocked, isText, isLaserMode, isClientMode, boardRef]);
   const canDrag = !isLocked && !(isField && isClientMode) && !(isLaserMode && !isClientMode);
@@ -3477,6 +3934,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
   }
   const baseClasses = `w-full h-full relative ${canDrag ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} transition-transform`;
   const typeClasses = isText ? `rounded-2xl backdrop-blur-md border flex flex-col overflow-hidden ${isPrivate ? 'bg-purple-100/90 border-purple-300' : 'bg-yellow-100/90 border-yellow-300'}` : (isField || isFigureOrArrow ? '' : 'rounded-[1rem]');
+  const figureRotation = ((element.rotation || 0) % 360 + 360) % 360;
   return (
     <div
       ref={elementRef}
@@ -3504,6 +3962,25 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
           ))}
         </div>
       )}
+      {element.type === 'figure' && canDrag && !(isLaserMode && !isClientMode) && (
+        <div
+          className="absolute top-1/2 left-1/2 z-30 pointer-events-none"
+          style={{
+            width: element.width + 74,
+            height: element.height + 74,
+            transform: `translate(-50%, -50%) rotate(${figureRotation}deg)`
+          }}
+        >
+          <button
+            onMouseDown={handleRotateStart}
+            onTouchStart={handleRotateStart}
+            className="absolute left-1/2 -top-3 -translate-x-1/2 w-8 h-8 rounded-full bg-yellow-300 text-ink border-2 border-white shadow-lg flex items-center justify-center pointer-events-auto active:scale-95"
+            title="Потяните, чтобы направить взгляд"
+          >
+            <ArrowUp size={15} />
+          </button>
+        </div>
+      )}
       {!(isLaserMode && !isClientMode) && (
         <div className="absolute -top-16 left-1/2 -translate-x-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all bg-white/80 backdrop-blur-xl rounded-full px-2 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-20 border border-white">
           {!isField && <button onClick={(e) => { e.stopPropagation(); onUpdate({ zIndex: maxZIndex + 1 }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="На передний план"><ArrowUpToLine size={16} /></button>}
@@ -3517,6 +3994,39 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
             <button onClick={(e) => { e.stopPropagation(); onUpdate({ isFallen: !element.isFallen }); }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 ${element.isFallen ? 'bg-terra/10 text-terra' : 'hover:bg-black/5 text-ink/70'}`} title={element.isFallen ? "Поднять фигурку" : "Уронить на пол"}>
               <UserMinus size={16} />
             </button>
+          )}
+          {element.type === 'figure' && (
+            <div className="flex bg-gray-100 rounded-full p-0.5 shadow-inner border border-gray-200/50">
+              <button
+                onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (figureRotation - 15 + 360) % 360 }); }}
+                className="w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white text-ink/60"
+                title="Чуть левее"
+              >
+                <RotateCcw size={13} />
+              </button>
+              {[
+                { angle: 0, Icon: ArrowUp, title: 'Взгляд вверх' },
+                { angle: 90, Icon: ArrowRight, title: 'Взгляд вправо' },
+                { angle: 180, Icon: ArrowDown, title: 'Взгляд вниз' },
+                { angle: 270, Icon: ArrowLeft, title: 'Взгляд влево' }
+              ].map(({ angle, Icon, title }) => (
+                <button
+                  key={angle}
+                  onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: angle }); }}
+                  className={`w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white ${figureRotation === angle ? 'bg-white shadow-sm text-plum' : 'text-ink/60'}`}
+                  title={title}
+                >
+                  <Icon size={13} />
+                </button>
+              ))}
+              <button
+                onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (figureRotation + 15) % 360 }); }}
+                className="w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white text-ink/60"
+                title="Чуть правее"
+              >
+                <RotateCw size={13} />
+              </button>
+            </div>
           )}
           {element.type === 'card' && element.isFlipped && (
             <button onClick={(e) => {
@@ -3623,7 +4133,10 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
               contentEditable={true}
               suppressContentEditableWarning={true}
               onInput={handleTextInput}
-              onBlur={() => { if (contentEditableRef.current) onUpdate({ text: contentEditableRef.current.innerHTML }); }}
+              onPaste={handleTextPaste}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onBlur={flushTextInput}
               className="rich-text flex-1 w-full p-4 bg-transparent outline-none text-[13px] text-gray-800 leading-relaxed min-h-[60px] max-h-[65vh] overflow-y-auto custom-scrollbar"
               data-placeholder="Заметка..."
             />
