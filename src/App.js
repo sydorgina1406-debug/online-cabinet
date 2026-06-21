@@ -38,6 +38,10 @@ const DRIVE_API_KEY = "AIzaSyDXSTiw-Sd2jZve2Yv7bnbVRIAYcPre3N4";
 
 const PLATFORM_BASE_URL = "https://online-cabinet.vercel.app";
 const PLATFORM_DECKS_URL = `${PLATFORM_BASE_URL}/decks.json`;
+const BOARD_SIZE = 3000;
+const MIN_BOARD_SCALE = 0.35;
+const MAX_BOARD_SCALE = 1.6;
+const clampBoardScale = (value) => Math.min(MAX_BOARD_SCALE, Math.max(MIN_BOARD_SCALE, value));
 
 const MaxIcon = ({ size = 14, color = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -746,6 +750,8 @@ export default function App() {
   const lastCursorSync = useRef(0);
   const scrollContainerRef = useRef(null);
   const boardRef = useRef(null);
+  const boardPinchRef = useRef(null);
+  const [boardScale, setBoardScale] = useState(1);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isLibraryFullscreen, setIsLibraryFullscreen] = useState(false);
   const [isLibraryDeckFlipped, setIsLibraryDeckFlipped] = useState(false);
@@ -803,6 +809,54 @@ export default function App() {
       window.removeEventListener('offline', updateOnlineStatus);
     };
   }, []);
+  const getBoardTouchDistance = (touches) => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt((dx * dx) + (dy * dy));
+  };
+  const getBoardTouchCenter = (touches) => ({
+    x: (touches[0].clientX + touches[1].clientX) / 2,
+    y: (touches[0].clientY + touches[1].clientY) / 2
+  });
+  const handleBoardTouchStart = (e) => {
+    if (!e.touches || e.touches.length < 2) return;
+    if (e.target.closest?.('[data-draggable-element="true"]')) return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const distance = getBoardTouchDistance(e.touches);
+    const center = getBoardTouchCenter(e.touches);
+    const rect = container.getBoundingClientRect();
+    boardPinchRef.current = {
+      distance,
+      scale: boardScale,
+      centerX: center.x - rect.left,
+      centerY: center.y - rect.top,
+      scrollLeft: container.scrollLeft,
+      scrollTop: container.scrollTop
+    };
+  };
+  const handleBoardTouchMove = (e) => {
+    if (!e.touches || e.touches.length < 2 || !boardPinchRef.current) return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const distance = getBoardTouchDistance(e.touches);
+    const start = boardPinchRef.current;
+    const nextScale = clampBoardScale(start.scale * (distance / Math.max(1, start.distance)));
+    const logicalX = (start.scrollLeft + start.centerX) / Math.max(0.01, start.scale);
+    const logicalY = (start.scrollTop + start.centerY) / Math.max(0.01, start.scale);
+    setBoardScale(nextScale);
+    requestAnimationFrame(() => {
+      container.scrollLeft = (logicalX * nextScale) - start.centerX;
+      container.scrollTop = (logicalY * nextScale) - start.centerY;
+    });
+  };
+  const handleBoardTouchEnd = (e) => {
+    if (!e.touches || e.touches.length < 2) boardPinchRef.current = null;
+  };
   const askPrompt = (title, defaultValue = '', placeholder = '') => {
     return new Promise((resolve) => {
       setCustomDialog({
@@ -1581,8 +1635,8 @@ export default function App() {
       const rect = board.getBoundingClientRect();
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
+      const x = (clientX - rect.left) / Math.max(0.01, boardScale);
+      const y = (clientY - rect.top) / Math.max(0.01, boardScale);
       setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_cursors`, user.uid), {
         x, y, color: myCursorColor, timestamp: now, name: userName, isLaser: isLaserMode
       }).catch(() => {});
@@ -1821,8 +1875,8 @@ export default function App() {
       const publicElementsToLoad = elementsToLoad.filter(el => !isPrivateElement(el));
       const shouldPlaceInCurrentView = targetRoomId === roomId;
       const container = scrollContainerRef.current;
-      const originX = container ? container.scrollLeft + 80 : 180;
-      const originY = container ? container.scrollTop + 120 : 160;
+      const originX = container ? (container.scrollLeft / Math.max(0.01, boardScale)) + 80 : 180;
+      const originY = container ? (container.scrollTop / Math.max(0.01, boardScale)) + 120 : 160;
       const savedXs = publicElementsToLoad.map(el => Number(el.x)).filter(Number.isFinite);
       const savedYs = publicElementsToLoad.map(el => Number(el.y)).filter(Number.isFinite);
       const offsetX = shouldPlaceInCurrentView && savedXs.length ? originX - Math.min(...savedXs) : 0;
@@ -2436,12 +2490,16 @@ export default function App() {
     let spawnY = 150;
     if (scrollContainerRef.current) {
       const container = scrollContainerRef.current;
+      const visibleLeft = container.scrollLeft / Math.max(0.01, boardScale);
+      const visibleTop = container.scrollTop / Math.max(0.01, boardScale);
+      const visibleWidth = container.clientWidth / Math.max(0.01, boardScale);
+      const visibleHeight = container.clientHeight / Math.max(0.01, boardScale);
       if (isField) {
-        spawnX = container.scrollLeft + 50;
-        spawnY = container.scrollTop + 50;
+        spawnX = visibleLeft + 50;
+        spawnY = visibleTop + 50;
       } else {
-        spawnX = container.scrollLeft + (container.clientWidth / 2) - (width / 2) + (Math.random() * 40 - 20);
-        spawnY = container.scrollTop + (container.clientHeight / 2) - (height / 2) + (Math.random() * 40 - 20);
+        spawnX = visibleLeft + (visibleWidth / 2) - (width / 2) + (Math.random() * 40 - 20);
+        spawnY = visibleTop + (visibleHeight / 2) - (height / 2) + (Math.random() * 40 - 20);
       }
     }
     const elem = {
@@ -2954,7 +3012,7 @@ export default function App() {
               </div>
               <div className="flex gap-3 p-3 rounded-2xl border bg-gray-50" style={{ borderColor: `${COLORS.ink}10` }}>
                 <Maximize2 size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.plum }} />
-                <div><b>Как увеличить:</b> на телефоне разведите два пальца на карте, как на фото. На компьютере наведите на карту и используйте меню увеличения.</div>
+                <div><b>Как увеличить:</b> разведите два пальца по пустому месту стола, чтобы приблизить или отдалить весь расклад. Если сделать это прямо на карте, изменится размер этой карты.</div>
               </div>
               <div className="flex gap-3 p-3 rounded-2xl border bg-gray-50" style={{ borderColor: `${COLORS.ink}10` }}>
                 <Layers size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.forest }} />
@@ -3083,7 +3141,7 @@ export default function App() {
                   </div>
                   <p className="mt-3 text-xs bg-gray-50 p-3 rounded-lg flex flex-col gap-2">
                     <span><Move size={14} className="inline text-plum"/> Чтобы <b>изменить размер</b>, потяните за правый нижний угол.</span>
-                    <span><Maximize2 size={14} className="inline text-plum"/> На телефоне карты и объекты можно <b>увеличивать и уменьшать двумя пальцами</b>, как фото.</span>
+                    <span><Maximize2 size={14} className="inline text-plum"/> На телефоне <b>пустое место стола</b> масштабирует весь рабочий стол двумя пальцами, а жест двумя пальцами <b>на карте</b> меняет размер самой карты.</span>
                     <span><RotateCw size={14} className="inline text-plum"/> Чтобы <b>свободно направить взгляд фигурки</b>, потяните желтый указатель вокруг неё. Для карт используйте кнопки Влево/Вправо в меню.</span>
                   </p>
                 </div>
@@ -3566,15 +3624,40 @@ export default function App() {
             </button>
           </div>
         )}
-        <div ref={scrollContainerRef} className="absolute inset-0 overflow-auto custom-scrollbar transition-colors duration-500" style={{ backgroundColor: tableBg.bgColor }}>
-          <div ref={boardRef} className="relative min-w-[3000px] min-h-[3000px] bg-transparent" onMouseMove={handleMouseMove} onTouchMove={handleMouseMove}>
+        {Math.abs(boardScale - 1) > 0.02 && (
+          <button
+            onClick={() => setBoardScale(1)}
+            className="absolute top-4 left-4 z-40 px-3 py-2 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-md border bg-white/90 backdrop-blur-xl transition-all hover:scale-105"
+            style={{ color: COLORS.plum, borderColor: `${COLORS.plum}25` }}
+            title="Сбросить масштаб стола"
+          >
+            Стол {Math.round(boardScale * 100)}%
+          </button>
+        )}
+        <div
+          ref={scrollContainerRef}
+          className="absolute inset-0 overflow-auto custom-scrollbar transition-colors duration-500"
+          style={{ backgroundColor: tableBg.bgColor, touchAction: 'pan-x pan-y' }}
+          onTouchStart={handleBoardTouchStart}
+          onTouchMove={handleBoardTouchMove}
+          onTouchEnd={handleBoardTouchEnd}
+          onTouchCancel={handleBoardTouchEnd}
+        >
+          <div style={{ width: BOARD_SIZE * boardScale, height: BOARD_SIZE * boardScale }}>
+            <div
+              ref={boardRef}
+              className="relative bg-transparent"
+              style={{ width: BOARD_SIZE, height: BOARD_SIZE, transform: `scale(${boardScale})`, transformOrigin: 'top left' }}
+              onMouseMove={handleMouseMove}
+              onTouchMove={handleMouseMove}
+            >
             <div className="absolute inset-0 pointer-events-none transition-opacity duration-500" style={{ backgroundColor: tableBg.blendMode ? tableBg.bgColor : 'transparent', backgroundImage: tableBg.value === 'none' ? 'none' : (tableBg.type === 'css' ? tableBg.value : `url('${tableBg.value}')`), backgroundSize: tableBg.bgSize, backgroundPosition: 'center', backgroundRepeat: tableBg.repeat || 'repeat', backgroundBlendMode: tableBg.blendMode || 'normal', opacity: tableBg.opacity }}></div>
             
             {cardsOnTable
               .filter(elem => !undoStack?.cards.some(c => c.id === elem.id))
               .filter(elem => !(isClientMode && elem.type === 'private-text'))
               .map((elem) => (
-                <DraggableElement key={elem.id} element={elem} globalFigureView={figureViewMode} isClientMode={isClientMode} isMuted={isMuted} isLaserMode={isLaserMode} playSound={playSound} maxZIndex={Math.max(0, ...cardsOnTable.map(c => c.zIndex || 0))} onUpdate={(d) => updateElementOnTable(elem, d)} onRemove={() => deleteElementFromRoom(roomId, elem)} onPreview={() => elem.type === 'card' && setPreviewCard(elem)} currentUser={user} currentUserName={userName} onNotify={notify} boardRef={boardRef} />
+                <DraggableElement key={elem.id} element={elem} globalFigureView={figureViewMode} isClientMode={isClientMode} isMuted={isMuted} isLaserMode={isLaserMode} playSound={playSound} maxZIndex={Math.max(0, ...cardsOnTable.map(c => c.zIndex || 0))} onUpdate={(d) => updateElementOnTable(elem, d)} onRemove={() => deleteElementFromRoom(roomId, elem)} onPreview={() => elem.type === 'card' && setPreviewCard(elem)} currentUser={user} currentUserName={userName} onNotify={notify} boardRef={boardRef} boardScale={boardScale} />
               ))}
             
             {Object.entries(cursors).map(([id, cur]) => {
@@ -3595,6 +3678,7 @@ export default function App() {
                 </div>
               );
             })}
+            </div>
           </div>
         </div>
         {undoStack && (
@@ -3852,7 +3936,7 @@ export default function App() {
     </div>
   );
 }
-function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, playSound, isMuted, isClientMode, currentUser, currentUserName, onNotify, boardRef, globalFigureView, isLaserMode }) {
+function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, playSound, isMuted, isClientMode, currentUser, currentUserName, onNotify, boardRef, boardScale = 1, globalFigureView, isLaserMode }) {
   const elementRef = useRef(null);
   const contentEditableRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -3881,6 +3965,18 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     if (element.type === 'token') return 25;
     if (element.type === 'arrow') return 30;
     return 80;
+  };
+  const getBoardPoint = (e) => {
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    const rect = boardRef.current?.getBoundingClientRect();
+    const scale = Math.max(0.01, boardScale);
+    return {
+      clientX: cx,
+      clientY: cy,
+      x: rect ? (cx - rect.left) / scale : cx / scale,
+      y: rect ? (cy - rect.top) / scale : cy / scale
+    };
   };
   const startPinchResize = (e) => {
     if (!e.touches || e.touches.length < 2) return false;
@@ -3911,11 +4007,10 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     if (isField && isClientMode) return;
     if (isText && e.target.closest?.('[contenteditable="true"]')) return;
     if (isLaserMode && !isClientMode) return;
-    const cx = e.touches ? e.touches[0].clientX : e.clientX;
-    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    const point = getBoardPoint(e);
     setIsDragging(true); hasMoved.current = false; clickTimestamp.current = Date.now();
-    initialMousePos.current = { x: cx, y: cy };
-    startPos.current = { x: (cx - (element.x || 0)), y: (cy - (element.y || 0)) };
+    initialMousePos.current = { x: point.clientX, y: point.clientY };
+    startPos.current = { x: point.x - (element.x || 0), y: point.y - (element.y || 0) };
     if (!isField) onUpdate({ zIndex: maxZIndex + 1 });
   };
   const handleResizeStart = (e) => {
@@ -3924,9 +4019,8 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     if (isLocked) return;
     if (isField && isClientMode) return;
     if (isLaserMode && !isClientMode) return;
-    const cx = e.touches ? e.touches[0].clientX : e.clientX;
-    const cy = e.touches ? e.touches[0].clientY : e.clientY;
-    setIsResizing(true); startPos.current = { x: cx, y: cy }; startDim.current = { w: element.width, h: element.height };
+    const point = getBoardPoint(e);
+    setIsResizing(true); startPos.current = { x: point.x, y: point.y }; startDim.current = { w: element.width, h: element.height };
   };
   const handleRotateStart = (e) => {
     e.stopPropagation();
@@ -3937,11 +4031,10 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     if (!isField) onUpdate({ zIndex: maxZIndex + 1 });
     if (!boardRef.current) return;
     const boardRect = boardRef.current.getBoundingClientRect();
-    const cx = e.touches ? e.touches[0].clientX : e.clientX;
-    const cy = e.touches ? e.touches[0].clientY : e.clientY;
-    const centerX = boardRect.left + (element.x || 0) + element.width / 2;
-    const centerY = boardRect.top + (element.y || 0) + element.height / 2;
-    const angleRad = Math.atan2(cy - centerY, cx - centerX);
+    const point = getBoardPoint(e);
+    const centerX = boardRect.left + ((element.x || 0) + element.width / 2) * boardScale;
+    const centerY = boardRect.top + ((element.y || 0) + element.height / 2) * boardScale;
+    const angleRad = Math.atan2(point.clientY - centerY, point.clientX - centerX);
     let angleDeg = angleRad * (180 / Math.PI) + 90;
     if (angleDeg < 0) angleDeg += 360;
     onUpdate({ rotation: Math.round(angleDeg) });
@@ -3999,13 +4092,14 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         }
         return;
       }
-      const cx = e.touches ? e.touches[0].clientX : e.clientX;
-      const cy = e.touches ? e.touches[0].clientY : e.clientY;
+      const point = getBoardPoint(e);
+      const cx = point.clientX;
+      const cy = point.clientY;
       if (isDragging) {
         if (Math.sqrt(Math.pow(cx - initialMousePos.current.x, 2) + Math.pow(cy - initialMousePos.current.y, 2)) > 5) hasMoved.current = true;
-        onUpdate({ x: Math.max(0, cx - startPos.current.x), y: Math.max(0, cy - startPos.current.y) });
+        onUpdate({ x: Math.max(0, point.x - startPos.current.x), y: Math.max(0, point.y - startPos.current.y) });
       } else if (isResizing) {
-        const dx = cx - startPos.current.x;
+        const dx = point.x - startPos.current.x;
         if (isText) {
           const nw = Math.max(150, startDim.current.w + dx);
           onUpdate({ width: nw }); 
@@ -4017,8 +4111,8 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       } else if (isRotating) {
         if (!boardRef.current) return;
         const boardRect = boardRef.current.getBoundingClientRect();
-        const centerX = boardRect.left + (element.x || 0) + element.width / 2;
-        const centerY = boardRect.top + (element.y || 0) + element.height / 2;
+        const centerX = boardRect.left + ((element.x || 0) + element.width / 2) * boardScale;
+        const centerY = boardRect.top + ((element.y || 0) + element.height / 2) * boardScale;
         
         const angleRad = Math.atan2(cy - centerY, cx - centerX);
         let angleDeg = angleRad * (180 / Math.PI) + 90;
@@ -4050,7 +4144,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', end);
       window.removeEventListener('touchmove', move); window.removeEventListener('touchend', end); window.removeEventListener('touchcancel', end);
     };
-  }, [isDragging, isResizing, isRotating, element, onUpdate, playSound, isMuted, isLocked, isText, isLaserMode, isClientMode, boardRef]);
+  }, [isDragging, isResizing, isRotating, element, onUpdate, playSound, isMuted, isLocked, isText, isLaserMode, isClientMode, boardRef, boardScale]);
   const canDrag = !isLocked && !(isField && isClientMode) && !(isLaserMode && !isClientMode);
   const isFigureOrArrow = element.type === 'figure' || element.type === 'arrow';
   const appliedRotation = isFigureOrArrow ? 0 : element.rotation;
@@ -4066,6 +4160,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
   return (
     <div
       ref={elementRef}
+      data-draggable-element="true"
       className={`absolute group ${canDrag ? 'touch-none' : ''} ${(isDragging || isRotating) ? 'z-[1000]' : ''}`}
       style={{
         left: Math.max(0, element.x || 0), top: Math.max(0, element.y || 0),
