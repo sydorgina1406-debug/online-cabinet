@@ -173,9 +173,11 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
               <g transform={direction === 'left' ? 'translate(100 0) scale(-1 1)' : undefined}>
                 {isMale ? (
                   <>
-                    <path d="M42 41 C42 35 47 32 54 34 C62 37 66 48 65 62 L62 86 C61 92 56 94 50 94 L42 94 C39 80 39 55 42 41 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
-                    <path d="M54 35 C62 39 65 50 64 63 L61 87 C60 91 57 93 53 94 C55 73 56 53 54 35 Z" fill={`url(#${bodySideId})`} opacity="0.72" />
-                    <path d="M44 42 C47 39 50 38 54 39 L50 88 C46 89 43 87 42 83 Z" fill={`url(#${glossGradientId})`} opacity="0.34" />
+                    <path d="M38 48 C38 40 45 36 55 37 C65 40 69 50 67 64 L63 86 C62 92 57 94 51 94 L42 94 C38 79 37 58 38 48 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
+                    <path d="M51 36 C59 37 66 42 68 49 L67 64 L63 87 C62 91 58 93 54 94 C56 73 56 54 51 36 Z" fill={`url(#${bodySideId})`} opacity="0.68" />
+                    <rect x="46" y="35" width="10" height="15" rx="4" fill={`url(#${headGradientId})`} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                    <path d="M40 46 C44 42 50 40 57 41" stroke="rgba(255,255,255,0.45)" strokeWidth="3" strokeLinecap="round" fill="none" />
+                    <path d="M42 49 C46 43 51 41 55 42 L50 88 C46 89 43 87 42 83 Z" fill={`url(#${glossGradientId})`} opacity="0.32" />
                   </>
                 ) : (
                   <>
@@ -196,9 +198,11 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
             <g>
               {isMale ? (
                 <>
-                  <path d="M30 43 C30 36 37 33 45 33 L55 33 C63 33 70 36 70 43 L65 86 C64 92 59 94 54 94 L46 94 C41 94 36 92 35 86 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
-                  <path d="M58 35 C65 36 70 39 70 44 L65 86 C64 90 61 93 56 94 C59 73 60 52 58 35 Z" fill={`url(#${bodySideId})`} opacity="0.58" />
-                  <path d="M38 40 C43 36 49 36 54 37 L50 86 C46 90 40 88 38 83 Z" fill={`url(#${glossGradientId})`} opacity="0.32" />
+                  <path d="M25 50 C27 41 36 36 45 36 L55 36 C64 36 73 41 75 50 L67 86 C66 92 60 94 54 94 L46 94 C40 94 34 92 33 86 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
+                  <path d="M58 38 C66 38 73 43 75 51 L67 86 C66 90 62 93 56 94 C60 73 61 54 58 38 Z" fill={`url(#${bodySideId})`} opacity="0.55" />
+                  <rect x="44" y="34" width="12" height="16" rx="4" fill={`url(#${headGradientId})`} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                  <path d="M32 48 C38 41 44 39 50 39 C56 39 62 41 68 48" stroke="rgba(255,255,255,0.45)" strokeWidth="4" strokeLinecap="round" fill="none" />
+                  <path d="M37 47 C42 41 49 40 55 41 L50 86 C46 90 40 88 38 83 Z" fill={`url(#${glossGradientId})`} opacity="0.30" />
                 </>
               ) : (
                 <>
@@ -216,8 +220,10 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
             <g>
               {isMale ? (
                 <>
-                  <path d="M31 43 C31 36 38 33 46 33 L54 33 C62 33 69 36 69 43 L64 86 C63 92 58 94 54 94 L46 94 C42 94 37 92 36 86 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
-                  <path d="M50 36 L50 89" stroke="rgba(0,0,0,0.18)" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M25 50 C27 41 36 36 45 36 L55 36 C64 36 73 41 75 50 L67 86 C66 92 60 94 54 94 L46 94 C40 94 34 92 33 86 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
+                  <rect x="44" y="34" width="12" height="16" rx="4" fill={`url(#${headGradientId})`} stroke="rgba(255,255,255,0.35)" strokeWidth="1" />
+                  <path d="M32 48 C38 41 44 39 50 39 C56 39 62 41 68 48" stroke="rgba(0,0,0,0.15)" strokeWidth="3" strokeLinecap="round" fill="none" />
+                  <path d="M50 38 L50 89" stroke="rgba(0,0,0,0.18)" strokeWidth="2" strokeLinecap="round" />
                 </>
               ) : (
                 <>
@@ -2433,7 +2439,15 @@ export default function App() {
                 
                 ctx.fillStyle = color;
                 if (isMale) {
-                  roundRectPath(ew * 0.38, eh * 0.38, ew * 0.24, eh * 0.47, 4);
+                  ctx.beginPath();
+                  ctx.moveTo(ew * 0.38, eh * 0.48);
+                  ctx.bezierCurveTo(ew * 0.38, eh * 0.40, ew * 0.45, eh * 0.36, ew * 0.55, eh * 0.37);
+                  ctx.bezierCurveTo(ew * 0.65, eh * 0.40, ew * 0.69, eh * 0.50, ew * 0.67, eh * 0.64);
+                  ctx.lineTo(ew * 0.63, eh * 0.86);
+                  ctx.bezierCurveTo(ew * 0.62, eh * 0.92, ew * 0.57, eh * 0.94, ew * 0.51, eh * 0.94);
+                  ctx.lineTo(ew * 0.42, eh * 0.94);
+                  ctx.bezierCurveTo(ew * 0.38, eh * 0.79, ew * 0.37, eh * 0.58, ew * 0.38, eh * 0.48);
+                  ctx.closePath();
                   ctx.fill();
                 } else {
                   ctx.beginPath();
@@ -2445,6 +2459,10 @@ export default function App() {
                 }
                 
                 ctx.fillStyle = '#C99454';
+                if (isMale) {
+                  roundRectPath(ew * 0.46, eh * 0.35, ew * 0.10, eh * 0.15, 4);
+                  ctx.fill();
+                }
                 ctx.beginPath();
                 ctx.arc(ew * 0.5, eh * 0.24, ew * 0.14, 0, Math.PI * 2);
                 ctx.fill();
@@ -2475,10 +2493,14 @@ export default function App() {
                 ctx.fillStyle = color;
                 if (isMale) {
                   ctx.beginPath();
-                  ctx.moveTo(ew * 0.32, eh * 0.38);
-                  ctx.lineTo(ew * 0.68, eh * 0.38);
-                  ctx.lineTo(ew * 0.60, eh * 0.85);
-                  ctx.lineTo(ew * 0.40, eh * 0.85);
+                  ctx.moveTo(ew * 0.25, eh * 0.50);
+                  ctx.bezierCurveTo(ew * 0.27, eh * 0.41, ew * 0.36, eh * 0.36, ew * 0.45, eh * 0.36);
+                  ctx.lineTo(ew * 0.55, eh * 0.36);
+                  ctx.bezierCurveTo(ew * 0.64, eh * 0.36, ew * 0.73, eh * 0.41, ew * 0.75, eh * 0.50);
+                  ctx.lineTo(ew * 0.67, eh * 0.86);
+                  ctx.bezierCurveTo(ew * 0.66, eh * 0.92, ew * 0.60, eh * 0.94, ew * 0.54, eh * 0.94);
+                  ctx.lineTo(ew * 0.46, eh * 0.94);
+                  ctx.bezierCurveTo(ew * 0.40, eh * 0.94, ew * 0.34, eh * 0.92, ew * 0.33, eh * 0.86);
                   ctx.closePath();
                   ctx.fill();
                 } else {
@@ -2491,6 +2513,10 @@ export default function App() {
                 }
                 
                 ctx.fillStyle = '#C99454';
+                if (isMale) {
+                  roundRectPath(ew * 0.44, eh * 0.34, ew * 0.12, eh * 0.16, 4);
+                  ctx.fill();
+                }
                 ctx.beginPath();
                 ctx.arc(ew * 0.5, eh * 0.24, ew * 0.14, 0, Math.PI * 2);
                 ctx.fill();
@@ -2525,10 +2551,14 @@ export default function App() {
                 ctx.fillStyle = color;
                 if (isMale) {
                   ctx.beginPath();
-                  ctx.moveTo(ew * 0.32, eh * 0.38);
-                  ctx.lineTo(ew * 0.68, eh * 0.38);
-                  ctx.lineTo(ew * 0.60, eh * 0.85);
-                  ctx.lineTo(ew * 0.40, eh * 0.85);
+                  ctx.moveTo(ew * 0.25, eh * 0.50);
+                  ctx.bezierCurveTo(ew * 0.27, eh * 0.41, ew * 0.36, eh * 0.36, ew * 0.45, eh * 0.36);
+                  ctx.lineTo(ew * 0.55, eh * 0.36);
+                  ctx.bezierCurveTo(ew * 0.64, eh * 0.36, ew * 0.73, eh * 0.41, ew * 0.75, eh * 0.50);
+                  ctx.lineTo(ew * 0.67, eh * 0.86);
+                  ctx.bezierCurveTo(ew * 0.66, eh * 0.92, ew * 0.60, eh * 0.94, ew * 0.54, eh * 0.94);
+                  ctx.lineTo(ew * 0.46, eh * 0.94);
+                  ctx.bezierCurveTo(ew * 0.40, eh * 0.94, ew * 0.34, eh * 0.92, ew * 0.33, eh * 0.86);
                   ctx.closePath();
                   ctx.fill();
                 } else {
@@ -2541,6 +2571,10 @@ export default function App() {
                 }
                 
                 ctx.fillStyle = '#C99454';
+                if (isMale) {
+                  roundRectPath(ew * 0.44, eh * 0.34, ew * 0.12, eh * 0.16, 4);
+                  ctx.fill();
+                }
                 ctx.beginPath();
                 ctx.arc(ew * 0.5, eh * 0.24, ew * 0.14, 0, Math.PI * 2);
                 ctx.fill();
