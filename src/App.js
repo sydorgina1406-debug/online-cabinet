@@ -3708,7 +3708,7 @@ export default function App() {
             
             <div className="flex flex-1 flex-col md:flex-row p-3 md:p-8 pt-0 gap-3 md:gap-8 min-h-0 overflow-hidden">
               {!isClientMode && (
-                <div className={`w-full md:w-72 border-b md:border-b-0 md:border-r pb-3 md:pb-0 pr-0 md:pr-6 md:h-auto flex-shrink-0 overflow-y-auto custom-scrollbar flex flex-col gap-3 ${activeDeckData && !isLibraryFullscreen ? 'hidden md:flex' : 'h-[30%]'}`} style={{ borderColor: `${COLORS.ink}10` }}>
+                <div className={`w-full md:w-72 border-b md:border-b-0 md:border-r pb-3 md:pb-0 pr-0 md:pr-6 md:h-auto flex-shrink-0 overflow-y-auto custom-scrollbar flex flex-col gap-3 min-h-0 ${activeDeckData && !isLibraryFullscreen ? 'hidden md:flex' : 'flex-1 md:flex-none'}`} style={{ borderColor: `${COLORS.ink}10` }}>
                   <div className="flex p-1 rounded-xl mb-1 flex-shrink-0 bg-black/5">
                     <button onClick={() => setActiveTab('platform')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'platform' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>БАЗА</button>
                     <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'cloud' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>ОБЛАКО</button>
@@ -3807,13 +3807,13 @@ export default function App() {
                   {activeTab !== 'sessions' && visibleLibraryDecks.map(item => renderDeckItem(item))}
                   {activeTab !== 'sessions' && visibleLibraryDecks.length === 0 && favoriteDecks.length === 0 && !isPlatformDecksLoading && !isBaseDecksLoading && (
                     <div className="text-[9px] text-center font-bold py-5 px-3 rounded-2xl flex-shrink-0" style={{ color: `${COLORS.ink}55`, backgroundColor: `${COLORS.ink}06` }}>
-                      {deckSearch ? "По этому запросу колод не найдено" : showHiddenDecks ? "В этой вкладке пока нет колод" : "Нет видимых колод. Включите «Показать скрытые», если вы их скрывали."}
+                      {deckSearch ? "По этому запросу колод не найдено" : activeTab === 'cloud' ? "В облаке пока нет колод" : activeTab === 'local' ? "В ваших колодах пока пусто. Нажмите «Вставить ссылку на папку»." : showHiddenDecks ? "В этой вкладке пока нет колод" : "Нет видимых колод. Включите «Показать скрытые», если вы их скрывали."}
                     </div>
                   )}
                 </div>
               )}
               
-              <div className="flex-1 flex flex-col overflow-hidden">
+              <div className={`flex-1 flex flex-col overflow-hidden ${!activeDeckData && !isClientMode ? 'hidden md:flex' : ''}`}>
                 {activeDeckData ? (
                   <>
                     <div className="flex justify-between items-center mb-2 md:mb-3 flex-shrink-0 gap-2">
