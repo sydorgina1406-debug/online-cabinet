@@ -990,7 +990,7 @@ export default function App() {
           id: 'media',
           title: 'Камера и микрофон',
           status: 'error',
-          details: `${getMediaErrorText(err)}. Закройте Zoom/Telegram/браузерные вкладки с камерой и разрешите доступ в адресной строке.`
+          details: `${getMediaErrorText(err)}. Закройте Zoom/Telegram/браузерные вкладки с камерой и разрешите доступ в адресной строке. Если видео не запускается, выберите «Только микрофон». Если не работает и микрофон, продолжайте работу на платформе, а голос включите во внешнем звонке.`
         });
       } finally {
         cleanupLocalStream(stream);
@@ -1127,7 +1127,7 @@ export default function App() {
       }
       setCallStatus('');
       setIsVideoActive(false);
-      notify("Ошибка видеосвязи: " + getMediaErrorText(err), 8000);
+      notify(`Ошибка связи: ${getMediaErrorText(err)}. Попробуйте «Только микрофон». Если не получится, используйте внешний звонок, а стол оставьте открытым.`, 10000);
       console.error("WebRTC Error:", err);
     }
   };
@@ -1212,7 +1212,7 @@ export default function App() {
       }
       setCallStatus('');
       setIsVideoActive(false);
-      notify("Ошибка видеосвязи: " + getMediaErrorText(err), 8000);
+      notify(`Ошибка связи: ${getMediaErrorText(err)}. Попросите психолога переключить звонок на «Только микрофон». Если не получится, созвонитесь отдельно, а стол оставьте открытым.`, 10000);
       console.error("WebRTC Error:", err);
     }
   };
@@ -1737,7 +1737,14 @@ export default function App() {
     const targetRoomId = session.roomId || roomId;
     if (!targetRoomId) return notify("У этой сессии пока нет комнаты");
     const success = await copyToClipboard(buildRoomLink(targetRoomId));
-    notify(success !== false ? `Ссылка на "${session.name}" скопирована` : 'Не удалось скопировать ссылку');
+    if (success === false) return notify('Не удалось скопировать ссылку');
+    if (targetRoomId === roomId) {
+      notify(`Ссылка на "${session.name}" скопирована. Вы уже в этой сессии.`);
+      return;
+    }
+    notify(`Ссылка на "${session.name}" скопирована. Откройте эту сессию у себя, чтобы синхронизироваться с клиентом.`, 9000);
+    const ok = await askConfirm(`Открыть "${session.name}" у вас сейчас? Тогда вы и клиент будете в одной сессии. Текущий стол будет ОЧИЩЕН и заменён сохранённой сессией.`);
+    if (ok) await loadSavedSession(session, { skipConfirm: true });
   };
   const saveCurrentSession = async () => {
     const defaultName = `Сессия ${new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
@@ -1762,10 +1769,12 @@ export default function App() {
       notify("Ошибка сохранения сессии: " + getFriendlyErrorText(e));
     }
   };
-  const loadSavedSession = async (session) => {
+  const loadSavedSession = async (session, options = {}) => {
     const targetRoomId = session.roomId || roomId;
-    const ok = await askConfirm(`Вы уверены, что хотите загрузить "${session.name}"? ${targetRoomId !== roomId ? 'Вы перейдёте в постоянную комнату этой сессии. ' : ''}Текущий стол будет ОЧИЩЕН.`);
-    if (!ok) return;
+    if (!options.skipConfirm) {
+      const ok = await askConfirm(`Вы уверены, что хотите загрузить "${session.name}"? ${targetRoomId !== roomId ? 'Вы перейдёте в постоянную комнату этой сессии. ' : ''}Текущий стол будет ОЧИЩЕН.`);
+      if (!ok) return;
+    }
     notify("Загружаю сессию...");
     try {
       const batch = writeBatch(db);
@@ -2859,7 +2868,46 @@ export default function App() {
           </div>
         </div>
       )}
-      {isHelpOpen && (
+      {isHelpOpen && isClientMode && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }} onClick={() => setIsHelpOpen(false)}>
+          <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-lg w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setIsHelpOpen(false)} className="absolute top-5 right-5 p-2 rounded-full hover:bg-black/5 transition-colors">
+              <X size={22} style={{ color: COLORS.ink }} />
+            </button>
+            <h2 className="text-xl font-black uppercase mb-2 text-center" style={{ color: COLORS.ink }}>Инструкция для клиента</h2>
+            <p className="text-sm text-center mb-6 leading-relaxed" style={{ color: `${COLORS.ink}99` }}>
+              Коротко: вы работаете за общим столом с психологом. Всё, что вы двигаете на столе, психолог видит сразу.
+            </p>
+            <div className="space-y-3 text-sm leading-relaxed">
+              <div className="flex gap-3 p-3 rounded-2xl border bg-gray-50" style={{ borderColor: `${COLORS.ink}10` }}>
+                <UserCircle size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.forest }} />
+                <div><b>Как войти:</b> откройте ссылку от психолога, введите имя и нажмите <b>«Войти в кабинет»</b>. Регистрация не нужна.</div>
+              </div>
+              <div className="flex gap-3 p-3 rounded-2xl border bg-gray-50" style={{ borderColor: `${COLORS.ink}10` }}>
+                <Move size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.plum }} />
+                <div><b>Как двигать карту:</b> нажмите на карту или фигурку и перетащите её по столу. Если объект не двигается, он может быть закреплён психологом.</div>
+              </div>
+              <div className="flex gap-3 p-3 rounded-2xl border bg-gray-50" style={{ borderColor: `${COLORS.ink}10` }}>
+                <Maximize2 size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.plum }} />
+                <div><b>Как увеличить:</b> на телефоне разведите два пальца на карте, как на фото. На компьютере наведите на карту и используйте меню увеличения.</div>
+              </div>
+              <div className="flex gap-3 p-3 rounded-2xl border bg-gray-50" style={{ borderColor: `${COLORS.ink}10` }}>
+                <Layers size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.forest }} />
+                <div><b>Где панель:</b> на телефоне верхняя панель открыта сразу. Её можно свернуть или открыть стрелкой справа сверху. Нижняя панель <b>«Выбор карты»</b> появляется, когда психолог открыл колоду.</div>
+              </div>
+              <div className="flex gap-3 p-3 rounded-2xl border bg-gray-50" style={{ borderColor: `${COLORS.ink}10` }}>
+                <Video size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.forest }} />
+                <div><b>Как подключиться к связи:</b> если психолог включил звонок, в верхней панели появится зелёная кнопка <b>«Подключиться к видео»</b> или <b>«Подключиться к аудио»</b>.</div>
+              </div>
+              <div className="flex gap-3 p-3 rounded-2xl border" style={{ backgroundColor: `${COLORS.terra}10`, borderColor: `${COLORS.terra}25` }}>
+                <AlertCircle size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.terra }} />
+                <div><b>Если связь пропала:</b> не закрывайте стол. Обновите страницу и войдите по той же ссылке. Если встроенный звонок не работает, созвонитесь с психологом через телефон, MAX, Telegram или Zoom, а карты продолжайте двигать здесь.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {isHelpOpen && !isClientMode && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }} onClick={() => setIsHelpOpen(false)}>
           <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-5xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
             <button onClick={() => setIsHelpOpen(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
@@ -2875,6 +2923,7 @@ export default function App() {
               <ol className="list-decimal list-inside text-sm text-red-800 mt-2 font-bold space-y-2">
                 <li><b>Сначала нажмите проверку</b> (значок с восклицательным знаком): платформа проверит связь, скриншоты и резервную копию.</li>
                 <li><b>Потом включите связь</b> (кнопка с камерой): выберите <b>Видео</b> или <b>Только микрофон</b>.</li>
+                <li>Если видео не запускается, переключитесь на <b>«Только микрофон»</b>. Если не работает и микрофон, используйте MAX, Telegram, Zoom или телефон, а стол оставьте открытым на платформе.</li>
                 <li><b>Только после этого копируйте и отправляйте ссылку клиенту.</b></li>
                 <li>На телефоне верхняя панель открывается сразу. Если она мешает, её можно свернуть стрелкой <ChevronUp size={14} className="inline text-red-700"/> справа вверху.</li>
                 <li>Если клиент заходит <b>с телефона</b>, он увидит зеленую кнопку <b>«Подключиться к видео»</b> или <b>«Подключиться к аудио»</b> в этой верхней панели.</li>
@@ -2918,7 +2967,7 @@ export default function App() {
                   <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Настройки Поля:</b> Изменение фона стола (нейро-текстуры) или загрузка своего игрового поля (картинки, на которую можно класть карты).</div></div>
                   <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Очистить стол:</b> Удаляет все незакрепленные объекты. Внизу появится кнопка отмены (действует 10 секунд).</div></div>
                   <div className="flex items-start gap-2"><Timer size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Таймер:</b> Устанавливает общее время (60/90 мин). Синхронизирован с клиентом.</div></div>
-                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Связь:</b> Встроенная прямо в кабинет. В окне можно выбрать <b>Видео</b> или <b>Только микрофон</b>, обновить список устройств, выбрать внешнюю камеру и микрофон. Окно связи можно перемещать и растягивать.</div></div>
+                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Связь:</b> Встроенная прямо в кабинет. В окне можно выбрать <b>Видео</b> или <b>Только микрофон</b>, обновить список устройств, выбрать внешнюю камеру и микрофон. Если встроенная связь не запускается, продолжайте работу на столе, а голос/видео включите во внешнем приложении.</div></div>
                   <div className="flex items-start gap-2"><Volume2 size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Звуки:</b> Кнопка громкости включает или отключает звуки действий и кубиков.</div></div>
                 </div>
               </div>
@@ -3110,6 +3159,12 @@ export default function App() {
               <p className="mt-2 leading-relaxed font-medium" style={{ color: `${COLORS.ink}80` }}>
                 {callMediaMode === 'audio' ? 'В этом режиме камера не включается: нужен только микрофон.' : 'Если внешней вебкамеры нет в списке, нажмите «Обновить» и разрешите доступ к камере в браузере.'}
               </p>
+            </div>
+            <div className="rounded-2xl p-3 mb-4 border text-[10px] leading-relaxed" style={{ backgroundColor: `${COLORS.terra}10`, borderColor: `${COLORS.terra}25`, color: COLORS.ink }}>
+              <div className="font-black uppercase tracking-widest mb-1 flex items-center gap-1.5" style={{ color: COLORS.terra }}>
+                <AlertCircle size={13} /> Резервный план связи
+              </div>
+              <div>Если видео не запускается, выберите <b>«Только микрофон»</b> и запустите аудиозвонок. Если микрофон тоже не работает, созвонитесь через телефон, MAX, Telegram или Zoom: стол, карты и заметки продолжат синхронизироваться здесь.</div>
             </div>
             <button onClick={runSessionCheck} className="w-full py-3 mb-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all hover:bg-black/5 flex items-center justify-center gap-2 border" style={{ color: COLORS.forest, borderColor: `${COLORS.forest}25`, backgroundColor: `${COLORS.forest}08` }}>
               <AlertCircle size={14} /> Проверить связь перед запуском
@@ -3509,7 +3564,7 @@ export default function App() {
                       <div className="text-[10px] font-bold text-center mb-2" style={{ color: COLORS.ink }}>СОХРАНЕННЫЕ СЕССИИ</div>
                       <div className="rounded-2xl p-3 text-[9px] leading-relaxed border" style={{ backgroundColor: `${COLORS.forest}08`, color: `${COLORS.ink}AA`, borderColor: `${COLORS.forest}20` }}>
                         <div className="font-black uppercase tracking-widest mb-1 flex items-center gap-1" style={{ color: COLORS.forest }}><Save size={11} /> История и восстановление</div>
-                        <div>Кнопка сохранения записывает текущий расклад в историю. У каждой сохранённой сессии есть постоянная ссылка для психолога и клиента.</div>
+                        <div>Кнопка сохранения записывает текущий расклад в историю. У каждой сохранённой сессии есть постоянная ссылка для психолога и клиента. Если копируете ссылку старой сессии, платформа предложит открыть её у вас, чтобы вы были в одной комнате с клиентом.</div>
                         {hasLocalBoardBackup && (
                           <button onClick={restoreLocalBoardBackup} className="mt-3 w-full py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.02]" style={{ backgroundColor: COLORS.forest }}>
                             <UploadCloud size={12} /> Восстановить локальную копию
@@ -3526,7 +3581,7 @@ export default function App() {
                            </div>
                            <div className="flex gap-1">
                               <button onClick={() => loadSavedSession(session)} className="p-2 text-forest hover:bg-forest/10 rounded-lg transition-colors" title="Загрузить на стол"><UploadCloud size={14}/></button>
-                              <button onClick={() => copySavedSessionLink(session)} className="p-2 text-plum hover:bg-plum/10 rounded-lg transition-colors" title="Скопировать постоянную ссылку"><LinkIcon size={14}/></button>
+                              <button onClick={() => copySavedSessionLink(session)} className="p-2 text-plum hover:bg-plum/10 rounded-lg transition-colors" title="Скопировать ссылку и открыть эту сессию у себя"><LinkIcon size={14}/></button>
                               <button onClick={async () => {
                                 const ok = await askConfirm('Удалить эту сессию навсегда?');
                                 if(ok) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions', session.id));
