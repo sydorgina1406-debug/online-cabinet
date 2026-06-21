@@ -1815,10 +1815,32 @@ export default function App() {
         const privateSnap = await getDocs(privateRoomNotesCollectionRef(targetRoomId));
         privateSnap.docs.forEach(d => batch.delete(privateRoomNoteDocRef(targetRoomId, d.id)));
       }
-      (session.elements || []).forEach(el => {
+      const elementsToLoad = (session.elements || [])
+        .filter(Boolean)
+        .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+      const publicElementsToLoad = elementsToLoad.filter(el => !isPrivateElement(el));
+      const shouldPlaceInCurrentView = targetRoomId === roomId;
+      const container = scrollContainerRef.current;
+      const originX = container ? container.scrollLeft + 80 : 180;
+      const originY = container ? container.scrollTop + 120 : 160;
+      const savedXs = publicElementsToLoad.map(el => Number(el.x)).filter(Number.isFinite);
+      const savedYs = publicElementsToLoad.map(el => Number(el.y)).filter(Number.isFinite);
+      const offsetX = shouldPlaceInCurrentView && savedXs.length ? originX - Math.min(...savedXs) : 0;
+      const offsetY = shouldPlaceInCurrentView && savedYs.length ? originY - Math.min(...savedYs) : 0;
+      elementsToLoad.forEach((el, index) => {
         const newId = `elem_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
         const nextEl = { ...el, id: newId };
-        batch.set(getElementDocRef(targetRoomId, nextEl), nextEl);
+        if (!isPrivateElement(nextEl)) {
+          if (shouldPlaceInCurrentView) {
+            const hasSavedPosition = Number.isFinite(Number(el.x)) && Number.isFinite(Number(el.y));
+            nextEl.x = hasSavedPosition ? Math.max(40, Number(el.x) + offsetX) : originX + ((index % 6) * 28);
+            nextEl.y = hasSavedPosition ? Math.max(80, Number(el.y) + offsetY) : originY + (Math.floor(index / 6) * 28);
+          }
+          nextEl.zIndex = nextEl.type === 'field' ? 0 : index + 10;
+          batch.set(publicRoomDocRef(targetRoomId, nextEl.id), nextEl);
+        } else {
+          batch.set(privateRoomNoteDocRef(targetRoomId, nextEl.id), nextEl);
+        }
       });
       if (session.tableBg) {
         batch.set(doc(db, 'artifacts', appId, 'public', 'data', `room_${targetRoomId}`, '_settings'), { tableBg: session.tableBg }, { merge: true });
