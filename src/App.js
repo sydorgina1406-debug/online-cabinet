@@ -3002,43 +3002,45 @@ export default function App() {
       )}
       {isSessionCheckOpen && (
         <div className="fixed inset-0 z-[320] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }} onClick={() => !isRunningSessionCheck && setIsSessionCheckOpen(false)}>
-          <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-xl w-full shadow-2xl relative" onClick={e => e.stopPropagation()}>
-            <button onClick={() => setIsSessionCheckOpen(false)} disabled={isRunningSessionCheck} className="absolute top-5 right-5 p-2 rounded-full hover:bg-black/5 transition-colors disabled:opacity-30">
-              <X size={22} style={{ color: COLORS.ink }} />
+          <div className="bg-white rounded-[2rem] max-w-xl w-full shadow-2xl relative max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setIsSessionCheckOpen(false)} disabled={isRunningSessionCheck} className="absolute top-3 right-3 z-20 w-12 h-12 rounded-2xl bg-white shadow-md border flex items-center justify-center hover:bg-black/5 transition-colors disabled:opacity-30" style={{ borderColor: `${COLORS.ink}12` }} title="Вернуться на стол">
+              <X size={26} style={{ color: COLORS.ink }} />
             </button>
-            <h2 className="text-xl font-black uppercase mb-2 flex items-center gap-3" style={{ color: COLORS.ink }}>
-              <AlertCircle size={22} className="text-plum" /> Проверка перед сессией
-            </h2>
-            <p className="text-sm leading-relaxed mb-5" style={{ color: `${COLORS.ink}99` }}>
-              Быстрая проверка камеры, микрофона, синхронизации, скриншотов и резервной копии стола.
-            </p>
-            <div className="flex flex-col gap-3 mb-6">
-              {sessionCheckResults.length === 0 && (
-                <div className="p-4 rounded-2xl text-sm font-bold text-center" style={{ backgroundColor: `${COLORS.ink}08`, color: `${COLORS.ink}70` }}>
-                  Нажмите «Проверить ещё раз», чтобы запустить диагностику.
-                </div>
-              )}
-              {sessionCheckResults.map(item => {
-                const isOk = item.status === 'ok';
-                const isError = item.status === 'error';
-                return (
-                  <div key={item.id} className="p-4 rounded-2xl border flex items-start gap-3" style={{ backgroundColor: isOk ? '#F0FDF4' : (isError ? '#FEF2F2' : '#FFFBEB'), borderColor: isOk ? '#BBF7D0' : (isError ? '#FECACA' : '#FDE68A') }}>
-                    <div className="mt-0.5">
-                      {isOk ? <CheckCircle size={18} className="text-green-600" /> : <AlertCircle size={18} className={isError ? 'text-red-600' : 'text-yellow-600'} />}
-                    </div>
-                    <div>
-                      <div className="font-black text-sm" style={{ color: COLORS.ink }}>{item.title}</div>
-                      <div className="text-xs leading-relaxed mt-1" style={{ color: `${COLORS.ink}AA` }}>{item.details}</div>
-                    </div>
+            <div className="p-6 md:p-8 pb-4 overflow-y-auto custom-scrollbar">
+              <h2 className="text-xl font-black uppercase mb-2 pr-12 flex items-center gap-3" style={{ color: COLORS.ink }}>
+                <AlertCircle size={22} className="text-plum" /> Проверка перед сессией
+              </h2>
+              <p className="text-sm leading-relaxed mb-5" style={{ color: `${COLORS.ink}99` }}>
+                Быстрая проверка камеры, микрофона, синхронизации, скриншотов и резервной копии стола.
+              </p>
+              <div className="flex flex-col gap-3">
+                {sessionCheckResults.length === 0 && (
+                  <div className="p-4 rounded-2xl text-sm font-bold text-center" style={{ backgroundColor: `${COLORS.ink}08`, color: `${COLORS.ink}70` }}>
+                    Нажмите «Проверить ещё раз», чтобы запустить диагностику.
                   </div>
-                );
-              })}
+                )}
+                {sessionCheckResults.map(item => {
+                  const isOk = item.status === 'ok';
+                  const isError = item.status === 'error';
+                  return (
+                    <div key={item.id} className="p-4 rounded-2xl border flex items-start gap-3" style={{ backgroundColor: isOk ? '#F0FDF4' : (isError ? '#FEF2F2' : '#FFFBEB'), borderColor: isOk ? '#BBF7D0' : (isError ? '#FECACA' : '#FDE68A') }}>
+                      <div className="mt-0.5">
+                        {isOk ? <CheckCircle size={18} className="text-green-600" /> : <AlertCircle size={18} className={isError ? 'text-red-600' : 'text-yellow-600'} />}
+                      </div>
+                      <div>
+                        <div className="font-black text-sm" style={{ color: COLORS.ink }}>{item.title}</div>
+                        <div className="text-xs leading-relaxed mt-1" style={{ color: `${COLORS.ink}AA` }}>{item.details}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex gap-3">
-              <button onClick={() => setIsSessionCheckOpen(false)} disabled={isRunningSessionCheck} className="flex-1 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors text-xs font-black uppercase tracking-widest disabled:opacity-30" style={{ color: `${COLORS.ink}AA` }}>
-                Закрыть
+            <div className="sticky bottom-0 bg-white p-4 md:p-6 border-t flex flex-col sm:flex-row gap-3 shadow-[0_-10px_30px_rgba(0,0,0,0.06)]" style={{ borderColor: `${COLORS.ink}10` }}>
+              <button onClick={() => setIsSessionCheckOpen(false)} disabled={isRunningSessionCheck} className="flex-1 py-4 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors text-xs font-black uppercase tracking-widest disabled:opacity-30" style={{ color: `${COLORS.ink}AA` }}>
+                Вернуться на стол
               </button>
-              <button onClick={runSessionCheck} disabled={isRunningSessionCheck} className="flex-[2] py-3 rounded-xl text-white text-xs font-black uppercase tracking-widest shadow-md transition-all hover:scale-[1.02] disabled:opacity-60 flex items-center justify-center gap-2" style={{ backgroundColor: COLORS.forest }}>
+              <button onClick={runSessionCheck} disabled={isRunningSessionCheck} className="flex-[2] py-4 rounded-xl text-white text-xs font-black uppercase tracking-widest shadow-md transition-all hover:scale-[1.02] disabled:opacity-60 flex items-center justify-center gap-2" style={{ backgroundColor: COLORS.forest }}>
                 {isRunningSessionCheck ? <><Loader2 size={16} className="animate-spin" /> Проверяю...</> : <><RefreshCw size={16} /> Проверить ещё раз</>}
               </button>
             </div>
