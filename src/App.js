@@ -642,6 +642,7 @@ export default function App() {
   const [isLoadingMediaDevices, setIsLoadingMediaDevices] = useState(false);
   const videoDragRef = useRef({ isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 });
   const videoResizeRef = useRef({ isResizing: false, startX: 0, startY: 0, startW: 320, startH: 420 });
+  const videoPinchRef = useRef({ isPinching: false, distance: 0, startW: 320, startH: 420, initialX: 0, initialY: 0, anchorX: 0.5, anchorY: 0.5 });
   const [videoPos, setVideoPos] = useState({ x: 20, y: 20 });
   const [videoDim, setVideoDim] = useState({ w: 320, h: 420 });
   useEffect(() => {
@@ -652,7 +653,32 @@ export default function App() {
       });
     }
   }, []);
+  const getVideoTouchDistance = (touches) => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt((dx * dx) + (dy * dy));
+  };
   const handleVideoPointerDown = (e) => {
+    if (e.touches && e.touches.length >= 2) {
+      e.preventDefault();
+      e.stopPropagation();
+      const distance = getVideoTouchDistance(e.touches);
+      const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      videoPinchRef.current = {
+        isPinching: true,
+        distance,
+        startW: videoDim.w,
+        startH: videoDim.h,
+        initialX: videoPos.x,
+        initialY: videoPos.y,
+        anchorX: (centerX - videoPos.x) / Math.max(1, videoDim.w),
+        anchorY: (centerY - videoPos.y) / Math.max(1, videoDim.h)
+      };
+      videoDragRef.current.isDragging = false;
+      videoResizeRef.current.isResizing = false;
+      return;
+    }
     videoDragRef.current.isDragging = true;
     const cx = e.touches ? e.touches[0].clientX : e.clientX;
     const cy = e.touches ? e.touches[0].clientY : e.clientY;
@@ -673,6 +699,31 @@ export default function App() {
   };
   useEffect(() => {
     const handleMove = (e) => {
+      if (videoPinchRef.current.isPinching && e.touches && e.touches.length >= 2) {
+        e.preventDefault();
+        const distance = getVideoTouchDistance(e.touches);
+        const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const start = videoPinchRef.current;
+        const minW = 110;
+        const minH = 140;
+        const maxW = typeof window !== 'undefined' ? Math.max(180, window.innerWidth - 16) : 520;
+        const maxH = typeof window !== 'undefined' ? Math.max(220, window.innerHeight - 16) : 680;
+        const rawScale = distance / Math.max(1, start.distance);
+        const minScale = Math.max(minW / start.startW, minH / start.startH);
+        const maxScale = Math.min(maxW / start.startW, maxH / start.startH);
+        const scale = Math.min(maxScale, Math.max(minScale, rawScale));
+        const nextW = start.startW * scale;
+        const nextH = start.startH * scale;
+        const maxX = typeof window !== 'undefined' ? Math.max(8, window.innerWidth - nextW - 8) : 8;
+        const maxY = typeof window !== 'undefined' ? Math.max(8, window.innerHeight - nextH - 8) : 8;
+        setVideoDim({ w: nextW, h: nextH });
+        setVideoPos({
+          x: Math.min(maxX, Math.max(8, centerX - (start.anchorX * nextW))),
+          y: Math.min(maxY, Math.max(8, centerY - (start.anchorY * nextH)))
+        });
+        return;
+      }
       const cx = e.touches ? e.touches[0].clientX : e.clientX;
       const cy = e.touches ? e.touches[0].clientY : e.clientY;
       if (videoDragRef.current.isDragging) {
@@ -694,16 +745,19 @@ export default function App() {
     const handleUp = () => { 
       videoDragRef.current.isDragging = false; 
       videoResizeRef.current.isResizing = false;
+      videoPinchRef.current.isPinching = false;
     };
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
     window.addEventListener('touchmove', handleMove, { passive: false });
     window.addEventListener('touchend', handleUp);
+    window.addEventListener('touchcancel', handleUp);
     return () => {
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
       window.removeEventListener('touchmove', handleMove);
       window.removeEventListener('touchend', handleUp);
+      window.removeEventListener('touchcancel', handleUp);
     };
   }, [videoPos, videoDim]);
   const [isDicePanelOpen, setIsDicePanelOpen] = useState(false);
@@ -3090,7 +3144,7 @@ export default function App() {
                   <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Настройки Поля:</b> Изменение фона стола (нейро-текстуры) или загрузка своего игрового поля (картинки, на которую можно класть карты).</div></div>
                   <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Очистить стол:</b> Удаляет все незакрепленные объекты. Внизу появится кнопка отмены (действует 10 секунд).</div></div>
                   <div className="flex items-start gap-2"><Timer size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Таймер:</b> Устанавливает общее время (60/90 мин). Синхронизирован с клиентом.</div></div>
-                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Связь:</b> Встроенная прямо в кабинет. В окне можно выбрать <b>Видео</b> или <b>Только микрофон</b>, обновить список устройств, выбрать внешнюю камеру и микрофон. Если встроенная связь не запускается, продолжайте работу на столе, а голос/видео включите во внешнем приложении.</div></div>
+                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Связь:</b> Встроенная прямо в кабинет. В окне можно выбрать <b>Видео</b> или <b>Только микрофон</b>, обновить список устройств, выбрать внешнюю камеру и микрофон. На телефоне окно связи можно двигать одним пальцем и менять размер двумя пальцами. Если встроенная связь не запускается, продолжайте работу на столе, а голос/видео включите во внешнем приложении.</div></div>
                   <div className="flex items-start gap-2"><Volume2 size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Звуки:</b> Кнопка громкости включает или отключает звуки действий и кубиков.</div></div>
                 </div>
               </div>
