@@ -14,7 +14,7 @@ import {
   Plus, Layers, RotateCw, RotateCcw, Trash2, Maximize2, Minimize2, X, ChevronUp, ChevronDown,
   FolderOpen, LayoutGrid, Move, Cloud, Copy, CheckCircle,
   Users, LogOut, AlertCircle, ExternalLink, Image as ImageIcon,
-  Volume2, VolumeX, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ArrowUpToLine, Save, MousePointer2, UserCircle, UserPlus,
+  Volume2, VolumeX, ArrowUp, ArrowUpToLine, Save, MousePointer2, UserCircle, UserPlus,
   Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
   Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, MessageCircle,
   Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff, Dices, UserMinus, BookOpen, Mic,
@@ -61,15 +61,40 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
   const isMale = gender === 'male';
   const safeName = String(name || '').slice(0, 14);
   const rot = ((rotation % 360) + 360) % 360;
+  const direction = rot >= 45 && rot < 135 ? 'right' : (rot >= 135 && rot < 225 ? 'front' : (rot >= 225 && rot < 315 ? 'left' : 'back'));
   const hexColor = String(color || '#8B3252').replace('#', '').replace(/[^a-zA-Z0-9]/g, '');
-  const bodyGradientId = `figureBody-${hexColor}-${gender}`;
-  const bodySideId = `figureSide-${hexColor}-${gender}`;
-  const headGradientId = `figureHead-${hexColor}-${gender}`;
-  const glossGradientId = `figureGloss-${hexColor}-${gender}`;
-  const eyeOffset = {
-    x: rot >= 45 && rot < 135 ? 2.4 : (rot > 225 && rot < 315 ? -2.4 : 0),
-    y: rot >= 135 && rot <= 225 ? 2 : (rot < 45 || rot >= 315 ? -2 : 0)
+  const bodyGradientId = `figureBody-${hexColor}-${gender}-${viewMode}`;
+  const bodySideId = `figureSide-${hexColor}-${gender}-${viewMode}`;
+  const headGradientId = `figureHead-${hexColor}-${gender}-${viewMode}`;
+  const glossGradientId = `figureGloss-${hexColor}-${gender}-${viewMode}`;
+  const shadowStyle = isLaying ? 'drop-shadow(0px 2px 4px rgba(0,0,0,0.35))' : 'drop-shadow(0px 10px 16px rgba(0,0,0,0.28))';
+  const renderEyes = (cx1, cy1, cx2, cy2, r = 1.7) => {
+    if (isLaying) {
+      return (
+        <>
+          <line x1={cx1 - 3} y1={cy1} x2={cx1 + 3} y2={cy1} stroke="#2D241C" strokeWidth="2" strokeLinecap="round" />
+          <line x1={cx2 - 3} y1={cy2} x2={cx2 + 3} y2={cy2} stroke="#2D241C" strokeWidth="2" strokeLinecap="round" />
+        </>
+      );
+    }
+    return (
+      <>
+        <circle cx={cx1} cy={cy1} r={r} fill="#1B1720" />
+        <circle cx={cx2} cy={cy2} r={r} fill="#1B1720" />
+        <circle cx={cx1 + 0.5} cy={cy1 - 0.5} r="0.45" fill="white" opacity="0.8" />
+        <circle cx={cx2 + 0.5} cy={cy2 - 0.5} r="0.45" fill="white" opacity="0.8" />
+      </>
+    );
   };
+  const renderName = (y = 67, maxWidth = '32') => safeName && (
+    <text
+      x="50" y={y} textAnchor="middle" fontSize="9"
+      fontWeight="900" fill="rgba(255,255,255,0.95)" style={{ textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }}
+      textLength={safeName.length > 5 ? maxWidth : undefined} lengthAdjust="spacingAndGlyphs"
+    >
+      {safeName}
+    </text>
+  );
 
   if (isMenu) {
     return (
@@ -88,36 +113,14 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
         </defs>
         <ellipse cx="50" cy="92" rx="28" ry="6" fill="rgba(0,0,0,0.20)" />
         {isMale ? (
-          <path d="M28 44 Q28 36 36 36 L64 36 Q72 36 72 44 L66 88 Q65 94 58 94 L42 94 Q35 94 34 88 Z" fill={`url(#${bodyGradientId}-menu)`} />
+          <path d="M30 43 C30 36 37 33 45 33 L55 33 C63 33 70 36 70 43 L65 87 C64 93 59 95 54 95 L46 95 C41 95 36 93 35 87 Z" fill={`url(#${bodyGradientId}-menu)`} />
         ) : (
-          <path d="M50 35 C66 48 78 72 84 94 L16 94 C22 72 34 48 50 35 Z" fill={`url(#${bodyGradientId}-menu)`} />
+          <path d="M50 34 C65 46 77 72 83 94 L17 94 C23 72 35 46 50 34 Z" fill={`url(#${bodyGradientId}-menu)`} />
         )}
         <circle cx="50" cy="24" r="17" fill={`url(#${headGradientId}-menu)`} stroke="rgba(255,255,255,0.7)" strokeWidth="2" />
-        <path d="M40 20 Q50 12 60 20" stroke="rgba(255,255,255,0.45)" strokeWidth="3" fill="none" strokeLinecap="round" />
       </svg>
     );
   }
-
-  const isSide = viewMode === 'side';
-  const shadowStyle = isLaying ? 'drop-shadow(0px 2px 4px rgba(0,0,0,0.35))' : 'drop-shadow(0px 10px 16px rgba(0,0,0,0.28))';
-  const drawEyes = (cx1, cy1, cx2, cy2, r = 1.8) => {
-    if (isLaying) {
-      return (
-        <>
-          <path d={`M ${cx1 - 3},${cy1} Q ${cx1},${cy1 + 2.8} ${cx1 + 3},${cy1}`} stroke="#2D241C" strokeWidth="2" fill="none" strokeLinecap="round" />
-          <path d={`M ${cx2 - 3},${cy2} Q ${cx2},${cy2 + 2.8} ${cx2 + 3},${cy2}`} stroke="#2D241C" strokeWidth="2" fill="none" strokeLinecap="round" />
-        </>
-      );
-    }
-    return (
-      <>
-        <circle cx={cx1 + eyeOffset.x} cy={cy1 + eyeOffset.y} r={r} fill="#1B1720" />
-        <circle cx={cx2 + eyeOffset.x} cy={cy2 + eyeOffset.y} r={r} fill="#1B1720" />
-        <circle cx={cx1 + eyeOffset.x + 0.5} cy={cy1 + eyeOffset.y - 0.5} r="0.45" fill="white" opacity="0.8" />
-        <circle cx={cx2 + eyeOffset.x + 0.5} cy={cy2 + eyeOffset.y - 0.5} r="0.45" fill="white" opacity="0.8" />
-      </>
-    );
-  };
 
   return (
     <svg viewBox="0 0 100 100" className={className} style={{ overflow: 'visible', filter: shadowStyle }}>
@@ -133,8 +136,8 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
           <stop offset="100%" stopColor="#000000" stopOpacity="0.32" />
         </linearGradient>
         <linearGradient id={bodySideId} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#000000" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#000000" stopOpacity="0.44" />
+          <stop offset="0%" stopColor="#000000" stopOpacity="0.16" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.42" />
         </linearGradient>
         <linearGradient id={glossGradientId} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.62" />
@@ -142,69 +145,91 @@ const FigureIcon = ({ gender, color, viewMode = 'side', rotation = 0, name = '',
         </linearGradient>
       </defs>
 
-      {isSide ? (
+      {viewMode === 'top' ? (
         <g>
-          <ellipse cx="50" cy="89" rx="31" ry="7" fill="rgba(0,0,0,0.20)" />
-          <g transform={`rotate(${rot}, 50, 25)`} opacity={isLaying ? 0.28 : 0.82}>
-            <line x1="50" y1="21" x2="50" y2="-6" stroke="#F7C948" strokeWidth="3" strokeLinecap="round" />
-            <polygon points="50,-14 44,-3 56,-3" fill="#F7C948" stroke="white" strokeWidth="1" />
+          <g transform={`rotate(${rot}, 50, 50)`}>
+            <ellipse cx="50" cy="56" rx="34" ry="28" fill="rgba(0,0,0,0.13)" />
+            {isMale ? (
+              <rect x="25" y="31" width="50" height="42" rx="12" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.65)" strokeWidth="1.6" />
+            ) : (
+              <path d="M50 20 C68 31 80 48 79 68 C61 76 39 76 21 68 C20 48 32 31 50 20 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.65)" strokeWidth="1.6" />
+            )}
+            <circle cx="50" cy="48" r="15" fill={`url(#${headGradientId})`} stroke="rgba(255,255,255,0.75)" strokeWidth="2" />
+            {direction !== 'back' && (
+              <>
+                <path d="M50 50 L48 55 L52 55 Z" fill="#9B6436" opacity="0.65" />
+                {renderEyes(45, 49, 55, 49, 1.45)}
+              </>
+            )}
+            {direction === 'back' && <path d="M36 48 C41 36 59 36 64 48 L61 43 C55 39 45 39 39 43 Z" fill="#7A4D2B" opacity="0.72" />}
           </g>
-          {isMale ? (
-            <>
-              <path d="M31 42 Q31 35 39 35 L61 35 Q69 35 69 42 L64 84 Q63 90 57 90 L43 90 Q37 90 36 84 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
-              <path d="M61 36 Q69 36 69 43 L64 84 Q63 89 58 90 L56 90 Q61 61 61 36 Z" fill={`url(#${bodySideId})`} opacity="0.75" />
-              <path d="M39 39 Q45 36 54 37 L50 84 Q45 88 40 84 Z" fill={`url(#${glossGradientId})`} opacity="0.38" />
-            </>
-          ) : (
-            <>
-              <path d="M50 33 C63 45 74 68 80 90 L20 90 C26 68 37 45 50 33 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
-              <path d="M52 35 C65 48 75 70 80 90 L58 90 C57 68 55 50 52 35 Z" fill={`url(#${bodySideId})`} opacity="0.65" />
-              <path d="M47 38 C39 51 32 72 28 87" stroke="white" strokeWidth="4" strokeOpacity="0.22" strokeLinecap="round" />
-            </>
-          )}
-          <ellipse cx="50" cy="25" rx="16.5" ry="15.5" fill={`url(#${headGradientId})`} stroke="rgba(255,255,255,0.75)" strokeWidth="2" />
-          <path d="M39 21 Q50 13 61 21" stroke="rgba(255,255,255,0.42)" strokeWidth="3" fill="none" strokeLinecap="round" />
-          <path d={`M50,27 q${eyeOffset.x * 0.45},2 0,4`} stroke="#9B6436" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-          {drawEyes(44, 25, 56, 25)}
-          {safeName && (
-            <text
-              x="50" y="66" textAnchor="middle" fontSize="9"
-              fontWeight="900" fill="rgba(255,255,255,0.95)" style={{ textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }}
-              textLength={safeName.length > 5 ? "28" : undefined} lengthAdjust="spacingAndGlyphs"
-            >
-              {safeName}
-            </text>
-          )}
+          {renderName(85, '35')}
         </g>
       ) : (
         <g>
-          <g transform={`rotate(${rot}, 50, 50)`}>
-            <ellipse cx="50" cy="55" rx="34" ry="28" fill="rgba(0,0,0,0.13)" />
-            {isMale ? (
-              <>
-                <rect x="23" y="31" width="54" height="42" rx="11" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.65)" strokeWidth="1.6" />
-                <path d="M60 32 Q77 34 77 45 L73 67 Q69 74 58 73 Z" fill={`url(#${bodySideId})`} opacity="0.45" />
-              </>
-            ) : (
-              <>
-                <path d="M50 20 C68 31 80 47 79 67 C61 76 39 76 21 67 C20 47 32 31 50 20 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.65)" strokeWidth="1.6" />
-                <path d="M55 24 C70 35 79 50 79 67 C72 71 63 74 55 75 Z" fill={`url(#${bodySideId})`} opacity="0.42" />
-              </>
-            )}
-            <path d="M50 20 L43 34 L57 34 Z" fill="#F7C948" stroke="white" strokeWidth="1" />
-            <circle cx="50" cy="50" r="15" fill={`url(#${headGradientId})`} stroke="rgba(255,255,255,0.75)" strokeWidth="2" />
-            <path d="M42 46 Q50 40 58 46" stroke="rgba(255,255,255,0.45)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-            <path d="M50,51 q0,2 0,4" stroke="#9B6436" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-            {drawEyes(45, 51, 55, 51)}
-          </g>
-
-          {safeName && (
-            <text
-              x="50" y="85" textAnchor="middle" fontSize="10" fontWeight="900" fill="rgba(255,255,255,0.95)"
-              style={{ textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }} textLength={safeName.length > 5 ? "35" : undefined} lengthAdjust="spacingAndGlyphs"
-            >
-              {safeName}
-            </text>
+          <ellipse cx="50" cy="89" rx="31" ry="7" fill="rgba(0,0,0,0.20)" />
+          {direction === 'left' || direction === 'right' ? (
+            <>
+              <g transform={direction === 'left' ? 'translate(100 0) scale(-1 1)' : undefined}>
+                {isMale ? (
+                  <>
+                    <path d="M42 41 C42 35 47 32 54 34 C62 37 66 48 65 62 L62 86 C61 92 56 94 50 94 L42 94 C39 80 39 55 42 41 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
+                    <path d="M54 35 C62 39 65 50 64 63 L61 87 C60 91 57 93 53 94 C55 73 56 53 54 35 Z" fill={`url(#${bodySideId})`} opacity="0.72" />
+                    <path d="M44 42 C47 39 50 38 54 39 L50 88 C46 89 43 87 42 83 Z" fill={`url(#${glossGradientId})`} opacity="0.34" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M50 34 C62 48 70 70 73 90 L32 90 C36 68 41 47 50 34 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
+                    <path d="M53 37 C63 51 70 72 73 90 L59 90 C58 69 56 50 53 37 Z" fill={`url(#${bodySideId})`} opacity="0.62" />
+                    <path d="M47 39 C42 53 38 72 36 87" stroke="white" strokeWidth="4" strokeOpacity="0.22" strokeLinecap="round" />
+                  </>
+                )}
+                <ellipse cx="50" cy="25" rx="14.5" ry="16" fill={`url(#${headGradientId})`} stroke="rgba(255,255,255,0.75)" strokeWidth="2" />
+                <path d="M61 25 L68 29 L61 32 Z" fill="#C99454" stroke="rgba(255,255,255,0.35)" strokeWidth="0.7" />
+                <path d="M49 27 L47 32" stroke="#9B6436" strokeWidth="1.4" strokeLinecap="round" opacity="0.7" />
+                {!isLaying && <circle cx="56" cy="24" r="1.8" fill="#1B1720" />}
+                {isLaying && <line x1="53" y1="24" x2="59" y2="24" stroke="#2D241C" strokeWidth="2" strokeLinecap="round" />}
+              </g>
+              {renderName(67, '28')}
+            </>
+          ) : direction === 'front' ? (
+            <g>
+              {isMale ? (
+                <>
+                  <path d="M30 43 C30 36 37 33 45 33 L55 33 C63 33 70 36 70 43 L65 86 C64 92 59 94 54 94 L46 94 C41 94 36 92 35 86 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
+                  <path d="M58 35 C65 36 70 39 70 44 L65 86 C64 90 61 93 56 94 C59 73 60 52 58 35 Z" fill={`url(#${bodySideId})`} opacity="0.58" />
+                  <path d="M38 40 C43 36 49 36 54 37 L50 86 C46 90 40 88 38 83 Z" fill={`url(#${glossGradientId})`} opacity="0.32" />
+                </>
+              ) : (
+                <>
+                  <path d="M50 33 C63 45 74 68 80 90 L20 90 C26 68 37 45 50 33 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
+                  <path d="M52 35 C65 48 75 70 80 90 L58 90 C57 68 55 50 52 35 Z" fill={`url(#${bodySideId})`} opacity="0.62" />
+                  <path d="M47 38 C39 51 32 72 28 87" stroke="white" strokeWidth="4" strokeOpacity="0.22" strokeLinecap="round" />
+                </>
+              )}
+              <ellipse cx="50" cy="25" rx="16.5" ry="15.5" fill={`url(#${headGradientId})`} stroke="rgba(255,255,255,0.75)" strokeWidth="2" />
+              <path d="M50 27 L47 33 L53 33 Z" fill="#9B6436" opacity="0.62" />
+              {renderEyes(44, 25, 56, 25)}
+              {renderName(67, '32')}
+            </g>
+          ) : (
+            <g>
+              {isMale ? (
+                <>
+                  <path d="M31 43 C31 36 38 33 46 33 L54 33 C62 33 69 36 69 43 L64 86 C63 92 58 94 54 94 L46 94 C42 94 37 92 36 86 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
+                  <path d="M50 36 L50 89" stroke="rgba(0,0,0,0.18)" strokeWidth="2" strokeLinecap="round" />
+                </>
+              ) : (
+                <>
+                  <path d="M50 33 C63 45 74 68 80 90 L20 90 C26 68 37 45 50 33 Z" fill={`url(#${bodyGradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth="1.6" />
+                  <path d="M50 38 C49 55 49 72 50 88" stroke="rgba(0,0,0,0.18)" strokeWidth="2" strokeLinecap="round" />
+                </>
+              )}
+              <ellipse cx="50" cy="25" rx="16.5" ry="15.5" fill={`url(#${headGradientId})`} stroke="rgba(255,255,255,0.75)" strokeWidth="2" />
+              <path d="M36 25 C39 13 61 13 64 25 L63 20 C58 16 42 16 37 20 Z" fill="#7A4D2B" opacity="0.82" />
+              <path d="M38 26 C42 30 58 30 62 26" stroke="#7A4D2B" strokeWidth="4" strokeLinecap="round" opacity="0.55" />
+              {renderName(67, '32')}
+            </g>
           )}
         </g>
       )}
@@ -623,9 +648,13 @@ export default function App() {
   const [platformName, setPlatformName] = useState("ОНЛАЙН КАБИНЕТ");
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const remoteStreamRef = useRef(null);
   const pcRef = useRef(null);
   const processedCandidates = useRef(new Set());
   const callSnapshotUnsubRef = useRef(null);
+  const callConnectTimeoutRef = useRef(null);
+  const audioFallbackTimeoutRef = useRef(null);
   const [isVideoActive, setIsVideoActive] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [isSessionCheckOpen, setIsSessionCheckOpen] = useState(false);
@@ -1015,6 +1044,49 @@ export default function App() {
   const cleanupLocalStream = (stream) => {
     stream?.getTracks?.().forEach(track => track.stop());
   };
+  const isPeerConnected = (pc) => {
+    if (!pc) return false;
+    return pc.connectionState === 'connected' || pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed';
+  };
+  const clearCallConnectTimeout = () => {
+    if (callConnectTimeoutRef.current) {
+      clearTimeout(callConnectTimeoutRef.current);
+      callConnectTimeoutRef.current = null;
+    }
+  };
+  const clearAudioFallbackTimeout = () => {
+    if (audioFallbackTimeoutRef.current) {
+      clearTimeout(audioFallbackTimeoutRef.current);
+      audioFallbackTimeoutRef.current = null;
+    }
+  };
+  const scheduleAudioFallback = (pc, modeToUse = callMediaMode) => {
+    if (isClientMode || modeToUse === 'audio' || audioFallbackTimeoutRef.current) return;
+    setCallStatus('Видео не соединилось. Переключаю на «Только микрофон»...');
+    notify('Видео не соединилось. Перезапускаю связь в режиме «Только микрофон». Клиенту нужно будет нажать «Подключиться к аудио».', 9000);
+    audioFallbackTimeoutRef.current = setTimeout(async () => {
+      audioFallbackTimeoutRef.current = null;
+      if (pcRef.current !== pc || isPeerConnected(pc)) return;
+      await endNativeCall({ keepAudioMode: true });
+      setTimeout(() => startNativeCall('audio'), 400);
+    }, 1600);
+  };
+  const scheduleConnectionWatch = (pc, modeToUse, label) => {
+    clearCallConnectTimeout();
+    callConnectTimeoutRef.current = setTimeout(() => {
+      if (pcRef.current !== pc || pc.connectionState === 'closed' || isPeerConnected(pc)) return;
+      console.warn(`[${label}] connection timeout`, pc.connectionState, pc.iceConnectionState);
+      if (!isClientMode && modeToUse !== 'audio') {
+        scheduleAudioFallback(pc, modeToUse);
+        return;
+      }
+      const message = modeToUse === 'audio'
+        ? 'Аудио не соединилось. Используйте внешнюю связь, а стол оставьте открытым.'
+        : 'Видео не соединилось. Попросите психолога включить «Только микрофон» или используйте внешнюю связь.';
+      setCallStatus(message);
+      notify(message, 9000);
+    }, 22000);
+  };
   const refreshMediaDevices = async (requestAccess = false, mode = callMediaMode) => {
     if (!navigator.mediaDevices?.enumerateDevices) {
       notify("Браузер не поддерживает выбор камеры");
@@ -1161,23 +1233,34 @@ export default function App() {
     setIsRunningSessionCheck(false);
     notify("Проверка завершена");
   };
-  const updateConnectionStatus = (pc, label) => {
+  const updateConnectionStatus = (pc, label, modeToUse = callMediaMode) => {
     const connectionState = pc.connectionState;
     const iceState = pc.iceConnectionState;
     console.log(`[${label}] connectionState:`, connectionState, 'ice:', iceState);
     if (connectionState === 'connected' || iceState === 'connected' || iceState === 'completed') {
+      clearCallConnectTimeout();
+      clearAudioFallbackTimeout();
       setCallStatus('');
     } else if (connectionState === 'connecting' || iceState === 'checking') {
       setCallStatus('Соединение...');
     } else if (connectionState === 'disconnected' || iceState === 'disconnected') {
       setCallStatus('Пытаюсь восстановить связь...');
     } else if (connectionState === 'failed' || iceState === 'failed') {
-      setCallStatus('Связь не восстановилась. Перезапустите звонок.');
+      if (!isClientMode && modeToUse !== 'audio') {
+        scheduleAudioFallback(pc, modeToUse);
+      } else {
+        const message = modeToUse === 'audio'
+          ? 'Аудио не восстановилось. Используйте внешнюю связь, стол продолжит работать.'
+          : 'Видео не восстановилось. Перейдите на «Только микрофон» или внешнюю связь.';
+        setCallStatus(message);
+        notify(message, 9000);
+      }
     } else if (connectionState === 'closed') {
+      clearCallConnectTimeout();
       setCallStatus('');
     }
   };
-  const startNativeCall = async (mode = callMediaMode) => {
+  async function startNativeCall(mode = callMediaMode) {
     const modeToUse = mode === 'audio' ? 'audio' : 'video';
     let stream = null;
     try {
@@ -1188,6 +1271,7 @@ export default function App() {
       await new Promise(resolve => setTimeout(resolve, 100));
       setCallStatus(modeToUse === 'audio' ? 'Доступ к микрофону...' : 'Доступ к камере...');
       stream = await getPreferredMediaStream(modeToUse);
+      localStreamRef.current = stream;
       refreshMediaDevices(false, modeToUse);
       attachVideoStream(localVideoRef.current, stream, true);
       const pc = new RTCPeerConnection(rtcConfig);
@@ -1196,11 +1280,14 @@ export default function App() {
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
       pc.ontrack = (event) => {
         console.log('[PSY] ontrack получен:', event.streams);
+        remoteStreamRef.current = event.streams[0] || null;
         attachVideoStream(remoteVideoRef.current, event.streams[0]);
+        clearCallConnectTimeout();
+        clearAudioFallbackTimeout();
         setCallStatus('');
       };
-      pc.onconnectionstatechange = () => updateConnectionStatus(pc, 'PSY');
-      pc.oniceconnectionstatechange = () => updateConnectionStatus(pc, 'PSY');
+      pc.onconnectionstatechange = () => updateConnectionStatus(pc, 'PSY', modeToUse);
+      pc.oniceconnectionstatechange = () => updateConnectionStatus(pc, 'PSY', modeToUse);
       pc.onicecandidateerror = (event) => {
         console.warn('[PSY] ICE candidate error:', event);
         if (pc.connectionState !== 'connected') setCallStatus('Проверяю соединение...');
@@ -1231,6 +1318,7 @@ export default function App() {
             console.log('[PSY] получен answer, ставлю remoteDescription');
             await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
             answerSet = true;
+            scheduleConnectionWatch(pc, modeToUse, 'PSY');
           } catch(e) { 
             console.error("[PSY] setRemoteDescription error", e); 
           }
@@ -1253,6 +1341,9 @@ export default function App() {
       });
     } catch (err) {
       cleanupLocalStream(stream);
+      if (localStreamRef.current === stream) localStreamRef.current = null;
+      clearCallConnectTimeout();
+      clearAudioFallbackTimeout();
       if (pcRef.current) {
         pcRef.current.close();
         pcRef.current = null;
@@ -1262,8 +1353,8 @@ export default function App() {
       notify(`Ошибка связи: ${getMediaErrorText(err)}. Попробуйте «Только микрофон». Если не получится, используйте внешний звонок, а стол оставьте открытым.`, 10000);
       console.error("WebRTC Error:", err);
     }
-  };
-  const joinNativeCall = async () => {
+  }
+  async function joinNativeCall() {
     const modeToUse = callMediaMode === 'audio' ? 'audio' : 'video';
     let stream = null;
     try {
@@ -1273,6 +1364,7 @@ export default function App() {
       await new Promise(resolve => setTimeout(resolve, 100));
       setCallStatus(modeToUse === 'audio' ? 'Доступ к микрофону...' : 'Доступ к камере...');
       stream = await getPreferredMediaStream(modeToUse);
+      localStreamRef.current = stream;
       refreshMediaDevices(false, modeToUse);
       attachVideoStream(localVideoRef.current, stream, true);
       const pc = new RTCPeerConnection(rtcConfig);
@@ -1281,11 +1373,13 @@ export default function App() {
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
       pc.ontrack = (event) => {
         console.log('[CLIENT] ontrack получен:', event.streams);
+        remoteStreamRef.current = event.streams[0] || null;
         attachVideoStream(remoteVideoRef.current, event.streams[0]);
+        clearCallConnectTimeout();
         setCallStatus('');
       };
-      pc.onconnectionstatechange = () => updateConnectionStatus(pc, 'CLIENT');
-      pc.oniceconnectionstatechange = () => updateConnectionStatus(pc, 'CLIENT');
+      pc.onconnectionstatechange = () => updateConnectionStatus(pc, 'CLIENT', modeToUse);
+      pc.oniceconnectionstatechange = () => updateConnectionStatus(pc, 'CLIENT', modeToUse);
       pc.onicecandidateerror = (event) => {
         console.warn('[CLIENT] ICE candidate error:', event);
         if (pc.connectionState !== 'connected') setCallStatus('Проверяю соединение...');
@@ -1314,6 +1408,7 @@ export default function App() {
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
             await updateDoc(callDoc, { answer: { type: answer.type, sdp: answer.sdp } });
+            scheduleConnectionWatch(pc, modeToUse, 'CLIENT');
             console.log('[CLIENT] answer отправлен');
           } catch(e) {
             console.error('[CLIENT] обработка offer ошибка:', e);
@@ -1338,6 +1433,8 @@ export default function App() {
       });
     } catch (err) {
       cleanupLocalStream(stream);
+      if (localStreamRef.current === stream) localStreamRef.current = null;
+      clearCallConnectTimeout();
       if (pcRef.current) {
         pcRef.current.close();
         pcRef.current = null;
@@ -1347,8 +1444,11 @@ export default function App() {
       notify(`Ошибка связи: ${getMediaErrorText(err)}. Попросите психолога переключить звонок на «Только микрофон». Если не получится, созвонитесь отдельно, а стол оставьте открытым.`, 10000);
       console.error("WebRTC Error:", err);
     }
-  };
-  const endNativeCall = async () => {
+  }
+  async function endNativeCall(options = {}) {
+    const { keepAudioMode = false } = options;
+    clearCallConnectTimeout();
+    clearAudioFallbackTimeout();
     if (callSnapshotUnsubRef.current) {
       callSnapshotUnsubRef.current();
       callSnapshotUnsubRef.current = null;
@@ -1357,33 +1457,35 @@ export default function App() {
       pcRef.current.close();
       pcRef.current = null;
     }
+    cleanupLocalStream(localStreamRef.current);
+    localStreamRef.current = null;
+    cleanupLocalStream(remoteStreamRef.current);
+    remoteStreamRef.current = null;
     if (localVideoRef.current?.srcObject) {
-      localVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
       localVideoRef.current.srcObject = null;
     }
     if (remoteVideoRef.current?.srcObject) {
-      remoteVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
       remoteVideoRef.current.srcObject = null;
     }
     setIsVideoActive(false);
     setCallStatus('');
     if (!isClientMode) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: false, callMediaMode: 'video' }, { merge: true });
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: false, callMediaMode: keepAudioMode ? 'audio' : 'video' }, { merge: true });
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc'));
     }
-  };
+  }
   useEffect(() => {
     if (isVideoActive && isClientMode && roomId) {
       const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
       const unsub = onSnapshot(callDoc, (docSnap) => {
         if (!docSnap.exists() && isVideoActive) {
           endNativeCall();
-          notify('Психолог завершил звонок', 5000);
+          notify(callMediaMode === 'audio' ? 'Видео перезапускается в режиме аудио' : 'Психолог завершил звонок', 5000);
         }
       });
       return () => unsub();
     }
-  }, [isVideoActive, isClientMode, roomId]);
+  }, [isVideoActive, isClientMode, roomId, callMediaMode]);
   useEffect(() => {
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     if (!sessionTimer?.running) {
@@ -2360,7 +2462,7 @@ export default function App() {
                   ctx.lineWidth = 1.5;
                   ctx.beginPath();
                   ctx.moveTo(ew * 0.53, eh * 0.22);
-                  ctx.quadraticCurveTo(ew * 0.56, eh * 0.25, ew * 0.59, eh * 0.22);
+                  ctx.lineTo(ew * 0.59, eh * 0.22);
                   ctx.stroke();
                 } else {
                   ctx.fillStyle = '#222';
@@ -2406,9 +2508,9 @@ export default function App() {
                   ctx.lineWidth = 1.5;
                   ctx.beginPath();
                   ctx.moveTo(ew * 0.41, eh * 0.24);
-                  ctx.quadraticCurveTo(ew * 0.44, eh * 0.27, ew * 0.47, eh * 0.24);
+                  ctx.lineTo(ew * 0.47, eh * 0.24);
                   ctx.moveTo(ew * 0.53, eh * 0.24);
-                  ctx.quadraticCurveTo(ew * 0.56, eh * 0.27, ew * 0.59, eh * 0.24);
+                  ctx.lineTo(ew * 0.59, eh * 0.24);
                   ctx.stroke();
                 } else {
                   ctx.fillStyle = '#222';
@@ -3172,7 +3274,7 @@ export default function App() {
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
                   <div className="flex items-start gap-3 bg-emerald-50 p-3 rounded-xl border border-emerald-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-emerald-700 shrink-0"><FigureIcon gender="male" color={COLORS.forest} isMenu={true} className="w-[18px] h-[18px] opacity-80" /></div>
-                    <div><b className="text-emerald-800">Фигурки для расстановок:</b> Кнопка с фигуркой вверху открывает панель. Вы можете выбирать цвет, указывать имя, добавлять объёмные 3D-фигурки и стрелки. Есть переключатель вида (Сбоку/Сверху).</div>
+                    <div><b className="text-emerald-800">Фигурки для расстановок:</b> Кнопка с фигуркой вверху открывает панель. Вы можете выбирать цвет, указывать имя, добавлять объёмные фигурки и стрелки. Есть переключатель вида (Сбоку/Сверху).</div>
                   </div>
                   <div className="flex items-start gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-blue-700 shrink-0"><Dices size={18} /></div>
@@ -3193,7 +3295,7 @@ export default function App() {
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Lock size={14} className="text-gray-500" /> Закрепить (от сдвигов)</div>
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><EyeOff size={14} className="text-gray-500" /> Уложить/Разбудить (сон/смерть для фигур)</div>
                     <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><UserMinus size={14} className="text-terra" /> Уронить/поднять фигурку в расстановке</div>
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><ArrowUp size={14} className="text-plum" /> У фигурок есть желтый указатель взгляда: потяните его вокруг фигурки. Кнопки рядом докручивают взгляд на 15 градусов.</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><ArrowUp size={14} className="text-plum" /> У фигурок есть желтый указатель взгляда: потяните его вокруг фигурки, и фигурка развернётся лицом, боком или спиной.</div>
                   </div>
                   <p className="mt-3 text-xs bg-gray-50 p-3 rounded-lg flex flex-col gap-2">
                     <span><Move size={14} className="inline text-plum"/> Чтобы <b>изменить размер</b>, потяните за правый нижний угол.</span>
@@ -3343,7 +3445,7 @@ export default function App() {
               <div className="font-black uppercase tracking-widest mb-1 flex items-center gap-1.5" style={{ color: COLORS.terra }}>
                 <AlertCircle size={13} /> Резервный план связи
               </div>
-              <div>Если видео не запускается, выберите <b>«Только микрофон»</b> и запустите аудиозвонок. Если микрофон тоже не работает, созвонитесь через телефон, MAX, Telegram или Zoom: стол, карты и заметки продолжат синхронизироваться здесь.</div>
+              <div>Если видео не соединится, платформа попробует переключить звонок на <b>«Только микрофон»</b>. Если микрофон тоже не работает, созвонитесь через телефон, MAX, Telegram или Zoom: стол, карты и заметки продолжат синхронизироваться здесь.</div>
             </div>
             <button onClick={runSessionCheck} className="w-full py-3 mb-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all hover:bg-black/5 flex items-center justify-center gap-2 border" style={{ color: COLORS.forest, borderColor: `${COLORS.forest}25`, backgroundColor: `${COLORS.forest}08` }}>
               <AlertCircle size={14} /> Проверить связь перед запуском
@@ -4226,7 +4328,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         transition: (isDragging || isResizing || isRotating) ? 'none' : 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
       }}
     >
-      {isFigureOrArrow && canDrag && (
+      {element.type === 'arrow' && canDrag && (
         <div
           onMouseDown={handleRotateStart}
           onTouchStart={handleRotateStart}
@@ -4273,39 +4375,6 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
             <button onClick={(e) => { e.stopPropagation(); onUpdate({ isFallen: !element.isFallen }); }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 ${element.isFallen ? 'bg-terra/10 text-terra' : 'hover:bg-black/5 text-ink/70'}`} title={element.isFallen ? "Поднять фигурку" : "Уронить на пол"}>
               <UserMinus size={16} />
             </button>
-          )}
-          {element.type === 'figure' && (
-            <div className="flex bg-gray-100 rounded-full p-0.5 shadow-inner border border-gray-200/50">
-              <button
-                onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (figureRotation - 15 + 360) % 360 }); }}
-                className="w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white text-ink/60"
-                title="Чуть левее"
-              >
-                <RotateCcw size={13} />
-              </button>
-              {[
-                { angle: 0, Icon: ArrowUp, title: 'Взгляд вверх' },
-                { angle: 90, Icon: ArrowRight, title: 'Взгляд вправо' },
-                { angle: 180, Icon: ArrowDown, title: 'Взгляд вниз' },
-                { angle: 270, Icon: ArrowLeft, title: 'Взгляд влево' }
-              ].map(({ angle, Icon, title }) => (
-                <button
-                  key={angle}
-                  onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: angle }); }}
-                  className={`w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white ${figureRotation === angle ? 'bg-white shadow-sm text-plum' : 'text-ink/60'}`}
-                  title={title}
-                >
-                  <Icon size={13} />
-                </button>
-              ))}
-              <button
-                onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (figureRotation + 15) % 360 }); }}
-                className="w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white text-ink/60"
-                title="Чуть правее"
-              >
-                <RotateCw size={13} />
-              </button>
-            </div>
           )}
           {element.type === 'card' && element.isFlipped && (
             <button onClick={(e) => {
