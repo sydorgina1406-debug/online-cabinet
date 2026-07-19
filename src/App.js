@@ -665,6 +665,7 @@ export default function App() {
   const [isRunningSessionCheck, setIsRunningSessionCheck] = useState(false);
   const [hasLocalBoardBackup, setHasLocalBoardBackup] = useState(false);
   const [isVideoCallReady, setIsVideoCallReady] = useState(false);
+  const [externalCallLink, setExternalCallLink] = useState('');
   const [callStatus, setCallStatus] = useState('');
   const [callMediaMode, setCallMediaMode] = useState('video');
   const [videoDevices, setVideoDevices] = useState([]);
@@ -1747,6 +1748,7 @@ export default function App() {
           if (data.figureViewMode) setFigureViewMode(data.figureViewMode);
           if (data.isVideoCallReady !== undefined) setIsVideoCallReady(data.isVideoCallReady);
           if (data.callMediaMode) setCallMediaMode(data.callMediaMode === 'audio' ? 'audio' : 'video');
+          if (data.externalCallLink !== undefined) setExternalCallLink(data.externalCallLink);
         }
         else if (d.id === '_library_state') {
           const libraryData = data;
@@ -1810,6 +1812,16 @@ export default function App() {
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { platformName: val }, { merge: true });
       }
     }
+  };
+  const editExternalCallLink = async () => {
+    const newLink = await askPrompt("Ссылка на видеозвонок (Zoom, Телемост, MAX, VK-звонки):", externalCallLink, "https://...");
+    if (newLink === null) return;
+    const val = newLink.trim();
+    setExternalCallLink(val);
+    if (isDbConnected && user && roomId) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { externalCallLink: val }, { merge: true });
+    }
+    notify(val ? "Ссылка на звонок сохранена ✓" : "Ссылка на звонок убрана");
   };
   const updateGlobalFigureView = async (mode) => {
     if (!isDbConnected || !roomId) return;
@@ -3619,16 +3631,14 @@ export default function App() {
              </button>
           </div>
           {!isClientMode ? (
-            <div className="flex items-center gap-1 bg-white/50 p-1 rounded-[1rem] border shadow-sm" style={{ borderColor: `${COLORS.forest}30`, backgroundColor: `${COLORS.forest}10` }}>
-              <button onClick={() => { setIsVideoModalOpen(true); }} className="p-2 rounded-xl transition-all hover:bg-white text-forest" title="Настроить связь">
-                <Video size={16} />
-              </button>
-           </div>
+            <button onClick={editExternalCallLink} className="flex items-center gap-2 px-3 py-2.5 rounded-[1rem] text-[10px] font-black uppercase tracking-widest shadow-sm border transition-all hover:scale-105" style={{ backgroundColor: externalCallLink ? COLORS.forest : 'white', color: externalCallLink ? 'white' : COLORS.forest, borderColor: `${COLORS.forest}30` }} title={externalCallLink ? "Изменить ссылку на видеозвонок" : "Добавить ссылку на видеозвонок (Zoom, Телемост, MAX)"}>
+              <Video size={16} /> {externalCallLink ? "Ссылка на звонок" : "Добавить звонок"}
+            </button>
           ) : (
-            isVideoCallReady && (
-              <button onClick={joinNativeCall} className="flex items-center gap-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black text-white shadow-[0_0_15px_rgba(45,74,62,0.4)] transition-all hover:scale-105 uppercase animate-pulse" style={{ backgroundColor: COLORS.forest }}>
-                {callMediaMode === 'audio' ? <Mic size={14} /> : <Video size={14} />} {callMediaMode === 'audio' ? 'Подключиться к аудио' : 'Подключиться к видео'}
-             </button>
+            externalCallLink && (
+              <a href={externalCallLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black text-white shadow-[0_0_15px_rgba(45,74,62,0.4)] transition-all hover:scale-105 uppercase" style={{ backgroundColor: COLORS.forest }}>
+                <Video size={14} /> Видеозвонок
+              </a>
             )
           )}
           {!isClientMode && (
