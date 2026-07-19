@@ -256,7 +256,7 @@ const loadPlatformDecks = async () => {
       };
     });
   } catch (e) {
-    console.error('Ошибка загрузки колод платформы:', e);
+    console.error('╨Ю╤И╨╕╨▒╨║╨░ ╨╖╨░╨│╤А╤Г╨╖╨║╨╕ ╨║╨╛╨╗╨╛╨┤ ╨┐╨╗╨░╤В╤Д╨╛╤А╨╝╤Л:', e);
     return [];
   }
 };
@@ -270,11 +270,11 @@ const COLORS = {
 };
 
 const TABLE_BACKGROUNDS = [
-  { id: 'milky', name: 'Молочный', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#FDFAF6', opacity: 1 },
-  { id: 'forest', name: 'Зеленый', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#2D4A3E', opacity: 1 },
-  { id: 'plum', name: 'Сливовый', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#8B3252', opacity: 1 },
-  { id: 'purple', name: 'Фиолетовый', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#4A148C', opacity: 1 },
-  { id: 'terra', name: 'Терракотовый', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#D26027', opacity: 1 }
+  { id: 'milky', name: '╨Ь╨╛╨╗╨╛╤З╨╜╤Л╨╣', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#FDFAF6', opacity: 1 },
+  { id: 'forest', name: '╨Ч╨╡╨╗╨╡╨╜╤Л╨╣', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#2D4A3E', opacity: 1 },
+  { id: 'plum', name: '╨б╨╗╨╕╨▓╨╛╨▓╤Л╨╣', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#8B3252', opacity: 1 },
+  { id: 'purple', name: '╨д╨╕╨╛╨╗╨╡╤В╨╛╨▓╤Л╨╣', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#4A148C', opacity: 1 },
+  { id: 'terra', name: '╨в╨╡╤А╤А╨░╨║╨╛╤В╨╛╨▓╤Л╨╣', type: 'css', value: 'none', bgSize: 'auto', bgColor: '#D26027', opacity: 1 }
 ];
 
 if (typeof window !== 'undefined' && !document.getElementById('tailwind-script')) {
@@ -351,8 +351,8 @@ const getNumberedBackNumber = (name) => {
   const match = getFileStem(name).match(/^(\d+)-1$/);
   return match ? normalizeCardNumber(match[1]) : null;
 };
-const isCommonBackFileName = (name = '') => String(name).toLowerCase().includes('рубашка');
-const isDeckBoxFileName = (name = '') => String(name).toLowerCase().includes('коробк');
+const isCommonBackFileName = (name = '') => String(name).toLowerCase().includes('╤А╤Г╨▒╨░╤И╨║╨░');
+const isDeckBoxFileName = (name = '') => String(name).toLowerCase().includes('╨║╨╛╤А╨╛╨▒╨║');
 const sortByFileName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { numeric: true, sensitivity: 'base' });
 const buildDeckImages = (files) => {
   const sortedFiles = [...files].sort(sortByFileName);
@@ -499,7 +499,7 @@ const loadBaseDecks = async (notifyCb) => {
         }
       }
     } else if (images.length > 0) {
-      const deck = buildDeckFromFiles(images, { id: ROOT_DRIVE_FOLDER_ID, name: "Базовая колода", isBaseDeck: true });
+      const deck = buildDeckFromFiles(images, { id: ROOT_DRIVE_FOLDER_ID, name: "╨С╨░╨╖╨╛╨▓╨░╤П ╨║╨╛╨╗╨╛╨┤╨░", isBaseDeck: true });
       if (deck.cards.length > 0) {
         loadedDecks.push(deck);
       }
@@ -604,7 +604,7 @@ const saveStoredDeckIds = (key, ids) => {
   try {
     window.localStorage.setItem(key, JSON.stringify(ids));
   } catch (e) {
-    console.warn('Не удалось сохранить настройки колод', e);
+    console.warn('╨Э╨╡ ╤Г╨┤╨░╨╗╨╛╤Б╤М ╤Б╨╛╤Е╤А╨░╨╜╨╕╤В╤М ╨╜╨░╤Б╤В╤А╨╛╨╣╨║╨╕ ╨║╨╛╨╗╨╛╨┤', e);
   }
 };
 const renderDiceFace = (value, dotColor) => {
@@ -633,7 +633,7 @@ function UndoTimer({ expiresAt }) {
     }, 200);
     return () => clearInterval(id);
   }, [expiresAt]);
-  return <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: 400 }}>{sec}с</span>;
+  return <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: 400 }}>{sec}╤Б</span>;
 }
 export default function App() {
   const [user, setUser] = useState(null);
@@ -648,7 +648,7 @@ export default function App() {
   const [isCheckingKey, setIsCheckingKey] = useState(false);
   const [appLoading, setAppLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
-  const [platformName, setPlatformName] = useState("ОНЛАЙН КАБИНЕТ");
+  const [platformName, setPlatformName] = useState("╨Ю╨Э╨Ы╨Р╨Щ╨Э ╨Ъ╨Р╨С╨Ш╨Э╨Х╨в");
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -852,7 +852,7 @@ export default function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [copyFeedback, setCopyFeedback] = useState(false);
-  const [activeTab, setActiveTab] = useState('platform');
+  const [activeTab, setActiveTab] = useState('cloud');
   const [favoriteDeckIds, setFavoriteDeckIds] = useState(() => loadStoredDeckIds('makFavoriteDecksV1'));
   const [hiddenDeckIds, setHiddenDeckIds] = useState(() => loadStoredDeckIds('makHiddenDecksV1'));
   const [deckSearch, setDeckSearch] = useState('');
@@ -875,13 +875,13 @@ export default function App() {
   const isPageSecure = typeof window === 'undefined' || window.isSecureContext || window.location.protocol === 'https:' || window.location.hostname === 'localhost';
   const clientPanelMessage = isClientMode
     ? (!roomId
-      ? 'Комната не найдена. Попросите психолога прислать ссылку ещё раз.'
+      ? '╨Ъ╨╛╨╝╨╜╨░╤В╨░ ╨╜╨╡ ╨╜╨░╨╣╨┤╨╡╨╜╨░. ╨Я╨╛╨┐╤А╨╛╤Б╨╕╤В╨╡ ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│╨░ ╨┐╤А╨╕╤Б╨╗╨░╤В╤М ╤Б╤Б╤Л╨╗╨║╤Г ╨╡╤Й╤С ╤А╨░╨╖.'
       : !isBrowserOnline
-        ? 'Нет интернета. Изменения могут не синхронизироваться.'
+        ? '╨Э╨╡╤В ╨╕╨╜╤В╨╡╤А╨╜╨╡╤В╨░. ╨Ш╨╖╨╝╨╡╨╜╨╡╨╜╨╕╤П ╨╝╨╛╨│╤Г╤В ╨╜╨╡ ╤Б╨╕╨╜╤Е╤А╨╛╨╜╨╕╨╖╨╕╤А╨╛╨▓╨░╤В╤М╤Б╤П.'
         : (!user || !isDbConnected)
-          ? 'Подключаюсь к общему столу...'
+          ? '╨Я╨╛╨┤╨║╨╗╤О╤З╨░╤О╤Б╤М ╨║ ╨╛╨▒╤Й╨╡╨╝╤Г ╤Б╤В╨╛╨╗╤Г...'
           : !isPageSecure
-            ? 'Откройте защищённую ссылку https, чтобы связь работала стабильно.'
+            ? '╨Ю╤В╨║╤А╨╛╨╣╤В╨╡ ╨╖╨░╤Й╨╕╤Й╤С╨╜╨╜╤Г╤О ╤Б╤Б╤Л╨╗╨║╤Г https, ╤З╤В╨╛╨▒╤Л ╤Б╨▓╤П╨╖╤М ╤А╨░╨▒╨╛╤В╨░╨╗╨░ ╤Б╤В╨░╨▒╨╕╨╗╤М╨╜╨╛.'
             : '')
     : '';
   useEffect(() => {
@@ -1006,21 +1006,21 @@ export default function App() {
     }
   };
   const getMediaErrorText = (err) => {
-    if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') return 'доступ к камере или микрофону запрещён в браузере';
-    if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') return 'камера или микрофон не найдены';
-    if (err?.name === 'NotReadableError' || err?.name === 'TrackStartError') return 'камера или микрофон заняты другой программой';
-    if (err?.name === 'OverconstrainedError' || err?.name === 'ConstraintNotSatisfiedError') return 'выбранная камера не поддерживает нужные параметры';
-    if (err?.name === 'SecurityError') return 'браузер заблокировал камеру из-за настроек безопасности';
-    return err?.message || 'неизвестная ошибка камеры';
+    if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') return '╨┤╨╛╤Б╤В╤Г╨┐ ╨║ ╨║╨░╨╝╨╡╤А╨╡ ╨╕╨╗╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜╤Г ╨╖╨░╨┐╤А╨╡╤Й╤С╨╜ ╨▓ ╨▒╤А╨░╤Г╨╖╨╡╤А╨╡';
+    if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') return '╨║╨░╨╝╨╡╤А╨░ ╨╕╨╗╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜ ╨╜╨╡ ╨╜╨░╨╣╨┤╨╡╨╜╤Л';
+    if (err?.name === 'NotReadableError' || err?.name === 'TrackStartError') return '╨║╨░╨╝╨╡╤А╨░ ╨╕╨╗╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜ ╨╖╨░╨╜╤П╤В╤Л ╨┤╤А╤Г╨│╨╛╨╣ ╨┐╤А╨╛╨│╤А╨░╨╝╨╝╨╛╨╣';
+    if (err?.name === 'OverconstrainedError' || err?.name === 'ConstraintNotSatisfiedError') return '╨▓╤Л╨▒╤А╨░╨╜╨╜╨░╤П ╨║╨░╨╝╨╡╤А╨░ ╨╜╨╡ ╨┐╨╛╨┤╨┤╨╡╤А╨╢╨╕╨▓╨░╨╡╤В ╨╜╤Г╨╢╨╜╤Л╨╡ ╨┐╨░╤А╨░╨╝╨╡╤В╤А╤Л';
+    if (err?.name === 'SecurityError') return '╨▒╤А╨░╤Г╨╖╨╡╤А ╨╖╨░╨▒╨╗╨╛╨║╨╕╤А╨╛╨▓╨░╨╗ ╨║╨░╨╝╨╡╤А╤Г ╨╕╨╖-╨╖╨░ ╨╜╨░╤Б╤В╤А╨╛╨╡╨║ ╨▒╨╡╨╖╨╛╨┐╨░╤Б╨╜╨╛╤Б╤В╨╕';
+    return err?.message || '╨╜╨╡╨╕╨╖╨▓╨╡╤Б╤В╨╜╨░╤П ╨╛╤И╨╕╨▒╨║╨░ ╨║╨░╨╝╨╡╤А╤Л';
   };
-  const getFriendlyErrorText = (err, fallback = 'неизвестная ошибка') => {
+  const getFriendlyErrorText = (err, fallback = '╨╜╨╡╨╕╨╖╨▓╨╡╤Б╤В╨╜╨░╤П ╨╛╤И╨╕╨▒╨║╨░') => {
     const message = String(err?.message || '');
     const code = String(err?.code || '');
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'похоже, пропал интернет. Проверьте подключение и повторите действие';
-    if (code.includes('permission-denied') || message.includes('Missing or insufficient permissions')) return 'нет доступа к данным. Перезайдите в кабинет и попробуйте снова';
-    if (code.includes('unavailable') || message.includes('unavailable')) return 'сервер временно недоступен. Подождите минуту и повторите действие';
-    if (message.includes('Failed to fetch') || message.includes('NetworkError')) return 'браузер не смог соединиться с сервером. Проверьте интернет или блокировщики';
-    if (message.includes('quota') || code.includes('resource-exhausted')) return 'превышен лимит хранения. Удалите лишние данные или попробуйте позже';
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return '╨┐╨╛╤Е╨╛╨╢╨╡, ╨┐╤А╨╛╨┐╨░╨╗ ╨╕╨╜╤В╨╡╤А╨╜╨╡╤В. ╨Я╤А╨╛╨▓╨╡╤А╤М╤В╨╡ ╨┐╨╛╨┤╨║╨╗╤О╤З╨╡╨╜╨╕╨╡ ╨╕ ╨┐╨╛╨▓╤В╨╛╤А╨╕╤В╨╡ ╨┤╨╡╨╣╤Б╤В╨▓╨╕╨╡';
+    if (code.includes('permission-denied') || message.includes('Missing or insufficient permissions')) return '╨╜╨╡╤В ╨┤╨╛╤Б╤В╤Г╨┐╨░ ╨║ ╨┤╨░╨╜╨╜╤Л╨╝. ╨Я╨╡╤А╨╡╨╖╨░╨╣╨┤╨╕╤В╨╡ ╨▓ ╨║╨░╨▒╨╕╨╜╨╡╤В ╨╕ ╨┐╨╛╨┐╤А╨╛╨▒╤Г╨╣╤В╨╡ ╤Б╨╜╨╛╨▓╨░';
+    if (code.includes('unavailable') || message.includes('unavailable')) return '╤Б╨╡╤А╨▓╨╡╤А ╨▓╤А╨╡╨╝╨╡╨╜╨╜╨╛ ╨╜╨╡╨┤╨╛╤Б╤В╤Г╨┐╨╡╨╜. ╨Я╨╛╨┤╨╛╨╢╨┤╨╕╤В╨╡ ╨╝╨╕╨╜╤Г╤В╤Г ╨╕ ╨┐╨╛╨▓╤В╨╛╤А╨╕╤В╨╡ ╨┤╨╡╨╣╤Б╤В╨▓╨╕╨╡';
+    if (message.includes('Failed to fetch') || message.includes('NetworkError')) return '╨▒╤А╨░╤Г╨╖╨╡╤А ╨╜╨╡ ╤Б╨╝╨╛╨│ ╤Б╨╛╨╡╨┤╨╕╨╜╨╕╤В╤М╤Б╤П ╤Б ╤Б╨╡╤А╨▓╨╡╤А╨╛╨╝. ╨Я╤А╨╛╨▓╨╡╤А╤М╤В╨╡ ╨╕╨╜╤В╨╡╤А╨╜╨╡╤В ╨╕╨╗╨╕ ╨▒╨╗╨╛╨║╨╕╤А╨╛╨▓╤Й╨╕╨║╨╕';
+    if (message.includes('quota') || code.includes('resource-exhausted')) return '╨┐╤А╨╡╨▓╤Л╤И╨╡╨╜ ╨╗╨╕╨╝╨╕╤В ╤Е╤А╨░╨╜╨╡╨╜╨╕╤П. ╨г╨┤╨░╨╗╨╕╤В╨╡ ╨╗╨╕╤И╨╜╨╕╨╡ ╨┤╨░╨╜╨╜╤Л╨╡ ╨╕╨╗╨╕ ╨┐╨╛╨┐╤А╨╛╨▒╤Г╨╣╤В╨╡ ╨┐╨╛╨╖╨╢╨╡';
     return message || fallback;
   };
   const buildMediaConstraints = (mode = callMediaMode) => ({
@@ -1065,8 +1065,8 @@ export default function App() {
   };
   const scheduleAudioFallback = (pc, modeToUse = callMediaMode) => {
     if (isClientMode || modeToUse === 'audio' || audioFallbackTimeoutRef.current) return;
-    setCallStatus('Видео не соединилось. Переключаю на «Только микрофон»...');
-    notify('Видео не соединилось. Перезапускаю связь в режиме «Только микрофон». Клиенту нужно будет нажать «Подключиться к аудио».', 9000);
+    setCallStatus('╨Т╨╕╨┤╨╡╨╛ ╨╜╨╡ ╤Б╨╛╨╡╨┤╨╕╨╜╨╕╨╗╨╛╤Б╤М. ╨Я╨╡╤А╨╡╨║╨╗╤О╤З╨░╤О ╨╜╨░ ┬л╨в╨╛╨╗╤М╨║╨╛ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜┬╗...');
+    notify('╨Т╨╕╨┤╨╡╨╛ ╨╜╨╡ ╤Б╨╛╨╡╨┤╨╕╨╜╨╕╨╗╨╛╤Б╤М. ╨Я╨╡╤А╨╡╨╖╨░╨┐╤Г╤Б╨║╨░╤О ╤Б╨▓╤П╨╖╤М ╨▓ ╤А╨╡╨╢╨╕╨╝╨╡ ┬л╨в╨╛╨╗╤М╨║╨╛ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜┬╗. ╨Ъ╨╗╨╕╨╡╨╜╤В╤Г ╨╜╤Г╨╢╨╜╨╛ ╨▒╤Г╨┤╨╡╤В ╨╜╨░╨╢╨░╤В╤М ┬л╨Я╨╛╨┤╨║╨╗╤О╤З╨╕╤В╤М╤Б╤П ╨║ ╨░╤Г╨┤╨╕╨╛┬╗.', 9000);
     audioFallbackTimeoutRef.current = setTimeout(async () => {
       audioFallbackTimeoutRef.current = null;
       if (pcRef.current !== pc || isPeerConnected(pc)) return;
@@ -1084,15 +1084,15 @@ export default function App() {
         return;
       }
       const message = modeToUse === 'audio'
-        ? 'Аудио не соединилось. Используйте внешнюю связь, а стол оставьте открытым.'
-        : 'Видео не соединилось. Попросите психолога включить «Только микрофон» или используйте внешнюю связь.';
+        ? '╨Р╤Г╨┤╨╕╨╛ ╨╜╨╡ ╤Б╨╛╨╡╨┤╨╕╨╜╨╕╨╗╨╛╤Б╤М. ╨Ш╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╣╤В╨╡ ╨▓╨╜╨╡╤И╨╜╤О╤О ╤Б╨▓╤П╨╖╤М, ╨░ ╤Б╤В╨╛╨╗ ╨╛╤Б╤В╨░╨▓╤М╤В╨╡ ╨╛╤В╨║╤А╤Л╤В╤Л╨╝.'
+        : '╨Т╨╕╨┤╨╡╨╛ ╨╜╨╡ ╤Б╨╛╨╡╨┤╨╕╨╜╨╕╨╗╨╛╤Б╤М. ╨Я╨╛╨┐╤А╨╛╤Б╨╕╤В╨╡ ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│╨░ ╨▓╨║╨╗╤О╤З╨╕╤В╤М ┬л╨в╨╛╨╗╤М╨║╨╛ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜┬╗ ╨╕╨╗╨╕ ╨╕╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╣╤В╨╡ ╨▓╨╜╨╡╤И╨╜╤О╤О ╤Б╨▓╤П╨╖╤М.';
       setCallStatus(message);
       notify(message, 9000);
     }, 22000);
   };
   const refreshMediaDevices = async (requestAccess = false, mode = callMediaMode) => {
     if (!navigator.mediaDevices?.enumerateDevices) {
-      notify("Браузер не поддерживает выбор камеры");
+      notify("╨С╤А╨░╤Г╨╖╨╡╤А ╨╜╨╡ ╨┐╨╛╨┤╨┤╨╡╤А╨╢╨╕╨▓╨░╨╡╤В ╨▓╤Л╨▒╨╛╤А ╨║╨░╨╝╨╡╤А╤Л");
       return;
     }
     let tempStream = null;
@@ -1119,9 +1119,9 @@ export default function App() {
       if (selectedAudioDeviceId && !microphones.some(device => device.deviceId === selectedAudioDeviceId)) {
         setSelectedAudioDeviceId('');
       }
-      if (requestAccess) notify(mode === 'audio' ? "Микрофоны обновлены ✓" : "Камеры и микрофоны обновлены ✓");
+      if (requestAccess) notify(mode === 'audio' ? "╨Ь╨╕╨║╤А╨╛╤Д╨╛╨╜╤Л ╨╛╨▒╨╜╨╛╨▓╨╗╨╡╨╜╤Л тЬУ" : "╨Ъ╨░╨╝╨╡╤А╤Л ╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜╤Л ╨╛╨▒╨╜╨╛╨▓╨╗╨╡╨╜╤Л тЬУ");
     } catch (err) {
-      notify("Не удалось получить список устройств: " + getMediaErrorText(err), 8000);
+      notify("╨Э╨╡ ╤Г╨┤╨░╨╗╨╛╤Б╤М ╨┐╨╛╨╗╤Г╤З╨╕╤В╤М ╤Б╨┐╨╕╤Б╨╛╨║ ╤Г╤Б╤В╤А╨╛╨╣╤Б╤В╨▓: " + getMediaErrorText(err), 8000);
     } finally {
       cleanupLocalStream(tempStream);
       setIsLoadingMediaDevices(false);
@@ -1129,13 +1129,13 @@ export default function App() {
   };
   const getPreferredMediaStream = async (mode = callMediaMode) => {
     if (!navigator.mediaDevices?.getUserMedia) {
-      throw new Error('браузер не поддерживает видеосвязь');
+      throw new Error('╨▒╤А╨░╤Г╨╖╨╡╤А ╨╜╨╡ ╨┐╨╛╨┤╨┤╨╡╤А╨╢╨╕╨▓╨░╨╡╤В ╨▓╨╕╨┤╨╡╨╛╤Б╨▓╤П╨╖╤М');
     }
     try {
       return await navigator.mediaDevices.getUserMedia(buildMediaConstraints(mode));
     } catch (err) {
       if (selectedVideoDeviceId || selectedAudioDeviceId) {
-        notify(mode === 'audio' ? "Выбранный микрофон не открылся, пробую микрофон по умолчанию..." : "Выбранная камера или микрофон не открылись, пробую устройство по умолчанию...", 6000);
+        notify(mode === 'audio' ? "╨Т╤Л╨▒╤А╨░╨╜╨╜╤Л╨╣ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜ ╨╜╨╡ ╨╛╤В╨║╤А╤Л╨╗╤Б╤П, ╨┐╤А╨╛╨▒╤Г╤О ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜ ╨┐╨╛ ╤Г╨╝╨╛╨╗╤З╨░╨╜╨╕╤О..." : "╨Т╤Л╨▒╤А╨░╨╜╨╜╨░╤П ╨║╨░╨╝╨╡╤А╨░ ╨╕╨╗╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜ ╨╜╨╡ ╨╛╤В╨║╤А╤Л╨╗╨╕╤Б╤М, ╨┐╤А╨╛╨▒╤Г╤О ╤Г╤Б╤В╤А╨╛╨╣╤Б╤В╨▓╨╛ ╨┐╨╛ ╤Г╨╝╨╛╨╗╤З╨░╨╜╨╕╤О...", 6000);
         return await navigator.mediaDevices.getUserMedia(getDefaultMediaConstraints(mode));
       }
       throw err;
@@ -1150,35 +1150,35 @@ export default function App() {
       results.push(item);
       setSessionCheckResults([...results]);
     };
-    const modeLabel = callMediaMode === 'audio' ? 'микрофон' : 'камера и микрофон';
+    const modeLabel = callMediaMode === 'audio' ? '╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜' : '╨║╨░╨╝╨╡╤А╨░ ╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜';
     
     pushResult({
       id: 'room',
-      title: 'Комната сессии',
+      title: '╨Ъ╨╛╨╝╨╜╨░╤В╨░ ╤Б╨╡╤Б╤Б╨╕╨╕',
       status: roomId ? 'ok' : 'error',
-      details: roomId ? `Комната найдена: ${roomId}` : 'Комната не создана. Войдите как психолог или откройте ссылку клиента.'
+      details: roomId ? `╨Ъ╨╛╨╝╨╜╨░╤В╨░ ╨╜╨░╨╣╨┤╨╡╨╜╨░: ${roomId}` : '╨Ъ╨╛╨╝╨╜╨░╤В╨░ ╨╜╨╡ ╤Б╨╛╨╖╨┤╨░╨╜╨░. ╨Т╨╛╨╣╨┤╨╕╤В╨╡ ╨║╨░╨║ ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│ ╨╕╨╗╨╕ ╨╛╤В╨║╤А╨╛╨╣╤В╨╡ ╤Б╤Б╤Л╨╗╨║╤Г ╨║╨╗╨╕╨╡╨╜╤В╨░.'
     });
     pushResult({
       id: 'server',
-      title: 'Синхронизация',
+      title: '╨б╨╕╨╜╤Е╤А╨╛╨╜╨╕╨╖╨░╤Ж╨╕╤П',
       status: user && isDbConnected ? 'ok' : 'warn',
-      details: user && isDbConnected ? 'Связь с базой активна, стол должен синхронизироваться.' : 'База ещё не подключилась. Если это не проходит, обновите страницу.'
+      details: user && isDbConnected ? '╨б╨▓╤П╨╖╤М ╤Б ╨▒╨░╨╖╨╛╨╣ ╨░╨║╤В╨╕╨▓╨╜╨░, ╤Б╤В╨╛╨╗ ╨┤╨╛╨╗╨╢╨╡╨╜ ╤Б╨╕╨╜╤Е╤А╨╛╨╜╨╕╨╖╨╕╤А╨╛╨▓╨░╤В╤М╤Б╤П.' : '╨С╨░╨╖╨░ ╨╡╤Й╤С ╨╜╨╡ ╨┐╨╛╨┤╨║╨╗╤О╤З╨╕╨╗╨░╤Б╤М. ╨Х╤Б╨╗╨╕ ╤Н╤В╨╛ ╨╜╨╡ ╨┐╤А╨╛╤Е╨╛╨┤╨╕╤В, ╨╛╨▒╨╜╨╛╨▓╨╕╤В╨╡ ╤Б╤В╤А╨░╨╜╨╕╤Ж╤Г.'
     });
     const isSecure = typeof window !== 'undefined' && (window.isSecureContext || window.location.protocol === 'https:' || window.location.hostname === 'localhost');
     pushResult({
       id: 'secure',
-      title: 'Доступ браузера',
+      title: '╨Ф╨╛╤Б╤В╤Г╨┐ ╨▒╤А╨░╤Г╨╖╨╡╤А╨░',
       status: isSecure ? 'ok' : 'error',
-      details: isSecure ? 'Страница открыта безопасно, камера и микрофон могут работать.' : 'Камера и микрофон работают только на https-странице.'
+      details: isSecure ? '╨б╤В╤А╨░╨╜╨╕╤Ж╨░ ╨╛╤В╨║╤А╤Л╤В╨░ ╨▒╨╡╨╖╨╛╨┐╨░╤Б╨╜╨╛, ╨║╨░╨╝╨╡╤А╨░ ╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜ ╨╝╨╛╨│╤Г╤В ╤А╨░╨▒╨╛╤В╨░╤В╤М.' : '╨Ъ╨░╨╝╨╡╤А╨░ ╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜ ╤А╨░╨▒╨╛╤В╨░╤О╤В ╤В╨╛╨╗╤М╨║╨╛ ╨╜╨░ https-╤Б╤В╤А╨░╨╜╨╕╤Ж╨╡.'
     });
     
     let stream = null;
     if (!navigator.mediaDevices?.getUserMedia) {
       pushResult({
         id: 'media',
-        title: 'Камера и микрофон',
+        title: '╨Ъ╨░╨╝╨╡╤А╨░ ╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜',
         status: 'error',
-        details: 'Этот браузер не поддерживает встроенную связь. Лучше открыть в Chrome, Edge или Safari.'
+        details: '╨н╤В╨╛╤В ╨▒╤А╨░╤Г╨╖╨╡╤А ╨╜╨╡ ╨┐╨╛╨┤╨┤╨╡╤А╨╢╨╕╨▓╨░╨╡╤В ╨▓╤Б╤В╤А╨╛╨╡╨╜╨╜╤Г╤О ╤Б╨▓╤П╨╖╤М. ╨Ы╤Г╤З╤И╨╡ ╨╛╤В╨║╤А╤Л╤В╤М ╨▓ Chrome, Edge ╨╕╨╗╨╕ Safari.'
       });
     } else {
       try {
@@ -1187,17 +1187,17 @@ export default function App() {
         const audioOk = stream.getAudioTracks().length > 0;
         pushResult({
           id: 'media',
-          title: 'Камера и микрофон',
+          title: '╨Ъ╨░╨╝╨╡╤А╨░ ╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜',
           status: videoOk && audioOk ? 'ok' : 'warn',
-          details: videoOk && audioOk ? `${modeLabel} работают. Можно запускать связь.` : `Проверьте ${modeLabel}: браузер не выдал все нужные устройства.`
+          details: videoOk && audioOk ? `${modeLabel} ╤А╨░╨▒╨╛╤В╨░╤О╤В. ╨Ь╨╛╨╢╨╜╨╛ ╨╖╨░╨┐╤Г╤Б╨║╨░╤В╤М ╤Б╨▓╤П╨╖╤М.` : `╨Я╤А╨╛╨▓╨╡╤А╤М╤В╨╡ ${modeLabel}: ╨▒╤А╨░╤Г╨╖╨╡╤А ╨╜╨╡ ╨▓╤Л╨┤╨░╨╗ ╨▓╤Б╨╡ ╨╜╤Г╨╢╨╜╤Л╨╡ ╤Г╤Б╤В╤А╨╛╨╣╤Б╤В╨▓╨░.`
         });
         refreshMediaDevices(false, callMediaMode);
       } catch (err) {
         pushResult({
           id: 'media',
-          title: 'Камера и микрофон',
+          title: '╨Ъ╨░╨╝╨╡╤А╨░ ╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜',
           status: 'error',
-          details: `${getMediaErrorText(err)}. Закройте Zoom/Telegram/браузерные вкладки с камерой и разрешите доступ в адресной строке. Если видео не запускается, выберите «Только микрофон». Если не работает и микрофон, продолжайте работу на платформе, а голос включите во внешнем звонке.`
+          details: `${getMediaErrorText(err)}. ╨Ч╨░╨║╤А╨╛╨╣╤В╨╡ Zoom/Telegram/╨▒╤А╨░╤Г╨╖╨╡╤А╨╜╤Л╨╡ ╨▓╨║╨╗╨░╨┤╨║╨╕ ╤Б ╨║╨░╨╝╨╡╤А╨╛╨╣ ╨╕ ╤А╨░╨╖╤А╨╡╤И╨╕╤В╨╡ ╨┤╨╛╤Б╤В╤Г╨┐ ╨▓ ╨░╨┤╤А╨╡╤Б╨╜╨╛╨╣ ╤Б╤В╤А╨╛╨║╨╡. ╨Х╤Б╨╗╨╕ ╨▓╨╕╨┤╨╡╨╛ ╨╜╨╡ ╨╖╨░╨┐╤Г╤Б╨║╨░╨╡╤В╤Б╤П, ╨▓╤Л╨▒╨╡╤А╨╕╤В╨╡ ┬л╨в╨╛╨╗╤М╨║╨╛ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜┬╗. ╨Х╤Б╨╗╨╕ ╨╜╨╡ ╤А╨░╨▒╨╛╤В╨░╨╡╤В ╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜, ╨┐╤А╨╛╨┤╨╛╨╗╨╢╨░╨╣╤В╨╡ ╤А╨░╨▒╨╛╤В╤Г ╨╜╨░ ╨┐╨╗╨░╤В╤Д╨╛╤А╨╝╨╡, ╨░ ╨│╨╛╨╗╨╛╤Б ╨▓╨║╨╗╤О╤З╨╕╤В╨╡ ╨▓╨╛ ╨▓╨╜╨╡╤И╨╜╨╡╨╝ ╨╖╨▓╨╛╨╜╨║╨╡.`
         });
       } finally {
         cleanupLocalStream(stream);
@@ -1213,28 +1213,28 @@ export default function App() {
       const canDownload = 'download' in document.createElement('a');
       pushResult({
         id: 'screenshot',
-        title: 'Скриншоты',
+        title: '╨б╨║╤А╨╕╨╜╤И╨╛╤В╤Л',
         status: canDownload ? 'ok' : 'warn',
-        details: canDownload ? 'Снимки стола должны скачиваться на устройство.' : 'Браузер может не скачать файл автоматически. Если не получится, откройте платформу в Chrome или Edge.'
+        details: canDownload ? '╨б╨╜╨╕╨╝╨║╨╕ ╤Б╤В╨╛╨╗╨░ ╨┤╨╛╨╗╨╢╨╜╤Л ╤Б╨║╨░╤З╨╕╨▓╨░╤В╤М╤Б╤П ╨╜╨░ ╤Г╤Б╤В╤А╨╛╨╣╤Б╤В╨▓╨╛.' : '╨С╤А╨░╤Г╨╖╨╡╤А ╨╝╨╛╨╢╨╡╤В ╨╜╨╡ ╤Б╨║╨░╤З╨░╤В╤М ╤Д╨░╨╣╨╗ ╨░╨▓╤В╨╛╨╝╨░╤В╨╕╤З╨╡╤Б╨║╨╕. ╨Х╤Б╨╗╨╕ ╨╜╨╡ ╨┐╨╛╨╗╤Г╤З╨╕╤В╤Б╤П, ╨╛╤В╨║╤А╨╛╨╣╤В╨╡ ╨┐╨╗╨░╤В╤Д╨╛╤А╨╝╤Г ╨▓ Chrome ╨╕╨╗╨╕ Edge.'
       });
     } catch (err) {
       pushResult({
         id: 'screenshot',
-        title: 'Скриншоты',
+        title: '╨б╨║╤А╨╕╨╜╤И╨╛╤В╤Л',
         status: 'error',
-        details: 'Браузер блокирует создание снимка. Обновите страницу и повторите проверку.'
+        details: '╨С╤А╨░╤Г╨╖╨╡╤А ╨▒╨╗╨╛╨║╨╕╤А╤Г╨╡╤В ╤Б╨╛╨╖╨┤╨░╨╜╨╕╨╡ ╤Б╨╜╨╕╨╝╨║╨░. ╨Ю╨▒╨╜╨╛╨▓╨╕╤В╨╡ ╤Б╤В╤А╨░╨╜╨╕╤Ж╤Г ╨╕ ╨┐╨╛╨▓╤В╨╛╤А╨╕╤В╨╡ ╨┐╤А╨╛╨▓╨╡╤А╨║╤Г.'
       });
     }
     
     const backup = roomId ? readJsonStorage(getBoardBackupKey(roomId)) : null;
     pushResult({
       id: 'backup',
-      title: 'Резервная копия стола',
+      title: '╨а╨╡╨╖╨╡╤А╨▓╨╜╨░╤П ╨║╨╛╨┐╨╕╤П ╤Б╤В╨╛╨╗╨░',
       status: backup?.elements?.length ? 'ok' : 'warn',
-      details: backup?.elements?.length ? `Есть локальная копия: ${backup.elements.length} объектов.` : 'Копия появится автоматически, когда на столе будут карты или фигурки.'
+      details: backup?.elements?.length ? `╨Х╤Б╤В╤М ╨╗╨╛╨║╨░╨╗╤М╨╜╨░╤П ╨║╨╛╨┐╨╕╤П: ${backup.elements.length} ╨╛╨▒╤К╨╡╨║╤В╨╛╨▓.` : '╨Ъ╨╛╨┐╨╕╤П ╨┐╨╛╤П╨▓╨╕╤В╤Б╤П ╨░╨▓╤В╨╛╨╝╨░╤В╨╕╤З╨╡╤Б╨║╨╕, ╨║╨╛╨│╨┤╨░ ╨╜╨░ ╤Б╤В╨╛╨╗╨╡ ╨▒╤Г╨┤╤Г╤В ╨║╨░╤А╤В╤Л ╨╕╨╗╨╕ ╤Д╨╕╨│╤Г╤А╨║╨╕.'
     });
     setIsRunningSessionCheck(false);
-    notify("Проверка завершена");
+    notify("╨Я╤А╨╛╨▓╨╡╤А╨║╨░ ╨╖╨░╨▓╨╡╤А╤И╨╡╨╜╨░");
   };
   const updateConnectionStatus = (pc, label, modeToUse = callMediaMode) => {
     const connectionState = pc.connectionState;
@@ -1245,16 +1245,16 @@ export default function App() {
       clearAudioFallbackTimeout();
       setCallStatus('');
     } else if (connectionState === 'connecting' || iceState === 'checking') {
-      setCallStatus('Соединение...');
+      setCallStatus('╨б╨╛╨╡╨┤╨╕╨╜╨╡╨╜╨╕╨╡...');
     } else if (connectionState === 'disconnected' || iceState === 'disconnected') {
-      setCallStatus('Пытаюсь восстановить связь...');
+      setCallStatus('╨Я╤Л╤В╨░╤О╤Б╤М ╨▓╨╛╤Б╤Б╤В╨░╨╜╨╛╨▓╨╕╤В╤М ╤Б╨▓╤П╨╖╤М...');
     } else if (connectionState === 'failed' || iceState === 'failed') {
       if (!isClientMode && modeToUse !== 'audio') {
         scheduleAudioFallback(pc, modeToUse);
       } else {
         const message = modeToUse === 'audio'
-          ? 'Аудио не восстановилось. Используйте внешнюю связь, стол продолжит работать.'
-          : 'Видео не восстановилось. Перейдите на «Только микрофон» или внешнюю связь.';
+          ? '╨Р╤Г╨┤╨╕╨╛ ╨╜╨╡ ╨▓╨╛╤Б╤Б╤В╨░╨╜╨╛╨▓╨╕╨╗╨╛╤Б╤М. ╨Ш╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╣╤В╨╡ ╨▓╨╜╨╡╤И╨╜╤О╤О ╤Б╨▓╤П╨╖╤М, ╤Б╤В╨╛╨╗ ╨┐╤А╨╛╨┤╨╛╨╗╨╢╨╕╤В ╤А╨░╨▒╨╛╤В╨░╤В╤М.'
+          : '╨Т╨╕╨┤╨╡╨╛ ╨╜╨╡ ╨▓╨╛╤Б╤Б╤В╨░╨╜╨╛╨▓╨╕╨╗╨╛╤Б╤М. ╨Я╨╡╤А╨╡╨╣╨┤╨╕╤В╨╡ ╨╜╨░ ┬л╨в╨╛╨╗╤М╨║╨╛ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜┬╗ ╨╕╨╗╨╕ ╨▓╨╜╨╡╤И╨╜╤О╤О ╤Б╨▓╤П╨╖╤М.';
         setCallStatus(message);
         notify(message, 9000);
       }
@@ -1269,20 +1269,20 @@ export default function App() {
     try {
       setCallMediaMode(modeToUse);
       setIsVideoActive(true);
-      setCallStatus('Подготовка...');
+      setCallStatus('╨Я╨╛╨┤╨│╨╛╤В╨╛╨▓╨║╨░...');
       processedCandidates.current.clear();
       await new Promise(resolve => setTimeout(resolve, 100));
-      setCallStatus(modeToUse === 'audio' ? 'Доступ к микрофону...' : 'Доступ к камере...');
+      setCallStatus(modeToUse === 'audio' ? '╨Ф╨╛╤Б╤В╤Г╨┐ ╨║ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜╤Г...' : '╨Ф╨╛╤Б╤В╤Г╨┐ ╨║ ╨║╨░╨╝╨╡╤А╨╡...');
       stream = await getPreferredMediaStream(modeToUse);
       localStreamRef.current = stream;
       refreshMediaDevices(false, modeToUse);
       attachVideoStream(localVideoRef.current, stream, true);
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
-      // ВАЖНО: сначала добавляем треки, потом всё остальное
+      // ╨Т╨Р╨Ц╨Э╨Ю: ╤Б╨╜╨░╤З╨░╨╗╨░ ╨┤╨╛╨▒╨░╨▓╨╗╤П╨╡╨╝ ╤В╤А╨╡╨║╨╕, ╨┐╨╛╤В╨╛╨╝ ╨▓╤Б╤С ╨╛╤Б╤В╨░╨╗╤М╨╜╨╛╨╡
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
       pc.ontrack = (event) => {
-        console.log('[PSY] ontrack получен:', event.streams);
+        console.log('[PSY] ontrack ╨┐╨╛╨╗╤Г╤З╨╡╨╜:', event.streams);
         remoteStreamRef.current = event.streams[0] || null;
         attachVideoStream(remoteVideoRef.current, event.streams[0]);
         clearCallConnectTimeout();
@@ -1293,32 +1293,32 @@ export default function App() {
       pc.oniceconnectionstatechange = () => updateConnectionStatus(pc, 'PSY', modeToUse);
       pc.onicecandidateerror = (event) => {
         console.warn('[PSY] ICE candidate error:', event);
-        if (pc.connectionState !== 'connected') setCallStatus('Проверяю соединение...');
+        if (pc.connectionState !== 'connected') setCallStatus('╨Я╤А╨╛╨▓╨╡╤А╤П╤О ╤Б╨╛╨╡╨┤╨╕╨╜╨╡╨╜╨╕╨╡...');
       };
       const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
-      // Чистим документ перед стартом
+      // ╨з╨╕╤Б╤В╨╕╨╝ ╨┤╨╛╨║╤Г╨╝╨╡╨╜╤В ╨┐╨╡╤А╨╡╨┤ ╤Б╤В╨░╤А╤В╨╛╨╝
       await setDoc(callDoc, { offerCandidates: [], answerCandidates: [], createdAt: Date.now() });
       pc.onicecandidate = (event) => {
         if (event.candidate) {
-          console.log('[PSY] отправляю ICE кандидата');
+          console.log('[PSY] ╨╛╤В╨┐╤А╨░╨▓╨╗╤П╤О ICE ╨║╨░╨╜╨┤╨╕╨┤╨░╤В╨░');
           updateDoc(callDoc, { offerCandidates: arrayUnion(event.candidate.toJSON()) }).catch(e => console.error('ice send err', e));
         }
       };
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       await updateDoc(callDoc, { offer: { type: offer.type, sdp: offer.sdp } });
-      // Только после создания offer оповещаем клиента
+      // ╨в╨╛╨╗╤М╨║╨╛ ╨┐╨╛╤Б╨╗╨╡ ╤Б╨╛╨╖╨┤╨░╨╜╨╕╤П offer ╨╛╨┐╨╛╨▓╨╡╤Й╨░╨╡╨╝ ╨║╨╗╨╕╨╡╨╜╤В╨░
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { isVideoCallReady: true, callMediaMode: modeToUse }, { merge: true });
-      setCallStatus('Ожидание клиента...');
+      setCallStatus('╨Ю╨╢╨╕╨┤╨░╨╜╨╕╨╡ ╨║╨╗╨╕╨╡╨╜╤В╨░...');
       if (callSnapshotUnsubRef.current) callSnapshotUnsubRef.current();
       let answerSet = false;
       callSnapshotUnsubRef.current = onSnapshot(callDoc, async (snap) => {
         const data = snap.data();
         if (!data) return;
-        // Принимаем answer один раз
+        // ╨Я╤А╨╕╨╜╨╕╨╝╨░╨╡╨╝ answer ╨╛╨┤╨╕╨╜ ╤А╨░╨╖
         if (data.answer && !answerSet && pc.signalingState !== 'closed') {
           try {
-            console.log('[PSY] получен answer, ставлю remoteDescription');
+            console.log('[PSY] ╨┐╨╛╨╗╤Г╤З╨╡╨╜ answer, ╤Б╤В╨░╨▓╨╗╤О remoteDescription');
             await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
             answerSet = true;
             scheduleConnectionWatch(pc, modeToUse, 'PSY');
@@ -1326,7 +1326,7 @@ export default function App() {
             console.error("[PSY] setRemoteDescription error", e); 
           }
         }
-        // ICE-кандидаты от клиента — обрабатываем только после установки remoteDescription
+        // ICE-╨║╨░╨╜╨┤╨╕╨┤╨░╤В╤Л ╨╛╤В ╨║╨╗╨╕╨╡╨╜╤В╨░ тАФ ╨╛╨▒╤А╨░╨▒╨░╤В╤Л╨▓╨░╨╡╨╝ ╤В╨╛╨╗╤М╨║╨╛ ╨┐╨╛╤Б╨╗╨╡ ╤Г╤Б╤В╨░╨╜╨╛╨▓╨║╨╕ remoteDescription
         if (pc.remoteDescription && data.answerCandidates) {
           for (const c of data.answerCandidates) {
             const candKey = JSON.stringify(c);
@@ -1334,7 +1334,7 @@ export default function App() {
               processedCandidates.current.add(candKey);
               try {
                 await pc.addIceCandidate(new RTCIceCandidate(c));
-                console.log('[PSY] добавил answer кандидата');
+                console.log('[PSY] ╨┤╨╛╨▒╨░╨▓╨╕╨╗ answer ╨║╨░╨╜╨┤╨╕╨┤╨░╤В╨░');
               } catch(e) {
                 console.warn('[PSY] addIceCandidate err', e);
               }
@@ -1353,7 +1353,7 @@ export default function App() {
       }
       setCallStatus('');
       setIsVideoActive(false);
-      notify(`Ошибка связи: ${getMediaErrorText(err)}. Попробуйте «Только микрофон». Если не получится, используйте внешний звонок, а стол оставьте открытым.`, 10000);
+      notify(`╨Ю╤И╨╕╨▒╨║╨░ ╤Б╨▓╤П╨╖╨╕: ${getMediaErrorText(err)}. ╨Я╨╛╨┐╤А╨╛╨▒╤Г╨╣╤В╨╡ ┬л╨в╨╛╨╗╤М╨║╨╛ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜┬╗. ╨Х╤Б╨╗╨╕ ╨╜╨╡ ╨┐╨╛╨╗╤Г╤З╨╕╤В╤Б╤П, ╨╕╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╣╤В╨╡ ╨▓╨╜╨╡╤И╨╜╨╕╨╣ ╨╖╨▓╨╛╨╜╨╛╨║, ╨░ ╤Б╤В╨╛╨╗ ╨╛╤Б╤В╨░╨▓╤М╤В╨╡ ╨╛╤В╨║╤А╤Л╤В╤Л╨╝.`, 10000);
       console.error("WebRTC Error:", err);
     }
   }
@@ -1362,20 +1362,20 @@ export default function App() {
     let stream = null;
     try {
       setIsVideoActive(true);
-      setCallStatus('Подготовка...');
+      setCallStatus('╨Я╨╛╨┤╨│╨╛╤В╨╛╨▓╨║╨░...');
       processedCandidates.current.clear();
       await new Promise(resolve => setTimeout(resolve, 100));
-      setCallStatus(modeToUse === 'audio' ? 'Доступ к микрофону...' : 'Доступ к камере...');
+      setCallStatus(modeToUse === 'audio' ? '╨Ф╨╛╤Б╤В╤Г╨┐ ╨║ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜╤Г...' : '╨Ф╨╛╤Б╤В╤Г╨┐ ╨║ ╨║╨░╨╝╨╡╤А╨╡...');
       stream = await getPreferredMediaStream(modeToUse);
       localStreamRef.current = stream;
       refreshMediaDevices(false, modeToUse);
       attachVideoStream(localVideoRef.current, stream, true);
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
-      // ВАЖНО: сначала добавляем треки
+      // ╨Т╨Р╨Ц╨Э╨Ю: ╤Б╨╜╨░╤З╨░╨╗╨░ ╨┤╨╛╨▒╨░╨▓╨╗╤П╨╡╨╝ ╤В╤А╨╡╨║╨╕
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
       pc.ontrack = (event) => {
-        console.log('[CLIENT] ontrack получен:', event.streams);
+        console.log('[CLIENT] ontrack ╨┐╨╛╨╗╤Г╤З╨╡╨╜:', event.streams);
         remoteStreamRef.current = event.streams[0] || null;
         attachVideoStream(remoteVideoRef.current, event.streams[0]);
         clearCallConnectTimeout();
@@ -1385,40 +1385,40 @@ export default function App() {
       pc.oniceconnectionstatechange = () => updateConnectionStatus(pc, 'CLIENT', modeToUse);
       pc.onicecandidateerror = (event) => {
         console.warn('[CLIENT] ICE candidate error:', event);
-        if (pc.connectionState !== 'connected') setCallStatus('Проверяю соединение...');
+        if (pc.connectionState !== 'connected') setCallStatus('╨Я╤А╨╛╨▓╨╡╤А╤П╤О ╤Б╨╛╨╡╨┤╨╕╨╜╨╡╨╜╨╕╨╡...');
       };
       const callDoc = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_webrtc');
       pc.onicecandidate = (event) => {
         if (event.candidate) {
-          console.log('[CLIENT] отправляю ICE кандидата');
+          console.log('[CLIENT] ╨╛╤В╨┐╤А╨░╨▓╨╗╤П╤О ICE ╨║╨░╨╜╨┤╨╕╨┤╨░╤В╨░');
           updateDoc(callDoc, { answerCandidates: arrayUnion(event.candidate.toJSON()) }).catch(e => console.error('ice send err', e));
         }
       };
-      // Ждём offer от психолога (если ещё не появился — ждём через onSnapshot)
-      setCallStatus('Ожидание сигнала от психолога...');
+      // ╨Ц╨┤╤С╨╝ offer ╨╛╤В ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│╨░ (╨╡╤Б╨╗╨╕ ╨╡╤Й╤С ╨╜╨╡ ╨┐╨╛╤П╨▓╨╕╨╗╤Б╤П тАФ ╨╢╨┤╤С╨╝ ╤З╨╡╤А╨╡╨╖ onSnapshot)
+      setCallStatus('╨Ю╨╢╨╕╨┤╨░╨╜╨╕╨╡ ╤Б╨╕╨│╨╜╨░╨╗╨░ ╨╛╤В ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│╨░...');
       let offerHandled = false;
       if (callSnapshotUnsubRef.current) callSnapshotUnsubRef.current();
       callSnapshotUnsubRef.current = onSnapshot(callDoc, async (snap) => {
         const data = snap.data();
         if (!data) return;
-        // Обрабатываем offer один раз
+        // ╨Ю╨▒╤А╨░╨▒╨░╤В╤Л╨▓╨░╨╡╨╝ offer ╨╛╨┤╨╕╨╜ ╤А╨░╨╖
         if (data.offer && !offerHandled && pc.signalingState === 'stable') {
           offerHandled = true;
           try {
-            console.log('[CLIENT] получен offer, ставлю remoteDescription');
-            setCallStatus('Соединение...');
+            console.log('[CLIENT] ╨┐╨╛╨╗╤Г╤З╨╡╨╜ offer, ╤Б╤В╨░╨▓╨╗╤О remoteDescription');
+            setCallStatus('╨б╨╛╨╡╨┤╨╕╨╜╨╡╨╜╨╕╨╡...');
             await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
             await updateDoc(callDoc, { answer: { type: answer.type, sdp: answer.sdp } });
             scheduleConnectionWatch(pc, modeToUse, 'CLIENT');
-            console.log('[CLIENT] answer отправлен');
+            console.log('[CLIENT] answer ╨╛╤В╨┐╤А╨░╨▓╨╗╨╡╨╜');
           } catch(e) {
-            console.error('[CLIENT] обработка offer ошибка:', e);
+            console.error('[CLIENT] ╨╛╨▒╤А╨░╨▒╨╛╤В╨║╨░ offer ╨╛╤И╨╕╨▒╨║╨░:', e);
             offerHandled = false;
           }
         }
-        // ICE-кандидаты от психолога
+        // ICE-╨║╨░╨╜╨┤╨╕╨┤╨░╤В╤Л ╨╛╤В ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│╨░
         if (pc.remoteDescription && data.offerCandidates) {
           for (const c of data.offerCandidates) {
             const candKey = JSON.stringify(c);
@@ -1426,7 +1426,7 @@ export default function App() {
               processedCandidates.current.add(candKey);
               try {
                 await pc.addIceCandidate(new RTCIceCandidate(c));
-                console.log('[CLIENT] добавил offer кандидата');
+                console.log('[CLIENT] ╨┤╨╛╨▒╨░╨▓╨╕╨╗ offer ╨║╨░╨╜╨┤╨╕╨┤╨░╤В╨░');
               } catch(e) {
                 console.warn('[CLIENT] addIceCandidate err', e);
               }
@@ -1444,7 +1444,7 @@ export default function App() {
       }
       setCallStatus('');
       setIsVideoActive(false);
-      notify(`Ошибка связи: ${getMediaErrorText(err)}. Попросите психолога переключить звонок на «Только микрофон». Если не получится, созвонитесь отдельно, а стол оставьте открытым.`, 10000);
+      notify(`╨Ю╤И╨╕╨▒╨║╨░ ╤Б╨▓╤П╨╖╨╕: ${getMediaErrorText(err)}. ╨Я╨╛╨┐╤А╨╛╤Б╨╕╤В╨╡ ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│╨░ ╨┐╨╡╤А╨╡╨║╨╗╤О╤З╨╕╤В╤М ╨╖╨▓╨╛╨╜╨╛╨║ ╨╜╨░ ┬л╨в╨╛╨╗╤М╨║╨╛ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜┬╗. ╨Х╤Б╨╗╨╕ ╨╜╨╡ ╨┐╨╛╨╗╤Г╤З╨╕╤В╤Б╤П, ╤Б╨╛╨╖╨▓╨╛╨╜╨╕╤В╨╡╤Б╤М ╨╛╤В╨┤╨╡╨╗╤М╨╜╨╛, ╨░ ╤Б╤В╨╛╨╗ ╨╛╤Б╤В╨░╨▓╤М╤В╨╡ ╨╛╤В╨║╤А╤Л╤В╤Л╨╝.`, 10000);
       console.error("WebRTC Error:", err);
     }
   }
@@ -1483,7 +1483,7 @@ export default function App() {
       const unsub = onSnapshot(callDoc, (docSnap) => {
         if (!docSnap.exists() && isVideoActive) {
           endNativeCall();
-          notify(callMediaMode === 'audio' ? 'Видео перезапускается в режиме аудио' : 'Психолог завершил звонок', 5000);
+          notify(callMediaMode === 'audio' ? '╨Т╨╕╨┤╨╡╨╛ ╨┐╨╡╤А╨╡╨╖╨░╨┐╤Г╤Б╨║╨░╨╡╤В╤Б╤П ╨▓ ╤А╨╡╨╢╨╕╨╝╨╡ ╨░╤Г╨┤╨╕╨╛' : '╨Я╤Б╨╕╤Е╨╛╨╗╨╛╨│ ╨╖╨░╨▓╨╡╤А╤И╨╕╨╗ ╨╖╨▓╨╛╨╜╨╛╨║', 5000);
         }
       });
       return () => unsub();
@@ -1520,7 +1520,7 @@ export default function App() {
     if (isDbConnected && roomId) {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_timer_state'), data);
     }
-    notify(`Таймер запущен: ${minutes} минут ⏱`);
+    notify(`╨в╨░╨╣╨╝╨╡╤А ╨╖╨░╨┐╤Г╤Й╨╡╨╜: ${minutes} ╨╝╨╕╨╜╤Г╤В тП▒`);
   };
   const stopTimer = async () => {
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -1699,7 +1699,7 @@ export default function App() {
     ? privateRoomNoteDocRef(targetRoomId, element.id)
     : publicRoomDocRef(targetRoomId, element.id);
   const writeElementToRoom = (targetRoomId, element) => setDoc(getElementDocRef(targetRoomId, element), element);
-  const updateElementOnTable = (element, updates) => updateDoc(getElementDocRef(roomId, element), updates).catch(e => notify("Ошибка сохранения объекта: " + getFriendlyErrorText(e)));
+  const updateElementOnTable = (element, updates) => updateDoc(getElementDocRef(roomId, element), updates).catch(e => notify("╨Ю╤И╨╕╨▒╨║╨░ ╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜╨╕╤П ╨╛╨▒╤К╨╡╨║╤В╨░: " + getFriendlyErrorText(e)));
   const deleteElementFromRoom = (targetRoomId, element) => deleteDoc(getElementDocRef(targetRoomId, element));
   useEffect(() => {
     if (inRoom && !isClientMode) {
@@ -1802,7 +1802,7 @@ export default function App() {
     }
   };
   const editPlatformName = async () => {
-    const newName = await askPrompt("Название вашего кабинета:", platformName);
+    const newName = await askPrompt("╨Э╨░╨╖╨▓╨░╨╜╨╕╨╡ ╨▓╨░╤И╨╡╨│╨╛ ╨║╨░╨▒╨╕╨╜╨╡╤В╨░:", platformName);
     if (newName && newName.trim() !== "") {
       const val = newName.trim();
       setPlatformName(val);
@@ -1842,7 +1842,7 @@ export default function App() {
     preloadDeckImages(deck);
     const currentRoomId = roomIdRef.current || roomId;
     if (!currentRoomId) {
-      notify("Ошибка: сессия не найдена. Перезайдите.");
+      notify("╨Ю╤И╨╕╨▒╨║╨░: ╤Б╨╡╤Б╤Б╨╕╤П ╨╜╨╡ ╨╜╨░╨╣╨┤╨╡╨╜╨░. ╨Я╨╡╤А╨╡╨╖╨░╨╣╨┤╨╕╤В╨╡.");
       return;
     }
     try {
@@ -1855,13 +1855,13 @@ export default function App() {
         cardBacks: deck.cardBacks || []
       });
       syncLibraryUI({ isFlipped: false });
-      notify(`Колода "${deck.name}" активирована ✓`);
+      notify(`╨Ъ╨╛╨╗╨╛╨┤╨░ "${deck.name}" ╨░╨║╤В╨╕╨▓╨╕╤А╨╛╨▓╨░╨╜╨░ тЬУ`);
     } catch(e) {
-      notify("Ошибка синхронизации: " + e.message);
+      notify("╨Ю╤И╨╕╨▒╨║╨░ ╤Б╨╕╨╜╤Е╤А╨╛╨╜╨╕╨╖╨░╤Ж╨╕╨╕: " + e.message);
     }
   };
   const handleLogin = async () => {
-    if (!emailInput || !passwordInput) return notify("Введите Email и Пароль");
+    if (!emailInput || !passwordInput) return notify("╨Т╨▓╨╡╨┤╨╕╤В╨╡ Email ╨╕ ╨Я╨░╤А╨╛╨╗╤М");
     const inputEmail = emailInput.trim().toLowerCase();
     const inputPwd = passwordInput.trim();
     const enterRoomAsPsy = (name) => {
@@ -1879,12 +1879,12 @@ export default function App() {
       } else {
         roomIdRef.current = roomId;
       }
-      setUserName(name + " (Мастер)");
+      setUserName(name + " (╨Ь╨░╤Б╤В╨╡╤А)");
       setIsClientMode(false); window._isClientMode = false; setIsAuthorized(true); setInRoom(true); setShowKeyPrompt(false);
-      notify(restoredRoom ? `Привет, ${name}! Вернула последнюю комнату и загружаю колоды...` : `Привет, ${name}! Базовые колоды загружаются...`);
+      notify(restoredRoom ? `╨Я╤А╨╕╨▓╨╡╤В, ${name}! ╨Т╨╡╤А╨╜╤Г╨╗╨░ ╨┐╨╛╤Б╨╗╨╡╨┤╨╜╤О╤О ╨║╨╛╨╝╨╜╨░╤В╤Г ╨╕ ╨╖╨░╨│╤А╤Г╨╢╨░╤О ╨║╨╛╨╗╨╛╨┤╤Л...` : `╨Я╤А╨╕╨▓╨╡╤В, ${name}! ╨С╨░╨╖╨╛╨▓╤Л╨╡ ╨║╨╛╨╗╨╛╨┤╤Л ╨╖╨░╨│╤А╤Г╨╢╨░╤О╤В╤Б╤П...`);
     };
-    if ((inputEmail === "yulia" || inputEmail === "юлия") && inputPwd === "owner777") {
-      enterRoomAsPsy("Юлия");
+    if ((inputEmail === "yulia" || inputEmail === "╤О╨╗╨╕╤П") && inputPwd === "owner777") {
+      enterRoomAsPsy("╨о╨╗╨╕╤П");
       return;
     }
     setIsCheckingKey(true);
@@ -1935,15 +1935,15 @@ export default function App() {
       if (found && valid) { 
         enterRoomAsPsy(found); 
       } else { 
-        notify(found ? "Подписка истекла (Проверьте формат даты в таблице)" : "Неверный Email или Пароль"); 
+        notify(found ? "╨Я╨╛╨┤╨┐╨╕╤Б╨║╨░ ╨╕╤Б╤В╨╡╨║╨╗╨░ (╨Я╤А╨╛╨▓╨╡╤А╤М╤В╨╡ ╤Д╨╛╤А╨╝╨░╤В ╨┤╨░╤В╤Л ╨▓ ╤В╨░╨▒╨╗╨╕╤Ж╨╡)" : "╨Э╨╡╨▓╨╡╤А╨╜╤Л╨╣ Email ╨╕╨╗╨╕ ╨Я╨░╤А╨╛╨╗╤М"); 
       }
     } catch (e) {
       setIsCheckingKey(false);
-      notify("Ошибка связи с таблицей. Включите прокси или убедитесь что таблица опубликована в интернете.");
+      notify("╨Ю╤И╨╕╨▒╨║╨░ ╤Б╨▓╤П╨╖╨╕ ╤Б ╤В╨░╨▒╨╗╨╕╤Ж╨╡╨╣. ╨Т╨║╨╗╤О╤З╨╕╤В╨╡ ╨┐╤А╨╛╨║╤Б╨╕ ╨╕╨╗╨╕ ╤Г╨▒╨╡╨┤╨╕╤В╨╡╤Б╤М ╤З╤В╨╛ ╤В╨░╨▒╨╗╨╕╤Ж╨░ ╨╛╨┐╤Г╨▒╨╗╨╕╨║╨╛╨▓╨░╨╜╨░ ╨▓ ╨╕╨╜╤В╨╡╤А╨╜╨╡╤В╨╡.");
     }
   };
   const handleClientLogin = () => {
-    if (!clientNameInput.trim()) return notify("Укажите ваше имя");
+    if (!clientNameInput.trim()) return notify("╨г╨║╨░╨╢╨╕╤В╨╡ ╨▓╨░╤И╨╡ ╨╕╨╝╤П");
     const clientName = clientNameInput.trim();
     setUserName(clientName);
     writeJsonStorage(LAST_CLIENT_ROOM_STORAGE_KEY, {
@@ -1965,29 +1965,29 @@ export default function App() {
     if (success !== false) {
       setCopyFeedback(true);
       setTimeout(() => setCopyFeedback(false), 2000);
-      notify('Постоянная ссылка скопирована!');
+      notify('╨Я╨╛╤Б╤В╨╛╤П╨╜╨╜╨░╤П ╤Б╤Б╤Л╨╗╨║╨░ ╤Б╨║╨╛╨┐╨╕╤А╨╛╨▓╨░╨╜╨░!');
     } else {
-      notify('Не удалось скопировать. Скопируйте ссылку вручную из адресной строки.');
+      notify('╨Э╨╡ ╤Г╨┤╨░╨╗╨╛╤Б╤М ╤Б╨║╨╛╨┐╨╕╤А╨╛╨▓╨░╤В╤М. ╨б╨║╨╛╨┐╨╕╤А╤Г╨╣╤В╨╡ ╤Б╤Б╤Л╨╗╨║╤Г ╨▓╤А╤Г╤З╨╜╤Г╤О ╨╕╨╖ ╨░╨┤╤А╨╡╤Б╨╜╨╛╨╣ ╤Б╤В╤А╨╛╨║╨╕.');
     }
   };
   const copySavedSessionLink = async (session) => {
     const targetRoomId = session.roomId || roomId;
-    if (!targetRoomId) return notify("У этой сессии пока нет комнаты");
+    if (!targetRoomId) return notify("╨г ╤Н╤В╨╛╨╣ ╤Б╨╡╤Б╤Б╨╕╨╕ ╨┐╨╛╨║╨░ ╨╜╨╡╤В ╨║╨╛╨╝╨╜╨░╤В╤Л");
     const success = await copyToClipboard(buildRoomLink(targetRoomId));
-    if (success === false) return notify('Не удалось скопировать ссылку');
+    if (success === false) return notify('╨Э╨╡ ╤Г╨┤╨░╨╗╨╛╤Б╤М ╤Б╨║╨╛╨┐╨╕╤А╨╛╨▓╨░╤В╤М ╤Б╤Б╤Л╨╗╨║╤Г');
     if (targetRoomId === roomId) {
-      notify(`Ссылка на "${session.name}" скопирована. Вы уже в этой сессии.`);
+      notify(`╨б╤Б╤Л╨╗╨║╨░ ╨╜╨░ "${session.name}" ╤Б╨║╨╛╨┐╨╕╤А╨╛╨▓╨░╨╜╨░. ╨Т╤Л ╤Г╨╢╨╡ ╨▓ ╤Н╤В╨╛╨╣ ╤Б╨╡╤Б╤Б╨╕╨╕.`);
       return;
     }
-    notify(`Ссылка на "${session.name}" скопирована. Откройте эту сессию у себя, чтобы синхронизироваться с клиентом.`, 9000);
-    const ok = await askConfirm(`Открыть "${session.name}" у вас сейчас? Тогда вы и клиент будете в одной сессии. Текущий стол будет ОЧИЩЕН и заменён сохранённой сессией.`);
+    notify(`╨б╤Б╤Л╨╗╨║╨░ ╨╜╨░ "${session.name}" ╤Б╨║╨╛╨┐╨╕╤А╨╛╨▓╨░╨╜╨░. ╨Ю╤В╨║╤А╨╛╨╣╤В╨╡ ╤Н╤В╤Г ╤Б╨╡╤Б╤Б╨╕╤О ╤Г ╤Б╨╡╨▒╤П, ╤З╤В╨╛╨▒╤Л ╤Б╨╕╨╜╤Е╤А╨╛╨╜╨╕╨╖╨╕╤А╨╛╨▓╨░╤В╤М╤Б╤П ╤Б ╨║╨╗╨╕╨╡╨╜╤В╨╛╨╝.`, 9000);
+    const ok = await askConfirm(`╨Ю╤В╨║╤А╤Л╤В╤М "${session.name}" ╤Г ╨▓╨░╤Б ╤Б╨╡╨╣╤З╨░╤Б? ╨в╨╛╨│╨┤╨░ ╨▓╤Л ╨╕ ╨║╨╗╨╕╨╡╨╜╤В ╨▒╤Г╨┤╨╡╤В╨╡ ╨▓ ╨╛╨┤╨╜╨╛╨╣ ╤Б╨╡╤Б╤Б╨╕╨╕. ╨в╨╡╨║╤Г╤Й╨╕╨╣ ╤Б╤В╨╛╨╗ ╨▒╤Г╨┤╨╡╤В ╨Ю╨з╨Ш╨й╨Х╨Э ╨╕ ╨╖╨░╨╝╨╡╨╜╤С╨╜ ╤Б╨╛╤Е╤А╨░╨╜╤С╨╜╨╜╨╛╨╣ ╤Б╨╡╤Б╤Б╨╕╨╡╨╣.`);
     if (ok) await loadSavedSession(session, { skipConfirm: true, targetRoomId });
   };
   const saveCurrentSession = async () => {
-    const defaultName = `Сессия ${new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
-    const name = await askPrompt("Введите название для сохранения текущего стола (например: Сессия с Анной):", defaultName);
+    const defaultName = `╨б╨╡╤Б╤Б╨╕╤П ${new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
+    const name = await askPrompt("╨Т╨▓╨╡╨┤╨╕╤В╨╡ ╨╜╨░╨╖╨▓╨░╨╜╨╕╨╡ ╨┤╨╗╤П ╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜╨╕╤П ╤В╨╡╨║╤Г╤Й╨╡╨│╨╛ ╤Б╤В╨╛╨╗╨░ (╨╜╨░╨┐╤А╨╕╨╝╨╡╤А: ╨б╨╡╤Б╤Б╨╕╤П ╤Б ╨Р╨╜╨╜╨╛╨╣):", defaultName);
     if (!name || !name.trim()) return;
-    notify("Сохраняю сессию...");
+    notify("╨б╨╛╤Е╤А╨░╨╜╤П╤О ╤Б╨╡╤Б╤Б╨╕╤О...");
     try {
       const elementsToSave = cardsOnTable.filter(c => c.id !== '_settings' && c.id !== '_dice_state' && c.id !== '_dice_type' && c.id !== '_library_state' && !c.id.startsWith('_'));
       const cardCount = elementsToSave.filter(el => el.type === 'card').length;
@@ -2003,19 +2003,19 @@ export default function App() {
         counts: { cards: cardCount, figures: figureCount, notes: noteCount, total: elementsToSave.length },
         createdAt: Date.now()
       });
-      notify("Сессия успешно сохранена! Ищите ее во вкладке СЕССИИ в библиотеке.");
+      notify("╨б╨╡╤Б╤Б╨╕╤П ╤Г╤Б╨┐╨╡╤И╨╜╨╛ ╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜╨░! ╨Ш╤Й╨╕╤В╨╡ ╨╡╨╡ ╨▓╨╛ ╨▓╨║╨╗╨░╨┤╨║╨╡ ╨б╨Х╨б╨б╨Ш╨Ш ╨▓ ╨▒╨╕╨▒╨╗╨╕╨╛╤В╨╡╨║╨╡.");
     } catch (e) {
-      notify("Ошибка сохранения сессии: " + getFriendlyErrorText(e));
+      notify("╨Ю╤И╨╕╨▒╨║╨░ ╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜╨╕╤П ╤Б╨╡╤Б╤Б╨╕╨╕: " + getFriendlyErrorText(e));
     }
   };
   const loadSavedSession = async (session, options = {}) => {
     const targetRoomId = options.targetRoomId || roomId || session.roomId;
-    if (!targetRoomId) return notify("Сначала войдите в сессию");
+    if (!targetRoomId) return notify("╨б╨╜╨░╤З╨░╨╗╨░ ╨▓╨╛╨╣╨┤╨╕╤В╨╡ ╨▓ ╤Б╨╡╤Б╤Б╨╕╤О");
     if (!options.skipConfirm) {
-      const ok = await askConfirm(`Вы уверены, что хотите загрузить "${session.name}"? ${targetRoomId !== roomId ? 'Вы перейдёте в постоянную комнату этой сессии. ' : 'Сессия загрузится в текущую комнату, клиент увидит эти карты. '}Текущий стол будет ОЧИЩЕН.`);
+      const ok = await askConfirm(`╨Т╤Л ╤Г╨▓╨╡╤А╨╡╨╜╤Л, ╤З╤В╨╛ ╤Е╨╛╤В╨╕╤В╨╡ ╨╖╨░╨│╤А╤Г╨╖╨╕╤В╤М "${session.name}"? ${targetRoomId !== roomId ? '╨Т╤Л ╨┐╨╡╤А╨╡╨╣╨┤╤С╤В╨╡ ╨▓ ╨┐╨╛╤Б╤В╨╛╤П╨╜╨╜╤Г╤О ╨║╨╛╨╝╨╜╨░╤В╤Г ╤Н╤В╨╛╨╣ ╤Б╨╡╤Б╤Б╨╕╨╕. ' : '╨б╨╡╤Б╤Б╨╕╤П ╨╖╨░╨│╤А╤Г╨╖╨╕╤В╤Б╤П ╨▓ ╤В╨╡╨║╤Г╤Й╤Г╤О ╨║╨╛╨╝╨╜╨░╤В╤Г, ╨║╨╗╨╕╨╡╨╜╤В ╤Г╨▓╨╕╨┤╨╕╤В ╤Н╤В╨╕ ╨║╨░╤А╤В╤Л. '}╨в╨╡╨║╤Г╤Й╨╕╨╣ ╤Б╤В╨╛╨╗ ╨▒╤Г╨┤╨╡╤В ╨Ю╨з╨Ш╨й╨Х╨Э.`);
       if (!ok) return;
     }
-    notify("Загружаю сессию...");
+    notify("╨Ч╨░╨│╤А╤Г╨╢╨░╤О ╤Б╨╡╤Б╤Б╨╕╤О...");
     try {
       const batch = writeBatch(db);
       const targetSnap = await getDocs(publicRoomCollectionRef(targetRoomId));
@@ -2071,30 +2071,30 @@ export default function App() {
           window.sessionStorage.setItem(ACTIVE_ROOM_SESSION_KEY, targetRoomId);
         } catch (e) {}
       }
-      notify(targetRoomId !== roomId ? "Постоянная комната сессии открыта! ✓" : "Сессия загружена в текущую комнату. Клиент увидит изменения ✓");
+      notify(targetRoomId !== roomId ? "╨Я╨╛╤Б╤В╨╛╤П╨╜╨╜╨░╤П ╨║╨╛╨╝╨╜╨░╤В╨░ ╤Б╨╡╤Б╤Б╨╕╨╕ ╨╛╤В╨║╤А╤Л╤В╨░! тЬУ" : "╨б╨╡╤Б╤Б╨╕╤П ╨╖╨░╨│╤А╤Г╨╢╨╡╨╜╨░ ╨▓ ╤В╨╡╨║╤Г╤Й╤Г╤О ╨║╨╛╨╝╨╜╨░╤В╤Г. ╨Ъ╨╗╨╕╨╡╨╜╤В ╤Г╨▓╨╕╨┤╨╕╤В ╨╕╨╖╨╝╨╡╨╜╨╡╨╜╨╕╤П тЬУ");
       if (isLibraryOpen) toggleLibrary();
     } catch (e) {
-      notify("Ошибка загрузки сессии: " + getFriendlyErrorText(e));
+      notify("╨Ю╤И╨╕╨▒╨║╨░ ╨╖╨░╨│╤А╤Г╨╖╨║╨╕ ╤Б╨╡╤Б╤Б╨╕╨╕: " + getFriendlyErrorText(e));
     }
   };
   const renameSavedSession = async (session) => {
-    const newName = await askPrompt("Новое название сессии:", session.name);
+    const newName = await askPrompt("╨Э╨╛╨▓╨╛╨╡ ╨╜╨░╨╖╨▓╨░╨╜╨╕╨╡ ╤Б╨╡╤Б╤Б╨╕╨╕:", session.name);
     if (!newName || !newName.trim()) return;
     try {
       await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions', session.id), { name: newName.trim() });
-      notify("Название сессии обновлено ✓");
+      notify("╨Э╨░╨╖╨▓╨░╨╜╨╕╨╡ ╤Б╨╡╤Б╤Б╨╕╨╕ ╨╛╨▒╨╜╨╛╨▓╨╗╨╡╨╜╨╛ тЬУ");
     } catch (e) {
-      notify("Ошибка переименования: " + getFriendlyErrorText(e));
+      notify("╨Ю╤И╨╕╨▒╨║╨░ ╨┐╨╡╤А╨╡╨╕╨╝╨╡╨╜╨╛╨▓╨░╨╜╨╕╤П: " + getFriendlyErrorText(e));
     }
   };
   const restoreLocalBoardBackup = async () => {
-    if (!roomId || !user) return notify("Сначала войдите в сессию");
+    if (!roomId || !user) return notify("╨б╨╜╨░╤З╨░╨╗╨░ ╨▓╨╛╨╣╨┤╨╕╤В╨╡ ╨▓ ╤Б╨╡╤Б╤Б╨╕╤О");
     const backup = readJsonStorage(getBoardBackupKey(roomId));
-    if (!backup?.elements?.length) return notify("Локальная копия стола не найдена");
-    const date = backup.updatedAt ? new Date(backup.updatedAt).toLocaleString('ru-RU') : 'без даты';
-    const ok = await askConfirm(`Восстановить локальную копию стола от ${date}? Текущий стол будет очищен.`);
+    if (!backup?.elements?.length) return notify("╨Ы╨╛╨║╨░╨╗╤М╨╜╨░╤П ╨║╨╛╨┐╨╕╤П ╤Б╤В╨╛╨╗╨░ ╨╜╨╡ ╨╜╨░╨╣╨┤╨╡╨╜╨░");
+    const date = backup.updatedAt ? new Date(backup.updatedAt).toLocaleString('ru-RU') : '╨▒╨╡╨╖ ╨┤╨░╤В╤Л';
+    const ok = await askConfirm(`╨Т╨╛╤Б╤Б╤В╨░╨╜╨╛╨▓╨╕╤В╤М ╨╗╨╛╨║╨░╨╗╤М╨╜╤Г╤О ╨║╨╛╨┐╨╕╤О ╤Б╤В╨╛╨╗╨░ ╨╛╤В ${date}? ╨в╨╡╨║╤Г╤Й╨╕╨╣ ╤Б╤В╨╛╨╗ ╨▒╤Г╨┤╨╡╤В ╨╛╤З╨╕╤Й╨╡╨╜.`);
     if (!ok) return;
-    notify("Восстанавливаю стол из локальной копии...");
+    notify("╨Т╨╛╤Б╤Б╤В╨░╨╜╨░╨▓╨╗╨╕╨▓╨░╤О ╤Б╤В╨╛╨╗ ╨╕╨╖ ╨╗╨╛╨║╨░╨╗╤М╨╜╨╛╨╣ ╨║╨╛╨┐╨╕╨╕...");
     try {
       const batch = writeBatch(db);
       const currentElements = cardsOnTable.filter(c => !c.id.startsWith('_'));
@@ -2113,17 +2113,17 @@ export default function App() {
         batch.set(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_active_deck'), backup.activeDeckData, { merge: true });
       }
       await batch.commit();
-      notify("Локальная копия восстановлена ✓");
+      notify("╨Ы╨╛╨║╨░╨╗╤М╨╜╨░╤П ╨║╨╛╨┐╨╕╤П ╨▓╨╛╤Б╤Б╤В╨░╨╜╨╛╨▓╨╗╨╡╨╜╨░ тЬУ");
       if (isLibraryOpen) toggleLibrary();
     } catch (e) {
-      notify("Не удалось восстановить копию: " + getFriendlyErrorText(e));
+      notify("╨Э╨╡ ╤Г╨┤╨░╨╗╨╛╤Б╤М ╨▓╨╛╤Б╤Б╤В╨░╨╜╨╛╨▓╨╕╤В╤М ╨║╨╛╨┐╨╕╤О: " + getFriendlyErrorText(e));
     }
   };
   const handleNoteImageUpload = async (e) => {
     const f = e.target.files[0];
     if (!f) return;
     setIsUploadingNoteImage(true);
-    notify("Загрузка картинки...", 4000);
+    notify("╨Ч╨░╨│╤А╤Г╨╖╨║╨░ ╨║╨░╤А╤В╨╕╨╜╨║╨╕...", 4000);
     try {
       const data = await new Promise(r => { const rd = new FileReader(); rd.onload = ev => r(ev.target.result); rd.readAsDataURL(f); });
       const comp = await compressImage(data, 800, 800);
@@ -2132,9 +2132,9 @@ export default function App() {
         notebookEditorRef.current.focus();
         document.execCommand('insertImage', false, url);
       }
-      notify("Картинка добавлена!");
+      notify("╨Ъ╨░╤А╤В╨╕╨╜╨║╨░ ╨┤╨╛╨▒╨░╨▓╨╗╨╡╨╜╨░!");
     } catch (err) {
-      notify("Ошибка загрузки: " + err.message);
+      notify("╨Ю╤И╨╕╨▒╨║╨░ ╨╖╨░╨│╤А╤Г╨╖╨║╨╕: " + err.message);
     } finally {
       setIsUploadingNoteImage(false);
       e.target.value = '';
@@ -2149,9 +2149,9 @@ export default function App() {
     if (!boardRef.current) return;
     const elements = cardsOnTable.filter(c => !c.id.startsWith('_'));
     if (elements.length === 0) {
-      return notify("Стол пуст, нечего сохранять");
+      return notify("╨б╤В╨╛╨╗ ╨┐╤Г╤Б╤В, ╨╜╨╡╤З╨╡╨│╨╛ ╤Б╨╛╤Е╤А╨░╨╜╤П╤В╤М");
     }
-    notify("Создаю скриншот, подождите...", 8000);
+    notify("╨б╨╛╨╖╨┤╨░╤О ╤Б╨║╤А╨╕╨╜╤И╨╛╤В, ╨┐╨╛╨┤╨╛╨╢╨┤╨╕╤В╨╡...", 8000);
     try {
       const PADDING = 60;
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -2246,11 +2246,11 @@ export default function App() {
             const img = await tryLoad(proxyUrl);
             if (img && img.naturalWidth > 0 && isExportSafe(img)) return img;
           } catch (e) {
-            // Переходим к следующему прокси
+            // ╨Я╨╡╤А╨╡╤Е╨╛╨┤╨╕╨╝ ╨║ ╤Б╨╗╨╡╨┤╤Г╤О╤Й╨╡╨╝╤Г ╨┐╤А╨╛╨║╤Б╨╕
           }
         }
         
-        // Последний fallback: получение base64 через JSON
+        // ╨Я╨╛╤Б╨╗╨╡╨┤╨╜╨╕╨╣ fallback: ╨┐╨╛╨╗╤Г╤З╨╡╨╜╨╕╨╡ base64 ╤З╨╡╤А╨╡╨╖ JSON
         try {
           const controller = new AbortController();
           const timer = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS);
@@ -2339,7 +2339,7 @@ export default function App() {
               ctx.font = 'bold 11px sans-serif';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';
-              ctx.fillText(el.isFlipped ? 'MAK SPACE' : 'Недоступно', ew / 2, eh / 2);
+              ctx.fillText(el.isFlipped ? 'MAK SPACE' : '╨Э╨╡╨┤╨╛╤Б╤В╤Г╨┐╨╜╨╛', ew / 2, eh / 2);
             }
             ctx.restore();
             roundRectPath(0, 0, ew, eh, 14);
@@ -2642,19 +2642,19 @@ export default function App() {
         dataUrl = canvas.toDataURL('image/png');
       } catch (exportErr) {
         console.warn('Screenshot export blocked by image source:', exportErr);
-        throw new Error('браузер заблокировал одну из картинок. Попробуйте повторить после обновления страницы');
+        throw new Error('╨▒╤А╨░╤Г╨╖╨╡╤А ╨╖╨░╨▒╨╗╨╛╨║╨╕╤А╨╛╨▓╨░╨╗ ╨╛╨┤╨╜╤Г ╨╕╨╖ ╨║╨░╤А╤В╨╕╨╜╨╛╨║. ╨Я╨╛╨┐╤А╨╛╨▒╤Г╨╣╤В╨╡ ╨┐╨╛╨▓╤В╨╛╤А╨╕╤В╤М ╨┐╨╛╤Б╨╗╨╡ ╨╛╨▒╨╜╨╛╨▓╨╗╨╡╨╜╨╕╤П ╤Б╤В╤А╨░╨╜╨╕╤Ж╤Л');
       }
       const link = document.createElement('a');
       const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-');
-      link.download = `Сессия_${dateStr}.png`;
+      link.download = `╨б╨╡╤Б╤Б╨╕╤П_${dateStr}.png`;
       link.href = dataUrl;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      notify("Скриншот сохранен! ✓");
+      notify("╨б╨║╤А╨╕╨╜╤И╨╛╤В ╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜! тЬУ");
     } catch (e) {
       console.error('Screenshot error:', e);
-      notify("Ошибка скриншота: " + getFriendlyErrorText(e, 'не получилось создать снимок'));
+      notify("╨Ю╤И╨╕╨▒╨║╨░ ╤Б╨║╤А╨╕╨╜╤И╨╛╤В╨░: " + getFriendlyErrorText(e, '╨╜╨╡ ╨┐╨╛╨╗╤Г╤З╨╕╨╗╨╛╤Б╤М ╤Б╨╛╨╖╨┤╨░╤В╤М ╤Б╨╜╨╕╨╝╨╛╨║'));
     }
   };
   const addElement = async (type, data) => {
@@ -2702,7 +2702,7 @@ export default function App() {
   };
   const clearTable = async () => {
     const unlocked = cardsOnTable.filter(c => !c.isLocked);
-    if (unlocked.length === 0) return notify("Нет незакреплённых объектов на столе");
+    if (unlocked.length === 0) return notify("╨Э╨╡╤В ╨╜╨╡╨╖╨░╨║╤А╨╡╨┐╨╗╤С╨╜╨╜╤Л╤Е ╨╛╨▒╤К╨╡╨║╤В╨╛╨▓ ╨╜╨░ ╤Б╤В╨╛╨╗╨╡");
     if (undoStack?.timeoutId) clearTimeout(undoStack.timeoutId);
     const timeoutId = setTimeout(async () => {
       try {
@@ -2720,7 +2720,7 @@ export default function App() {
     if (!undoStack) return;
     clearTimeout(undoStack.timeoutId);
     setUndoStack(null);
-    notify("Восстановлено ✓");
+    notify("╨Т╨╛╤Б╤Б╤В╨░╨╜╨╛╨▓╨╗╨╡╨╜╨╛ тЬУ");
   };
   const confirmUpload = async () => {
     if (pendingFiles.length === 0) return;
@@ -2745,16 +2745,16 @@ export default function App() {
         uploadedFiles.push({ name: file.name, url });
       }
       setUploadProgress(100);
-      const newDeck = { name: tempDeckName || "Колода", ...buildDeckImages(uploadedFiles), createdAt: Date.now() };
+      const newDeck = { name: tempDeckName || "╨Ъ╨╛╨╗╨╛╨┤╨░", ...buildDeckImages(uploadedFiles), createdAt: Date.now() };
       if (isDbConnected && user && !isClientMode) {
         await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_decks'), newDeck);
-        notify("Колода сохранена в Облако ✓");
+        notify("╨Ъ╨╛╨╗╨╛╨┤╨░ ╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜╨░ ╨▓ ╨Ю╨▒╨╗╨░╨║╨╛ тЬУ");
       } else {
         setLocalDecks(p => [...p, { ...newDeck, id: Date.now().toString() }]);
-        notify("Добавлено локально");
+        notify("╨Ф╨╛╨▒╨░╨▓╨╗╨╡╨╜╨╛ ╨╗╨╛╨║╨░╨╗╤М╨╜╨╛");
       }
     } catch (err) {
-      notify("Ошибка загрузки: " + err.message);
+      notify("╨Ю╤И╨╕╨▒╨║╨░ ╨╖╨░╨│╤А╤Г╨╖╨║╨╕: " + err.message);
     } finally {
       setIsNamingDeck(false);
       setIsUploading(false);
@@ -2765,38 +2765,38 @@ export default function App() {
     }
   };
   const addDeckByLinks = async () => {
-    const input = await askPrompt("Вставьте ссылку на папку Google Диска (или несколько ссылок на файлы):");
+    const input = await askPrompt("╨Т╤Б╤В╨░╨▓╤М╤В╨╡ ╤Б╤Б╤Л╨╗╨║╤Г ╨╜╨░ ╨┐╨░╨┐╨║╤Г Google ╨Ф╨╕╤Б╨║╨░ (╨╕╨╗╨╕ ╨╜╨╡╤Б╨║╨╛╨╗╤М╨║╨╛ ╤Б╤Б╤Л╨╗╨╛╨║ ╨╜╨░ ╤Д╨░╨╣╨╗╤Л):");
     if (!input || !input.trim()) return;
     const folderId = extractDriveFolderId(input.trim());
     if (folderId) {
-      const name = await askPrompt("Имя колоды:");
+      const name = await askPrompt("╨Ш╨╝╤П ╨║╨╛╨╗╨╛╨┤╤Л:");
       if (!name) return;
-      notify("Загружаю список файлов из папки...");
+      notify("╨Ч╨░╨│╤А╤Г╨╢╨░╤О ╤Б╨┐╨╕╤Б╨╛╨║ ╤Д╨░╨╣╨╗╨╛╨▓ ╨╕╨╖ ╨┐╨░╨┐╨║╨╕...");
       try {
         const files = await loadDriveFolderFiles(folderId, DRIVE_API_KEY);
-        if (files.length === 0) return notify("В папке нет изображений.");
+        if (files.length === 0) return notify("╨Т ╨┐╨░╨┐╨║╨╡ ╨╜╨╡╤В ╨╕╨╖╨╛╨▒╤А╨░╨╢╨╡╨╜╨╕╨╣.");
         const deckImages = buildDeckImages(files.map(file => ({ name: file.name, url: getDriveThumbnailUrl(file.id) })));
-        if (deckImages.cards.length === 0) return notify("Карты не найдены.");
+        if (deckImages.cards.length === 0) return notify("╨Ъ╨░╤А╤В╤Л ╨╜╨╡ ╨╜╨░╨╣╨┤╨╡╨╜╤Л.");
         const newDeck = { name, ...deckImages, createdAt: Date.now() };
         if (isDbConnected && user && !isClientMode) {
           await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_decks'), newDeck);
-          notify(`Колода "${name}": ${deckImages.cards.length} карт ✓`);
+          notify(`╨Ъ╨╛╨╗╨╛╨┤╨░ "${name}": ${deckImages.cards.length} ╨║╨░╤А╤В тЬУ`);
           setActiveTab('cloud');
         } else {
           setLocalDecks(p => [...p, { ...newDeck, id: Date.now().toString() }]);
         }
       } catch (e) {
-        notify("Ошибка загрузки папки: " + e.message);
+        notify("╨Ю╤И╨╕╨▒╨║╨░ ╨╖╨░╨│╤А╤Г╨╖╨║╨╕ ╨┐╨░╨┐╨║╨╕: " + e.message);
       }
     } else {
-      const name = await askPrompt("Имя колоды:");
+      const name = await askPrompt("╨Ш╨╝╤П ╨║╨╛╨╗╨╛╨┤╤Л:");
       if (!name) return;
       const linkArray = input.split(/[\n\r,\s]+/).map(l => l.trim()).filter(l => l.length > 10).map(l => convertDriveLink(l)).filter(Boolean);
-      if (linkArray.length === 0) return notify("Не найдено ни одной ссылки");
+      if (linkArray.length === 0) return notify("╨Э╨╡ ╨╜╨░╨╣╨┤╨╡╨╜╨╛ ╨╜╨╕ ╨╛╨┤╨╜╨╛╨╣ ╤Б╤Б╤Л╨╗╨║╨╕");
       const newDeck = { name, cards: linkArray, backImage: null, createdAt: Date.now() };
       if (isDbConnected && user && !isClientMode) {
         await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_decks'), newDeck);
-        notify(`Колода "${name}" сохранена: ${linkArray.length} карт ✓`);
+        notify(`╨Ъ╨╛╨╗╨╛╨┤╨░ "${name}" ╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜╨░: ${linkArray.length} ╨║╨░╤А╤В тЬУ`);
         setActiveTab('cloud');
       } else {
         setLocalDecks(p => [...p, { ...newDeck, id: Date.now().toString() }]);
@@ -2809,23 +2809,23 @@ export default function App() {
     if (!isFavorite && hiddenDeckIds.includes(item.id)) {
       setHiddenDeckIds(prev => prev.filter(id => id !== item.id));
     }
-    notify(isFavorite ? "Убрано из избранного" : "Колода закреплена в избранном ✓");
+    notify(isFavorite ? "╨г╨▒╤А╨░╨╜╨╛ ╨╕╨╖ ╨╕╨╖╨▒╤А╨░╨╜╨╜╨╛╨│╨╛" : "╨Ъ╨╛╨╗╨╛╨┤╨░ ╨╖╨░╨║╤А╨╡╨┐╨╗╨╡╨╜╨░ ╨▓ ╨╕╨╖╨▒╤А╨░╨╜╨╜╨╛╨╝ тЬУ");
   };
   const toggleDeckHidden = (item) => {
     const isHidden = hiddenDeckIds.includes(item.id);
     if (isHidden) {
       setHiddenDeckIds(prev => prev.filter(id => id !== item.id));
-      notify("Колода снова видна ✓");
+      notify("╨Ъ╨╛╨╗╨╛╨┤╨░ ╤Б╨╜╨╛╨▓╨░ ╨▓╨╕╨┤╨╜╨░ тЬУ");
     } else {
       setHiddenDeckIds(prev => [item.id, ...prev]);
       setFavoriteDeckIds(prev => prev.filter(id => id !== item.id));
-      notify("Колода скрыта. Ее можно вернуть через «Показать скрытые»");
+      notify("╨Ъ╨╛╨╗╨╛╨┤╨░ ╤Б╨║╤А╤Л╤В╨░. ╨Х╨╡ ╨╝╨╛╨╢╨╜╨╛ ╨▓╨╡╤А╨╜╤Г╤В╤М ╤З╨╡╤А╨╡╨╖ ┬л╨Я╨╛╨║╨░╨╖╨░╤В╤М ╤Б╨║╤А╤Л╤В╤Л╨╡┬╗");
     }
   };
   const matchesDeckSearch = (item) => {
     const query = deckSearch.trim().toLowerCase();
     if (!query) return true;
-    const source = item.isPlatformDeck ? 'платформа база' : item.isBaseDeck ? 'google drive облако' : 'мои личные';
+    const source = item.isPlatformDeck ? '╨┐╨╗╨░╤В╤Д╨╛╤А╨╝╨░ ╨▒╨░╨╖╨░' : item.isBaseDeck ? 'google drive ╨╛╨▒╨╗╨░╨║╨╛' : '╨╝╨╛╨╕ ╨╗╨╕╤З╨╜╤Л╨╡';
     return `${item.name || ''} ${source}`.toLowerCase().includes(query);
   };
   const allLibraryDecks = [...platformDecks, ...baseDecks, ...cloudDecks, ...localDecks];
@@ -2854,50 +2854,50 @@ export default function App() {
           <div className="flex flex-col overflow-hidden">
             <span className="text-[10px] font-bold truncate uppercase" style={{ color: COLORS.ink }}>{item.name}</span>
             <div className="flex items-center gap-1.5 flex-wrap">
-              {isFavorite && <span className="text-[7px] font-black uppercase tracking-widest flex items-center gap-1" style={{ color: COLORS.terra }}><Star size={8} fill={COLORS.terra} /> Избранное</span>}
-              {isHidden && <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: `${COLORS.ink}50` }}>Скрыта</span>}
-              {item.isPlatformDeck && <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: COLORS.forest }}>Платформа</span>}
+              {isFavorite && <span className="text-[7px] font-black uppercase tracking-widest flex items-center gap-1" style={{ color: COLORS.terra }}><Star size={8} fill={COLORS.terra} /> ╨Ш╨╖╨▒╤А╨░╨╜╨╜╨╛╨╡</span>}
+              {isHidden && <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: `${COLORS.ink}50` }}>╨б╨║╤А╤Л╤В╨░</span>}
+              {item.isPlatformDeck && <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: COLORS.forest }}>╨Я╨╗╨░╤В╤Д╨╛╤А╨╝╨░</span>}
               {item.isBaseDeck && <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}50` }}>Google Drive</span>}
             </div>
           </div>
         </button>
         <div className="flex gap-1 transition-opacity opacity-100 md:opacity-0 md:group-hover:opacity-100">
-          <button onClick={() => toggleDeckFavorite(item)} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: isFavorite ? COLORS.terra : `${COLORS.ink}70` }} title={isFavorite ? "Убрать из избранного" : "Закрепить в избранном"}>
+          <button onClick={() => toggleDeckFavorite(item)} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: isFavorite ? COLORS.terra : `${COLORS.ink}70` }} title={isFavorite ? "╨г╨▒╤А╨░╤В╤М ╨╕╨╖ ╨╕╨╖╨▒╤А╨░╨╜╨╜╨╛╨│╨╛" : "╨Ч╨░╨║╤А╨╡╨┐╨╕╤В╤М ╨▓ ╨╕╨╖╨▒╤А╨░╨╜╨╜╨╛╨╝"}>
             <Star size={15} fill={isFavorite ? COLORS.terra : 'none'} />
           </button>
-          <button onClick={() => toggleDeckHidden(item)} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: isHidden ? COLORS.forest : `${COLORS.ink}70` }} title={isHidden ? "Показать колоду" : "Скрыть колоду"}>
+          <button onClick={() => toggleDeckHidden(item)} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: isHidden ? COLORS.forest : `${COLORS.ink}70` }} title={isHidden ? "╨Я╨╛╨║╨░╨╖╨░╤В╤М ╨║╨╛╨╗╨╛╨┤╤Г" : "╨б╨║╤А╤Л╤В╤М ╨║╨╛╨╗╨╛╨┤╤Г"}>
             {isHidden ? <Eye size={15} /> : <EyeOff size={15} />}
           </button>
           {canEditDeck && (
             <>
               <button onClick={async () => {
-                const newName = await askPrompt("Новое имя колоды:", item.name);
+                const newName = await askPrompt("╨Э╨╛╨▓╨╛╨╡ ╨╕╨╝╤П ╨║╨╛╨╗╨╛╨┤╤Л:", item.name);
                 if (!newName || !newName.trim()) return;
                 const trimmed = newName.trim();
                 if (isLocalOnlyDeck) {
                   setLocalDecks(p => p.map(d => d.id === item.id ? { ...d, name: trimmed } : d));
-                  notify("Имя обновлено ✓");
+                  notify("╨Ш╨╝╤П ╨╛╨▒╨╜╨╛╨▓╨╗╨╡╨╜╨╛ тЬУ");
                 } else {
                   try {
                     await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_decks', item.id), { name: trimmed });
-                    notify("Имя обновлено ✓");
+                    notify("╨Ш╨╝╤П ╨╛╨▒╨╜╨╛╨▓╨╗╨╡╨╜╨╛ тЬУ");
                   } catch (e) {
-                    notify("Ошибка: " + e.message);
+                    notify("╨Ю╤И╨╕╨▒╨║╨░: " + e.message);
                   }
                 }
-              }} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: COLORS.plum }} title="Переименовать">
+              }} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: COLORS.plum }} title="╨Я╨╡╤А╨╡╨╕╨╝╨╡╨╜╨╛╨▓╨░╤В╤М">
                 <Edit2 size={15} />
               </button>
               <button onClick={async () => {
-                const ok = await askConfirm("Удалить колоду?");
+                const ok = await askConfirm("╨г╨┤╨░╨╗╨╕╤В╤М ╨║╨╛╨╗╨╛╨┤╤Г?");
                 if (ok) {
                   if (isLocalOnlyDeck) setLocalDecks(p => p.filter(d => d.id !== item.id));
                   else await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_decks', item.id));
                   setFavoriteDeckIds(prev => prev.filter(id => id !== item.id));
                   setHiddenDeckIds(prev => prev.filter(id => id !== item.id));
-                  notify("Удалено");
+                  notify("╨г╨┤╨░╨╗╨╡╨╜╨╛");
                 }
-              }} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: COLORS.terra }} title="Удалить">
+              }} className="p-2 rounded-xl transition-colors hover:bg-black/5" style={{ color: COLORS.terra }} title="╨г╨┤╨░╨╗╨╕╤В╤М">
                 <Trash2 size={15} />
               </button>
             </>
@@ -2909,7 +2909,7 @@ export default function App() {
   if (appLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center text-white gap-4" style={{ backgroundColor: COLORS.ink }}>
       <Loader2 size={40} className="animate-spin text-plum" />
-      Загрузка кабинета...
+      ╨Ч╨░╨│╤А╤Г╨╖╨║╨░ ╨║╨░╨▒╨╕╨╜╨╡╤В╨░...
     </div>
   );
   if (!inRoom) return (
@@ -2922,8 +2922,8 @@ export default function App() {
               <input autoFocus defaultValue={customDialog.defaultValue || ''} placeholder={customDialog.placeholder || ''} id="dialog-input" className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center" style={{ borderColor: COLORS.haze }} onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))} />
             )}
             <div className="flex gap-3">
-              <button onClick={() => { customDialog.onCancel(); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">Отмена</button>
-              <button onClick={() => { const val = customDialog.type === 'prompt' ? document.getElementById('dialog-input').value : true; customDialog.onOk(val); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl text-white transition-colors" style={{ backgroundColor: COLORS.plum }}>Ок</button>
+              <button onClick={() => { customDialog.onCancel(); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">╨Ю╤В╨╝╨╡╨╜╨░</button>
+              <button onClick={() => { const val = customDialog.type === 'prompt' ? document.getElementById('dialog-input').value : true; customDialog.onOk(val); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl text-white transition-colors" style={{ backgroundColor: COLORS.plum }}>╨Ю╨║</button>
             </div>
           </div>
         </div>
@@ -2942,8 +2942,8 @@ export default function App() {
               <div className="w-8 h-12 border-2 border-white/40 rounded-lg"></div>
             </div>
           </div>
-          <h1 className="text-3xl font-black uppercase italic mb-2 leading-none">ОНЛАЙН КАБИНЕТ</h1>
-          <p className="font-bold text-[10px] tracking-[0.3em] uppercase" style={{ color: COLORS.forest }}>Платформа для сессий</p>
+          <h1 className="text-3xl font-black uppercase italic mb-2 leading-none">╨Ю╨Э╨Ы╨Р╨Щ╨Э ╨Ъ╨Р╨С╨Ш╨Э╨Х╨в</h1>
+          <p className="font-bold text-[10px] tracking-[0.3em] uppercase" style={{ color: COLORS.forest }}>╨Я╨╗╨░╤В╤Д╨╛╤А╨╝╨░ ╨┤╨╗╤П ╤Б╨╡╤Б╤Б╨╕╨╣</p>
         </div>
         
         <div className="space-y-4">
@@ -2951,29 +2951,29 @@ export default function App() {
             !showKeyPrompt ? (
               <div className="flex flex-col gap-4">
                 <button onClick={() => setShowKeyPrompt(true)} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="w-full font-black py-5 rounded-2xl text-xs uppercase tracking-widest shadow-lg flex flex-col items-center gap-2 transition-all hover:opacity-90">
-                  <Key size={24} /> ВОЙТИ КАК ПСИХОЛОГ
+                  <Key size={24} /> ╨Т╨Ю╨Щ╨в╨Ш ╨Ъ╨Р╨Ъ ╨Я╨б╨Ш╨е╨Ю╨Ы╨Ю╨У
                 </button>
               </div>
             ) : (
               <div className="space-y-3">
                 <input type="text" value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Email" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
-                <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Пароль" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
+                <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="╨Я╨░╤А╨╛╨╗╤М" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
                 <div className="flex gap-2 pt-1">
-                  <button onClick={() => setShowKeyPrompt(false)} className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}80` }}>Назад</button>
+                  <button onClick={() => setShowKeyPrompt(false)} className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}80` }}>╨Э╨░╨╖╨░╨┤</button>
                   <button onClick={handleLogin} disabled={isCheckingKey} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="flex-[2] font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest shadow-md disabled:opacity-50">
-                    {isCheckingKey ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" /> Проверка...</span> : "Войти"}
+                    {isCheckingKey ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" /> ╨Я╤А╨╛╨▓╨╡╤А╨║╨░...</span> : "╨Т╨╛╨╣╤В╨╕"}
                   </button>
                 </div>
               </div>
             )
           ) : (
             <div className="space-y-3">
-              <p className="font-bold text-[10px] uppercase text-center mb-4" style={{ color: COLORS.ink }}>Представьтесь, чтобы зайти за стол:</p>
-              <input type="text" value={clientNameInput} onChange={e => setClientNameInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleClientLogin()} placeholder="Ваше Имя" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.forest, color: COLORS.forest, backgroundColor: `${COLORS.forest}10` }} />
-              <button onClick={handleClientLogin} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="w-full font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:opacity-90 mt-2">Войти в кабинет</button>
+              <p className="font-bold text-[10px] uppercase text-center mb-4" style={{ color: COLORS.ink }}>╨Я╤А╨╡╨┤╤Б╤В╨░╨▓╤М╤В╨╡╤Б╤М, ╤З╤В╨╛╨▒╤Л ╨╖╨░╨╣╤В╨╕ ╨╖╨░ ╤Б╤В╨╛╨╗:</p>
+              <input type="text" value={clientNameInput} onChange={e => setClientNameInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleClientLogin()} placeholder="╨Т╨░╤И╨╡ ╨Ш╨╝╤П" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.forest, color: COLORS.forest, backgroundColor: `${COLORS.forest}10` }} />
+              <button onClick={handleClientLogin} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="w-full font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:opacity-90 mt-2">╨Т╨╛╨╣╤В╨╕ ╨▓ ╨║╨░╨▒╨╕╨╜╨╡╤В</button>
               {roomId && (
                 <button onClick={() => { setIsClientMode(false); window._isClientMode = false; setShowKeyPrompt(true); }} className="w-full py-3 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all hover:bg-black/5" style={{ color: COLORS.plum }}>
-                  Я психолог, войти в эту же сессию
+                  ╨п ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│, ╨▓╨╛╨╣╤В╨╕ ╨▓ ╤Н╤В╤Г ╨╢╨╡ ╤Б╨╡╤Б╤Б╨╕╤О
                 </button>
               )}
             </div>
@@ -2981,14 +2981,14 @@ export default function App() {
         </div>
         <div className="mt-8 pt-6 border-t-2 border-dashed flex flex-col items-center gap-4" style={{ borderColor: `${COLORS.ink}15` }}>
           <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-center" style={{ color: `${COLORS.ink}60` }}>
-            Нужна помощь или есть вопросы по платформе?
+            ╨Э╤Г╨╢╨╜╨░ ╨┐╨╛╨╝╨╛╤Й╤М ╨╕╨╗╨╕ ╨╡╤Б╤В╤М ╨▓╨╛╨┐╤А╨╛╤Б╤Л ╨┐╨╛ ╨┐╨╗╨░╤В╤Д╨╛╤А╨╝╨╡?
           </span>
           <div className="flex flex-col gap-3 w-full">
             <a href="https://t.me/psyplat" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2.5 w-full py-4 rounded-[1rem] text-[11px] font-black uppercase tracking-[0.15em] transition-all hover:scale-[1.02] shadow-sm border border-transparent hover:border-plum/20" style={{ backgroundColor: '#FDF7F9', color: COLORS.plum }}>
-               <MessageCircle size={16} strokeWidth={2.5} /> TELEGRAM-КАНАЛ
+               <MessageCircle size={16} strokeWidth={2.5} /> TELEGRAM-╨Ъ╨Р╨Э╨Р╨Ы
             </a>
             <a href="https://max.ru/join/kmLoxZy4ssavrneuneZhry22HKbI5hbe11kPGlQUXUg" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2.5 w-full py-4 rounded-[1rem] text-[11px] font-black uppercase tracking-[0.15em] transition-all hover:scale-[1.02] shadow-sm border border-transparent hover:border-forest/20" style={{ backgroundColor: '#F5FAF8', color: COLORS.forest }}>
-               <MaxIcon size={16} color={COLORS.forest} /> СВЯЗЬ (МАКС)
+               <MaxIcon size={16} color={COLORS.forest} /> ╨б╨Т╨п╨Ч╨м (╨Ь╨Р╨Ъ╨б)
             </a>
           </div>
         </div>
@@ -3009,17 +3009,17 @@ export default function App() {
               <X size={24} style={{ color: COLORS.ink }} />
             </button>
             <h2 className="text-xl md:text-2xl font-black uppercase mb-6 flex items-center gap-3" style={{ color: COLORS.ink }}>
-              <BookOpen size={24} className="text-blue-600" /> Мои Техники
+              <BookOpen size={24} className="text-blue-600" /> ╨Ь╨╛╨╕ ╨в╨╡╤Е╨╜╨╕╨║╨╕
             </h2>
             
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-4">
               {!isCreatingNote ? (
                 <>
                   <button onClick={() => { setIsCreatingNote(true); setEditingNoteId(null); setNoteTitleInput(''); setTimeout(() => { if (notebookEditorRef.current) notebookEditorRef.current.innerHTML = ''; }, 50); }} className="w-full py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-2 hover:bg-black/5 transition-all" style={{ borderColor: `${COLORS.plum}4D`, color: COLORS.plum }}>
-                    <Plus size={20} /> <span className="font-black uppercase text-[10px] tracking-widest">Добавить технику / скрипт</span>
+                    <Plus size={20} /> <span className="font-black uppercase text-[10px] tracking-widest">╨Ф╨╛╨▒╨░╨▓╨╕╤В╤М ╤В╨╡╤Е╨╜╨╕╨║╤Г / ╤Б╨║╤А╨╕╨┐╤В</span>
                   </button>
                   {savedNotes.length === 0 && (
-                    <p className="text-center text-sm font-medium opacity-50 mt-4">У вас пока нет сохраненных техник.</p>
+                    <p className="text-center text-sm font-medium opacity-50 mt-4">╨г ╨▓╨░╤Б ╨┐╨╛╨║╨░ ╨╜╨╡╤В ╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜╨╜╤Л╤Е ╤В╨╡╤Е╨╜╨╕╨║.</p>
                   )}
                   {savedNotes.map(note => (
                     <div key={note.id} className="p-4 rounded-2xl border flex flex-col gap-3 shadow-sm bg-gray-50 hover:bg-white transition-colors" style={{ borderColor: `${COLORS.ink}10` }}>
@@ -3035,14 +3035,14 @@ export default function App() {
                                 notebookEditorRef.current.innerHTML = note.text;
                               }
                             }, 50);
-                          }} className="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-colors" title="Редактировать">
+                          }} className="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-colors" title="╨а╨╡╨┤╨░╨║╤В╨╕╤А╨╛╨▓╨░╤В╤М">
                             <Edit2 size={16} />
                           </button>
                           <button onClick={async () => {
-                            if (await askConfirm('Удалить технику?')) {
+                            if (await askConfirm('╨г╨┤╨░╨╗╨╕╤В╤М ╤В╨╡╤Е╨╜╨╕╨║╤Г?')) {
                               await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_notes', note.id));
                             }
-                          }} className="text-gray-400 hover:text-terra hover:bg-terra/10 p-1.5 rounded-lg transition-colors" title="Удалить">
+                          }} className="text-gray-400 hover:text-terra hover:bg-terra/10 p-1.5 rounded-lg transition-colors" title="╨г╨┤╨░╨╗╨╕╤В╤М">
                             <Trash2 size={16} />
                           </button>
                         </div>
@@ -3051,26 +3051,26 @@ export default function App() {
                       <button onClick={() => {
                         addElement('private-text', { text: note.text });
                         setIsNotebookOpen(false);
-                        notify("Техника добавлена на стол!");
+                        notify("╨в╨╡╤Е╨╜╨╕╨║╨░ ╨┤╨╛╨▒╨░╨▓╨╗╨╡╨╜╨░ ╨╜╨░ ╤Б╤В╨╛╨╗!");
                       }} className="py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all hover:opacity-90 flex items-center justify-center gap-2 mt-2 shadow-sm" style={{ backgroundColor: COLORS.plum }}>
-                        <Type size={14} /> Выложить на стол (Секретно)
+                        <Type size={14} /> ╨Т╤Л╨╗╨╛╨╢╨╕╤В╤М ╨╜╨░ ╤Б╤В╨╛╨╗ (╨б╨╡╨║╤А╨╡╤В╨╜╨╛)
                       </button>
                     </div>
                   ))}
                 </>
               ) : (
                 <div className="flex flex-col mb-4">
-                  <input autoFocus type="text" value={noteTitleInput} onChange={e => setNoteTitleInput(e.target.value)} placeholder="Название (напр: Работа с травмой)" className="w-full px-4 py-3 rounded-xl border-2 border-b-0 rounded-b-none outline-none font-bold text-sm shadow-inner" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
+                  <input autoFocus type="text" value={noteTitleInput} onChange={e => setNoteTitleInput(e.target.value)} placeholder="╨Э╨░╨╖╨▓╨░╨╜╨╕╨╡ (╨╜╨░╨┐╤А: ╨а╨░╨▒╨╛╤В╨░ ╤Б ╤В╤А╨░╨▓╨╝╨╛╨╣)" className="w-full px-4 py-3 rounded-xl border-2 border-b-0 rounded-b-none outline-none font-bold text-sm shadow-inner" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
                   
                   <div className="flex gap-2 items-center bg-gray-100 px-3 py-2 border-2 border-b-0 border-t-0 flex-wrap" style={{ borderColor: COLORS.haze }}>
-                    <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('bold', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Жирный"><Bold size={14} strokeWidth={3} /></button>
-                    <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('italic', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Курсив"><Italic size={14} /></button>
-                    <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('underline', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Подчеркнутый"><Underline size={14} /></button>
-                    <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('strikeThrough', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Зачеркнутый"><Strikethrough size={14} /></button>
+                    <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('bold', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="╨Ц╨╕╤А╨╜╤Л╨╣"><Bold size={14} strokeWidth={3} /></button>
+                    <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('italic', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="╨Ъ╤Г╤А╤Б╨╕╨▓"><Italic size={14} /></button>
+                    <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('underline', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="╨Я╨╛╨┤╤З╨╡╤А╨║╨╜╤Г╤В╤Л╨╣"><Underline size={14} /></button>
+                    <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('strikeThrough', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="╨Ч╨░╤З╨╡╤А╨║╨╜╤Г╤В╤Л╨╣"><Strikethrough size={14} /></button>
                     <div className="w-px h-4 bg-gray-300 mx-1"></div>
-                    <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('insertUnorderedList', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Список"><List size={14} /></button>
+                    <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('insertUnorderedList', false, null); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="╨б╨┐╨╕╤Б╨╛╨║"><List size={14} /></button>
                     <div className="w-px h-4 bg-gray-300 mx-1"></div>
-                    <label className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700 cursor-pointer flex items-center justify-center relative" title="Вставить картинку">
+                    <label className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700 cursor-pointer flex items-center justify-center relative" title="╨Т╤Б╤В╨░╨▓╨╕╤В╤М ╨║╨░╤А╤В╨╕╨╜╨║╤Г">
                       {isUploadingNoteImage ? <Loader2 size={14} className="animate-spin text-plum" /> : <ImageIcon size={14} />}
                       <input type="file" accept="image/*" className="hidden" onChange={handleNoteImageUpload} disabled={isUploadingNoteImage} />
                     </label>
@@ -3082,36 +3082,36 @@ export default function App() {
                     onPaste={handleNotebookPaste}
                     className="rich-text w-full px-4 py-3 rounded-b-xl border-2 outline-none text-sm custom-scrollbar min-h-[200px] shadow-inner leading-relaxed bg-white"
                     style={{ borderColor: COLORS.haze, color: COLORS.ink }}
-                    data-placeholder="Текст техники, алгоритм или вопросы... Выделите текст и используйте кнопки сверху 👆"
+                    data-placeholder="╨в╨╡╨║╤Б╤В ╤В╨╡╤Е╨╜╨╕╨║╨╕, ╨░╨╗╨│╨╛╤А╨╕╤В╨╝ ╨╕╨╗╨╕ ╨▓╨╛╨┐╤А╨╛╤Б╤Л... ╨Т╤Л╨┤╨╡╨╗╨╕╤В╨╡ ╤В╨╡╨║╤Б╤В ╨╕ ╨╕╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╣╤В╨╡ ╨║╨╜╨╛╨┐╨║╨╕ ╤Б╨▓╨╡╤А╤Е╤Г ЁЯСЖ"
                   />
                   
                   <div className="flex gap-3 mt-4">
-                    <button onClick={() => { setIsCreatingNote(false); setEditingNoteId(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors text-xs uppercase tracking-widest text-gray-600">Отмена</button>
+                    <button onClick={() => { setIsCreatingNote(false); setEditingNoteId(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors text-xs uppercase tracking-widest text-gray-600">╨Ю╤В╨╝╨╡╨╜╨░</button>
                     <button onClick={async () => {
                       const finalHtml = notebookEditorRef.current ? notebookEditorRef.current.innerHTML : '';
-                      if (!noteTitleInput.trim() || !finalHtml.trim()) return notify("Заполните все поля");
+                      if (!noteTitleInput.trim() || !finalHtml.trim()) return notify("╨Ч╨░╨┐╨╛╨╗╨╜╨╕╤В╨╡ ╨▓╤Б╨╡ ╨┐╨╛╨╗╤П");
                       try {
                         if (editingNoteId) {
                           await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_notes', editingNoteId), {
                             title: noteTitleInput.trim(),
                             text: finalHtml.trim()
                           });
-                          notify("Техника обновлена!");
+                          notify("╨в╨╡╤Е╨╜╨╕╨║╨░ ╨╛╨▒╨╜╨╛╨▓╨╗╨╡╨╜╨░!");
                         } else {
                           await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_notes'), {
                             title: noteTitleInput.trim(),
                             text: finalHtml.trim(),
                             createdAt: Date.now()
                           });
-                          notify("Техника сохранена!");
+                          notify("╨в╨╡╤Е╨╜╨╕╨║╨░ ╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜╨░!");
                         }
                         setIsCreatingNote(false);
                         setEditingNoteId(null);
                         setNoteTitleInput('');
                       } catch (e) {
-                        notify("Ошибка: " + e.message);
+                        notify("╨Ю╤И╨╕╨▒╨║╨░: " + e.message);
                       }
-                    }} className="flex-[2] py-3 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:scale-105" style={{ backgroundColor: COLORS.forest }}>Сохранить</button>
+                    }} className="flex-[2] py-3 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:scale-105" style={{ backgroundColor: COLORS.forest }}>╨б╨╛╤Е╤А╨░╨╜╨╕╤В╤М</button>
                   </div>
                 </div>
               )}
@@ -3127,8 +3127,8 @@ export default function App() {
               <input autoFocus defaultValue={customDialog.defaultValue || ''} placeholder={customDialog.placeholder || ''} id="dialog-input" className="w-full px-4 py-3 rounded-xl border-2 mb-6 outline-none font-bold text-center" style={{ borderColor: COLORS.haze }} onKeyDown={(e) => e.key === 'Enter' && (customDialog.onOk(e.target.value), setCustomDialog(null))} />
             )}
             <div className="flex gap-3">
-              <button onClick={() => { customDialog.onCancel(); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">Отмена</button>
-              <button onClick={() => { const val = customDialog.type === 'prompt' ? document.getElementById('dialog-input').value : true; customDialog.onOk(val); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl text-white transition-colors" style={{ backgroundColor: COLORS.plum }}>Ок</button>
+              <button onClick={() => { customDialog.onCancel(); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">╨Ю╤В╨╝╨╡╨╜╨░</button>
+              <button onClick={() => { const val = customDialog.type === 'prompt' ? document.getElementById('dialog-input').value : true; customDialog.onOk(val); setCustomDialog(null); }} className="flex-1 py-3 font-bold rounded-xl text-white transition-colors" style={{ backgroundColor: COLORS.plum }}>╨Ю╨║</button>
             </div>
           </div>
         </div>
@@ -3136,20 +3136,20 @@ export default function App() {
       {isSessionCheckOpen && (
         <div className="fixed inset-0 z-[320] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }} onClick={() => !isRunningSessionCheck && setIsSessionCheckOpen(false)}>
           <div className="bg-white rounded-[2rem] max-w-xl w-full shadow-2xl relative max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            <button onClick={() => setIsSessionCheckOpen(false)} disabled={isRunningSessionCheck} className="absolute top-3 right-3 z-20 w-12 h-12 rounded-2xl bg-white shadow-md border flex items-center justify-center hover:bg-black/5 transition-colors disabled:opacity-30" style={{ borderColor: `${COLORS.ink}12` }} title="Вернуться на стол">
+            <button onClick={() => setIsSessionCheckOpen(false)} disabled={isRunningSessionCheck} className="absolute top-3 right-3 z-20 w-12 h-12 rounded-2xl bg-white shadow-md border flex items-center justify-center hover:bg-black/5 transition-colors disabled:opacity-30" style={{ borderColor: `${COLORS.ink}12` }} title="╨Т╨╡╤А╨╜╤Г╤В╤М╤Б╤П ╨╜╨░ ╤Б╤В╨╛╨╗">
               <X size={26} style={{ color: COLORS.ink }} />
             </button>
             <div className="p-6 md:p-8 pb-4 overflow-y-auto custom-scrollbar">
               <h2 className="text-xl font-black uppercase mb-2 pr-12 flex items-center gap-3" style={{ color: COLORS.ink }}>
-                <AlertCircle size={22} className="text-plum" /> Проверка перед сессией
+                <AlertCircle size={22} className="text-plum" /> ╨Я╤А╨╛╨▓╨╡╤А╨║╨░ ╨┐╨╡╤А╨╡╨┤ ╤Б╨╡╤Б╤Б╨╕╨╡╨╣
               </h2>
               <p className="text-sm leading-relaxed mb-5" style={{ color: `${COLORS.ink}99` }}>
-                Быстрая проверка камеры, микрофона, синхронизации, скриншотов и резервной копии стола.
+                ╨С╤Л╤Б╤В╤А╨░╤П ╨┐╤А╨╛╨▓╨╡╤А╨║╨░ ╨║╨░╨╝╨╡╤А╤Л, ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜╨░, ╤Б╨╕╨╜╤Е╤А╨╛╨╜╨╕╨╖╨░╤Ж╨╕╨╕, ╤Б╨║╤А╨╕╨╜╤И╨╛╤В╨╛╨▓ ╨╕ ╤А╨╡╨╖╨╡╤А╨▓╨╜╨╛╨╣ ╨║╨╛╨┐╨╕╨╕ ╤Б╤В╨╛╨╗╨░.
               </p>
               <div className="flex flex-col gap-3">
                 {sessionCheckResults.length === 0 && (
                   <div className="p-4 rounded-2xl text-sm font-bold text-center" style={{ backgroundColor: `${COLORS.ink}08`, color: `${COLORS.ink}70` }}>
-                    Нажмите «Проверить ещё раз», чтобы запустить диагностику.
+                    ╨Э╨░╨╢╨╝╨╕╤В╨╡ ┬л╨Я╤А╨╛╨▓╨╡╤А╨╕╤В╤М ╨╡╤Й╤С ╤А╨░╨╖┬╗, ╤З╤В╨╛╨▒╤Л ╨╖╨░╨┐╤Г╤Б╤В╨╕╤В╤М ╨┤╨╕╨░╨│╨╜╨╛╤Б╤В╨╕╨║╤Г.
                   </div>
                 )}
                 {sessionCheckResults.map(item => {
@@ -3171,10 +3171,10 @@ export default function App() {
             </div>
             <div className="sticky bottom-0 bg-white p-4 md:p-6 border-t flex flex-col sm:flex-row gap-3 shadow-[0_-10px_30px_rgba(0,0,0,0.06)]" style={{ borderColor: `${COLORS.ink}10` }}>
               <button onClick={() => setIsSessionCheckOpen(false)} disabled={isRunningSessionCheck} className="flex-1 py-4 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors text-xs font-black uppercase tracking-widest disabled:opacity-30" style={{ color: `${COLORS.ink}AA` }}>
-                Вернуться на стол
+                ╨Т╨╡╤А╨╜╤Г╤В╤М╤Б╤П ╨╜╨░ ╤Б╤В╨╛╨╗
               </button>
               <button onClick={runSessionCheck} disabled={isRunningSessionCheck} className="flex-[2] py-4 rounded-xl text-white text-xs font-black uppercase tracking-widest shadow-md transition-all hover:scale-[1.02] disabled:opacity-60 flex items-center justify-center gap-2" style={{ backgroundColor: COLORS.forest }}>
-                {isRunningSessionCheck ? <><Loader2 size={16} className="animate-spin" /> Проверяю...</> : <><RefreshCw size={16} /> Проверить ещё раз</>}
+                {isRunningSessionCheck ? <><Loader2 size={16} className="animate-spin" /> ╨Я╤А╨╛╨▓╨╡╤А╤П╤О...</> : <><RefreshCw size={16} /> ╨Я╤А╨╛╨▓╨╡╤А╨╕╤В╤М ╨╡╤Й╤С ╤А╨░╨╖</>}
               </button>
             </div>
           </div>
@@ -3186,34 +3186,34 @@ export default function App() {
             <button onClick={() => setIsHelpOpen(false)} className="absolute top-5 right-5 p-2 rounded-full hover:bg-black/5 transition-colors">
               <X size={22} style={{ color: COLORS.ink }} />
             </button>
-            <h2 className="text-xl font-black uppercase mb-2 text-center" style={{ color: COLORS.ink }}>Инструкция для клиента</h2>
+            <h2 className="text-xl font-black uppercase mb-2 text-center" style={{ color: COLORS.ink }}>╨Ш╨╜╤Б╤В╤А╤Г╨║╤Ж╨╕╤П ╨┤╨╗╤П ╨║╨╗╨╕╨╡╨╜╤В╨░</h2>
             <p className="text-sm text-center mb-6 leading-relaxed" style={{ color: `${COLORS.ink}99` }}>
-              Коротко: вы работаете за общим столом с психологом. Всё, что вы двигаете на столе, психолог видит сразу.
+              ╨Ъ╨╛╤А╨╛╤В╨║╨╛: ╨▓╤Л ╤А╨░╨▒╨╛╤В╨░╨╡╤В╨╡ ╨╖╨░ ╨╛╨▒╤Й╨╕╨╝ ╤Б╤В╨╛╨╗╨╛╨╝ ╤Б ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│╨╛╨╝. ╨Т╤Б╤С, ╤З╤В╨╛ ╨▓╤Л ╨┤╨▓╨╕╨│╨░╨╡╤В╨╡ ╨╜╨░ ╤Б╤В╨╛╨╗╨╡, ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│ ╨▓╨╕╨┤╨╕╤В ╤Б╤А╨░╨╖╤Г.
             </p>
             <div className="space-y-3 text-sm leading-relaxed">
               <div className="flex gap-3 p-3 rounded-2xl border bg-gray-50" style={{ borderColor: `${COLORS.ink}10` }}>
                 <UserCircle size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.forest }} />
-                <div><b>Как войти:</b> откройте ссылку от психолога, введите имя и нажмите <b>«Войти в кабинет»</b>. Регистрация не нужна.</div>
+                <div><b>╨Ъ╨░╨║ ╨▓╨╛╨╣╤В╨╕:</b> ╨╛╤В╨║╤А╨╛╨╣╤В╨╡ ╤Б╤Б╤Л╨╗╨║╤Г ╨╛╤В ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│╨░, ╨▓╨▓╨╡╨┤╨╕╤В╨╡ ╨╕╨╝╤П ╨╕ ╨╜╨░╨╢╨╝╨╕╤В╨╡ <b>┬л╨Т╨╛╨╣╤В╨╕ ╨▓ ╨║╨░╨▒╨╕╨╜╨╡╤В┬╗</b>. ╨а╨╡╨│╨╕╤Б╤В╤А╨░╤Ж╨╕╤П ╨╜╨╡ ╨╜╤Г╨╢╨╜╨░.</div>
               </div>
               <div className="flex gap-3 p-3 rounded-2xl border bg-gray-50" style={{ borderColor: `${COLORS.ink}10` }}>
                 <Move size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.plum }} />
-                <div><b>Как двигать карту:</b> нажмите на карту или фигурку и перетащите её по столу. Если объект не двигается, он может быть закреплён психологом.</div>
+                <div><b>╨Ъ╨░╨║ ╨┤╨▓╨╕╨│╨░╤В╤М ╨║╨░╤А╤В╤Г:</b> ╨╜╨░╨╢╨╝╨╕╤В╨╡ ╨╜╨░ ╨║╨░╤А╤В╤Г ╨╕╨╗╨╕ ╤Д╨╕╨│╤Г╤А╨║╤Г ╨╕ ╨┐╨╡╤А╨╡╤В╨░╤Й╨╕╤В╨╡ ╨╡╤С ╨┐╨╛ ╤Б╤В╨╛╨╗╤Г. ╨Х╤Б╨╗╨╕ ╨╛╨▒╤К╨╡╨║╤В ╨╜╨╡ ╨┤╨▓╨╕╨│╨░╨╡╤В╤Б╤П, ╨╛╨╜ ╨╝╨╛╨╢╨╡╤В ╨▒╤Л╤В╤М ╨╖╨░╨║╤А╨╡╨┐╨╗╤С╨╜ ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│╨╛╨╝.</div>
               </div>
               <div className="flex gap-3 p-3 rounded-2xl border bg-gray-50" style={{ borderColor: `${COLORS.ink}10` }}>
                 <Maximize2 size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.plum }} />
-                <div><b>Как увеличить:</b> разведите два пальца по пустому месту стола, чтобы приблизить или отдалить весь расклад. Если сделать это прямо на карте, изменится размер этой карты.</div>
+                <div><b>╨Ъ╨░╨║ ╤Г╨▓╨╡╨╗╨╕╤З╨╕╤В╤М:</b> ╤А╨░╨╖╨▓╨╡╨┤╨╕╤В╨╡ ╨┤╨▓╨░ ╨┐╨░╨╗╤М╤Ж╨░ ╨┐╨╛ ╨┐╤Г╤Б╤В╨╛╨╝╤Г ╨╝╨╡╤Б╤В╤Г ╤Б╤В╨╛╨╗╨░, ╤З╤В╨╛╨▒╤Л ╨┐╤А╨╕╨▒╨╗╨╕╨╖╨╕╤В╤М ╨╕╨╗╨╕ ╨╛╤В╨┤╨░╨╗╨╕╤В╤М ╨▓╨╡╤Б╤М ╤А╨░╤Б╨║╨╗╨░╨┤. ╨Х╤Б╨╗╨╕ ╤Б╨┤╨╡╨╗╨░╤В╤М ╤Н╤В╨╛ ╨┐╤А╤П╨╝╨╛ ╨╜╨░ ╨║╨░╤А╤В╨╡, ╨╕╨╖╨╝╨╡╨╜╨╕╤В╤Б╤П ╤А╨░╨╖╨╝╨╡╤А ╤Н╤В╨╛╨╣ ╨║╨░╤А╤В╤Л.</div>
               </div>
               <div className="flex gap-3 p-3 rounded-2xl border bg-gray-50" style={{ borderColor: `${COLORS.ink}10` }}>
                 <Layers size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.forest }} />
-                <div><b>Где панель:</b> на телефоне верхняя панель открыта сразу. Её можно свернуть или открыть стрелкой справа сверху. Нижняя панель <b>«Выбор карты»</b> появляется, когда психолог открыл колоду.</div>
+                <div><b>╨У╨┤╨╡ ╨┐╨░╨╜╨╡╨╗╤М:</b> ╨╜╨░ ╤В╨╡╨╗╨╡╤Д╨╛╨╜╨╡ ╨▓╨╡╤А╤Е╨╜╤П╤П ╨┐╨░╨╜╨╡╨╗╤М ╨╛╤В╨║╤А╤Л╤В╨░ ╤Б╤А╨░╨╖╤Г. ╨Х╤С ╨╝╨╛╨╢╨╜╨╛ ╤Б╨▓╨╡╤А╨╜╤Г╤В╤М ╨╕╨╗╨╕ ╨╛╤В╨║╤А╤Л╤В╤М ╤Б╤В╤А╨╡╨╗╨║╨╛╨╣ ╤Б╨┐╤А╨░╨▓╨░ ╤Б╨▓╨╡╤А╤Е╤Г. ╨Э╨╕╨╢╨╜╤П╤П ╨┐╨░╨╜╨╡╨╗╤М <b>┬л╨Т╤Л╨▒╨╛╤А ╨║╨░╤А╤В╤Л┬╗</b> ╨┐╨╛╤П╨▓╨╗╤П╨╡╤В╤Б╤П, ╨║╨╛╨│╨┤╨░ ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│ ╨╛╤В╨║╤А╤Л╨╗ ╨║╨╛╨╗╨╛╨┤╤Г.</div>
               </div>
               <div className="flex gap-3 p-3 rounded-2xl border bg-gray-50" style={{ borderColor: `${COLORS.ink}10` }}>
                 <Video size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.forest }} />
-                <div><b>Как подключиться к связи:</b> если психолог включил звонок, в верхней панели появится зелёная кнопка <b>«Подключиться к видео»</b> или <b>«Подключиться к аудио»</b>.</div>
+                <div><b>╨Ъ╨░╨║ ╨┐╨╛╨┤╨║╨╗╤О╤З╨╕╤В╤М╤Б╤П ╨║ ╤Б╨▓╤П╨╖╨╕:</b> ╨╡╤Б╨╗╨╕ ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│ ╨▓╨║╨╗╤О╤З╨╕╨╗ ╨╖╨▓╨╛╨╜╨╛╨║, ╨▓ ╨▓╨╡╤А╤Е╨╜╨╡╨╣ ╨┐╨░╨╜╨╡╨╗╨╕ ╨┐╨╛╤П╨▓╨╕╤В╤Б╤П ╨╖╨╡╨╗╤С╨╜╨░╤П ╨║╨╜╨╛╨┐╨║╨░ <b>┬л╨Я╨╛╨┤╨║╨╗╤О╤З╨╕╤В╤М╤Б╤П ╨║ ╨▓╨╕╨┤╨╡╨╛┬╗</b> ╨╕╨╗╨╕ <b>┬л╨Я╨╛╨┤╨║╨╗╤О╤З╨╕╤В╤М╤Б╤П ╨║ ╨░╤Г╨┤╨╕╨╛┬╗</b>.</div>
               </div>
               <div className="flex gap-3 p-3 rounded-2xl border" style={{ backgroundColor: `${COLORS.terra}10`, borderColor: `${COLORS.terra}25` }}>
                 <AlertCircle size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.terra }} />
-                <div><b>Если связь пропала:</b> не закрывайте стол. Обновите страницу и войдите по той же ссылке. Если встроенный звонок не работает, созвонитесь с психологом через телефон, MAX, Telegram или Zoom, а карты продолжайте двигать здесь.</div>
+                <div><b>╨Х╤Б╨╗╨╕ ╤Б╨▓╤П╨╖╤М ╨┐╤А╨╛╨┐╨░╨╗╨░:</b> ╨╜╨╡ ╨╖╨░╨║╤А╤Л╨▓╨░╨╣╤В╨╡ ╤Б╤В╨╛╨╗. ╨Ю╨▒╨╜╨╛╨▓╨╕╤В╨╡ ╤Б╤В╤А╨░╨╜╨╕╤Ж╤Г ╨╕ ╨▓╨╛╨╣╨┤╨╕╤В╨╡ ╨┐╨╛ ╤В╨╛╨╣ ╨╢╨╡ ╤Б╤Б╤Л╨╗╨║╨╡. ╨Х╤Б╨╗╨╕ ╨▓╤Б╤В╤А╨╛╨╡╨╜╨╜╤Л╨╣ ╨╖╨▓╨╛╨╜╨╛╨║ ╨╜╨╡ ╤А╨░╨▒╨╛╤В╨░╨╡╤В, ╤Б╨╛╨╖╨▓╨╛╨╜╨╕╤В╨╡╤Б╤М ╤Б ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│╨╛╨╝ ╤З╨╡╤А╨╡╨╖ ╤В╨╡╨╗╨╡╤Д╨╛╨╜, MAX, Telegram ╨╕╨╗╨╕ Zoom, ╨░ ╨║╨░╤А╤В╤Л ╨┐╤А╨╛╨┤╨╛╨╗╨╢╨░╨╣╤В╨╡ ╨┤╨▓╨╕╨│╨░╤В╤М ╨╖╨┤╨╡╤Б╤М.</div>
               </div>
             </div>
           </div>
@@ -3225,148 +3225,148 @@ export default function App() {
             <button onClick={() => setIsHelpOpen(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
               <X size={24} style={{ color: COLORS.ink }} />
             </button>
-            <h2 className="text-2xl font-black uppercase mb-8 text-center" style={{ color: COLORS.ink }}>Полное руководство</h2>
+            <h2 className="text-2xl font-black uppercase mb-8 text-center" style={{ color: COLORS.ink }}>╨Я╨╛╨╗╨╜╨╛╨╡ ╤А╤Г╨║╨╛╨▓╨╛╨┤╤Б╤В╨▓╨╛</h2>
             
             <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl mb-8 shadow-sm">
-              <h4 className="font-black text-red-700 text-sm flex items-center gap-2 uppercase tracking-wide"><MonitorPlay size={18}/> Важный порядок действий (Работа с клиентом)</h4>
+              <h4 className="font-black text-red-700 text-sm flex items-center gap-2 uppercase tracking-wide"><MonitorPlay size={18}/> ╨Т╨░╨╢╨╜╤Л╨╣ ╨┐╨╛╤А╤П╨┤╨╛╨║ ╨┤╨╡╨╣╤Б╤В╨▓╨╕╨╣ (╨а╨░╨▒╨╛╤В╨░ ╤Б ╨║╨╗╨╕╨╡╨╜╤В╨╛╨╝)</h4>
               <p className="text-sm text-red-800 mt-2 leading-relaxed">
-                Для стабильной работы платформы (независимо от того, используете вы телефон или ПК) <b>строго соблюдайте этот порядок</b>:
+                ╨Ф╨╗╤П ╤Б╤В╨░╨▒╨╕╨╗╤М╨╜╨╛╨╣ ╤А╨░╨▒╨╛╤В╤Л ╨┐╨╗╨░╤В╤Д╨╛╤А╨╝╤Л (╨╜╨╡╨╖╨░╨▓╨╕╤Б╨╕╨╝╨╛ ╨╛╤В ╤В╨╛╨│╨╛, ╨╕╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╡╤В╨╡ ╨▓╤Л ╤В╨╡╨╗╨╡╤Д╨╛╨╜ ╨╕╨╗╨╕ ╨Я╨Ъ) <b>╤Б╤В╤А╨╛╨│╨╛ ╤Б╨╛╨▒╨╗╤О╨┤╨░╨╣╤В╨╡ ╤Н╤В╨╛╤В ╨┐╨╛╤А╤П╨┤╨╛╨║</b>:
               </p>
               <ol className="list-decimal list-inside text-sm text-red-800 mt-2 font-bold space-y-2">
-                <li><b>Сначала нажмите проверку</b> (значок с восклицательным знаком): платформа проверит связь, скриншоты и резервную копию.</li>
-                <li><b>Потом включите связь</b> (кнопка с камерой): выберите <b>Видео</b> или <b>Только микрофон</b>.</li>
-                <li>Если видео не запускается, переключитесь на <b>«Только микрофон»</b>. Если не работает и микрофон, используйте MAX, Telegram, Zoom или телефон, а стол оставьте открытым на платформе.</li>
-                <li><b>Только после этого копируйте и отправляйте ссылку клиенту.</b></li>
-                <li>На телефоне верхняя панель открывается сразу. Если она мешает, её можно свернуть стрелкой <ChevronUp size={14} className="inline text-red-700"/> справа вверху.</li>
-                <li>Если клиент заходит <b>с телефона</b>, он увидит зеленую кнопку <b>«Подключиться к видео»</b> или <b>«Подключиться к аудио»</b> в этой верхней панели.</li>
+                <li><b>╨б╨╜╨░╤З╨░╨╗╨░ ╨╜╨░╨╢╨╝╨╕╤В╨╡ ╨┐╤А╨╛╨▓╨╡╤А╨║╤Г</b> (╨╖╨╜╨░╤З╨╛╨║ ╤Б ╨▓╨╛╤Б╨║╨╗╨╕╤Ж╨░╤В╨╡╨╗╤М╨╜╤Л╨╝ ╨╖╨╜╨░╨║╨╛╨╝): ╨┐╨╗╨░╤В╤Д╨╛╤А╨╝╨░ ╨┐╤А╨╛╨▓╨╡╤А╨╕╤В ╤Б╨▓╤П╨╖╤М, ╤Б╨║╤А╨╕╨╜╤И╨╛╤В╤Л ╨╕ ╤А╨╡╨╖╨╡╤А╨▓╨╜╤Г╤О ╨║╨╛╨┐╨╕╤О.</li>
+                <li><b>╨Я╨╛╤В╨╛╨╝ ╨▓╨║╨╗╤О╤З╨╕╤В╨╡ ╤Б╨▓╤П╨╖╤М</b> (╨║╨╜╨╛╨┐╨║╨░ ╤Б ╨║╨░╨╝╨╡╤А╨╛╨╣): ╨▓╤Л╨▒╨╡╤А╨╕╤В╨╡ <b>╨Т╨╕╨┤╨╡╨╛</b> ╨╕╨╗╨╕ <b>╨в╨╛╨╗╤М╨║╨╛ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜</b>.</li>
+                <li>╨Х╤Б╨╗╨╕ ╨▓╨╕╨┤╨╡╨╛ ╨╜╨╡ ╨╖╨░╨┐╤Г╤Б╨║╨░╨╡╤В╤Б╤П, ╨┐╨╡╤А╨╡╨║╨╗╤О╤З╨╕╤В╨╡╤Б╤М ╨╜╨░ <b>┬л╨в╨╛╨╗╤М╨║╨╛ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜┬╗</b>. ╨Х╤Б╨╗╨╕ ╨╜╨╡ ╤А╨░╨▒╨╛╤В╨░╨╡╤В ╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜, ╨╕╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╣╤В╨╡ MAX, Telegram, Zoom ╨╕╨╗╨╕ ╤В╨╡╨╗╨╡╤Д╨╛╨╜, ╨░ ╤Б╤В╨╛╨╗ ╨╛╤Б╤В╨░╨▓╤М╤В╨╡ ╨╛╤В╨║╤А╤Л╤В╤Л╨╝ ╨╜╨░ ╨┐╨╗╨░╤В╤Д╨╛╤А╨╝╨╡.</li>
+                <li><b>╨в╨╛╨╗╤М╨║╨╛ ╨┐╨╛╤Б╨╗╨╡ ╤Н╤В╨╛╨│╨╛ ╨║╨╛╨┐╨╕╤А╤Г╨╣╤В╨╡ ╨╕ ╨╛╤В╨┐╤А╨░╨▓╨╗╤П╨╣╤В╨╡ ╤Б╤Б╤Л╨╗╨║╤Г ╨║╨╗╨╕╨╡╨╜╤В╤Г.</b></li>
+                <li>╨Э╨░ ╤В╨╡╨╗╨╡╤Д╨╛╨╜╨╡ ╨▓╨╡╤А╤Е╨╜╤П╤П ╨┐╨░╨╜╨╡╨╗╤М ╨╛╤В╨║╤А╤Л╨▓╨░╨╡╤В╤Б╤П ╤Б╤А╨░╨╖╤Г. ╨Х╤Б╨╗╨╕ ╨╛╨╜╨░ ╨╝╨╡╤И╨░╨╡╤В, ╨╡╤С ╨╝╨╛╨╢╨╜╨╛ ╤Б╨▓╨╡╤А╨╜╤Г╤В╤М ╤Б╤В╤А╨╡╨╗╨║╨╛╨╣ <ChevronUp size={14} className="inline text-red-700"/> ╤Б╨┐╤А╨░╨▓╨░ ╨▓╨▓╨╡╤А╤Е╤Г.</li>
+                <li>╨Х╤Б╨╗╨╕ ╨║╨╗╨╕╨╡╨╜╤В ╨╖╨░╤Е╨╛╨┤╨╕╤В <b>╤Б ╤В╨╡╨╗╨╡╤Д╨╛╨╜╨░</b>, ╨╛╨╜ ╤Г╨▓╨╕╨┤╨╕╤В ╨╖╨╡╨╗╨╡╨╜╤Г╤О ╨║╨╜╨╛╨┐╨║╤Г <b>┬л╨Я╨╛╨┤╨║╨╗╤О╤З╨╕╤В╤М╤Б╤П ╨║ ╨▓╨╕╨┤╨╡╨╛┬╗</b> ╨╕╨╗╨╕ <b>┬л╨Я╨╛╨┤╨║╨╗╤О╤З╨╕╤В╤М╤Б╤П ╨║ ╨░╤Г╨┤╨╕╨╛┬╗</b> ╨▓ ╤Н╤В╨╛╨╣ ╨▓╨╡╤А╤Е╨╜╨╡╨╣ ╨┐╨░╨╜╨╡╨╗╨╕.</li>
               </ol>
               <div className="mt-3 p-2 bg-white/50 rounded-lg text-xs font-bold flex gap-2">
                  <AlertCircle size={16} className="shrink-0 text-red-600" />
-                 <span>Хотя платформа поддерживает смартфоны, мы настоятельно рекомендуем использовать ПК или планшет для комфортной работы психолога.</span>
+                 <span>╨е╨╛╤В╤П ╨┐╨╗╨░╤В╤Д╨╛╤А╨╝╨░ ╨┐╨╛╨┤╨┤╨╡╤А╨╢╨╕╨▓╨░╨╡╤В ╤Б╨╝╨░╤А╤В╤Д╨╛╨╜╤Л, ╨╝╤Л ╨╜╨░╤Б╤В╨╛╤П╤В╨╡╨╗╤М╨╜╨╛ ╤А╨╡╨║╨╛╨╝╨╡╨╜╨┤╤Г╨╡╨╝ ╨╕╤Б╨┐╨╛╨╗╤М╨╖╨╛╨▓╨░╤В╤М ╨Я╨Ъ ╨╕╨╗╨╕ ╨┐╨╗╨░╨╜╤И╨╡╤В ╨┤╨╗╤П ╨║╨╛╨╝╤Д╨╛╤А╤В╨╜╨╛╨╣ ╤А╨░╨▒╨╛╤В╤Л ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│╨░.</span>
               </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               
               <div className="space-y-4">
-                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> Клиент и Доступ</h3>
+                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> ╨Ъ╨╗╨╕╨╡╨╜╤В ╨╕ ╨Ф╨╛╤Б╤В╤Г╨┐</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
-                  <p><b>Психолог</b> входит через логин и пароль. <b>Клиент</b> заходит только по вашей ссылке и вводит своё имя.</p>
-                  <p>Нажмите <UserPlus size={14} className="inline text-plum"/> <b>«ССЫЛКА»</b> на верхней панели. Это постоянная ссылка на текущую комнату: её можно отправить клиенту и открыть психологу.</p>
-                  <p>Клиент переходит по ссылке, вводит своё имя и попадает за ваш стол. <b>Регистрация не нужна.</b> Если психолог открыл эту же ссылку, он нажимает <b>«Я психолог»</b> и входит логином.</p>
-                  <p><b>Права клиента:</b> тянуть карты (если колода открыта), двигать их, писать в желтых заметках, бросать игровые кубики.</p>
-                  <p className="text-terra"><b>Клиент НЕ может:</b> видеть фиолетовые заметки, открывать библиотеку и менять колоды, удалять всё со стола, видеть лазерную указку (если она выключена у мастера).</p>
+                  <p><b>╨Я╤Б╨╕╤Е╨╛╨╗╨╛╨│</b> ╨▓╤Е╨╛╨┤╨╕╤В ╤З╨╡╤А╨╡╨╖ ╨╗╨╛╨│╨╕╨╜ ╨╕ ╨┐╨░╤А╨╛╨╗╤М. <b>╨Ъ╨╗╨╕╨╡╨╜╤В</b> ╨╖╨░╤Е╨╛╨┤╨╕╤В ╤В╨╛╨╗╤М╨║╨╛ ╨┐╨╛ ╨▓╨░╤И╨╡╨╣ ╤Б╤Б╤Л╨╗╨║╨╡ ╨╕ ╨▓╨▓╨╛╨┤╨╕╤В ╤Б╨▓╨╛╤С ╨╕╨╝╤П.</p>
+                  <p>╨Э╨░╨╢╨╝╨╕╤В╨╡ <UserPlus size={14} className="inline text-plum"/> <b>┬л╨б╨б╨л╨Ы╨Ъ╨Р┬╗</b> ╨╜╨░ ╨▓╨╡╤А╤Е╨╜╨╡╨╣ ╨┐╨░╨╜╨╡╨╗╨╕. ╨н╤В╨╛ ╨┐╨╛╤Б╤В╨╛╤П╨╜╨╜╨░╤П ╤Б╤Б╤Л╨╗╨║╨░ ╨╜╨░ ╤В╨╡╨║╤Г╤Й╤Г╤О ╨║╨╛╨╝╨╜╨░╤В╤Г: ╨╡╤С ╨╝╨╛╨╢╨╜╨╛ ╨╛╤В╨┐╤А╨░╨▓╨╕╤В╤М ╨║╨╗╨╕╨╡╨╜╤В╤Г ╨╕ ╨╛╤В╨║╤А╤Л╤В╤М ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│╤Г.</p>
+                  <p>╨Ъ╨╗╨╕╨╡╨╜╤В ╨┐╨╡╤А╨╡╤Е╨╛╨┤╨╕╤В ╨┐╨╛ ╤Б╤Б╤Л╨╗╨║╨╡, ╨▓╨▓╨╛╨┤╨╕╤В ╤Б╨▓╨╛╤С ╨╕╨╝╤П ╨╕ ╨┐╨╛╨┐╨░╨┤╨░╨╡╤В ╨╖╨░ ╨▓╨░╤И ╤Б╤В╨╛╨╗. <b>╨а╨╡╨│╨╕╤Б╤В╤А╨░╤Ж╨╕╤П ╨╜╨╡ ╨╜╤Г╨╢╨╜╨░.</b> ╨Х╤Б╨╗╨╕ ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│ ╨╛╤В╨║╤А╤Л╨╗ ╤Н╤В╤Г ╨╢╨╡ ╤Б╤Б╤Л╨╗╨║╤Г, ╨╛╨╜ ╨╜╨░╨╢╨╕╨╝╨░╨╡╤В <b>┬л╨п ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│┬╗</b> ╨╕ ╨▓╤Е╨╛╨┤╨╕╤В ╨╗╨╛╨│╨╕╨╜╨╛╨╝.</p>
+                  <p><b>╨Я╤А╨░╨▓╨░ ╨║╨╗╨╕╨╡╨╜╤В╨░:</b> ╤В╤П╨╜╤Г╤В╤М ╨║╨░╤А╤В╤Л (╨╡╤Б╨╗╨╕ ╨║╨╛╨╗╨╛╨┤╨░ ╨╛╤В╨║╤А╤Л╤В╨░), ╨┤╨▓╨╕╨│╨░╤В╤М ╨╕╤Е, ╨┐╨╕╤Б╨░╤В╤М ╨▓ ╨╢╨╡╨╗╤В╤Л╤Е ╨╖╨░╨╝╨╡╤В╨║╨░╤Е, ╨▒╤А╨╛╤Б╨░╤В╤М ╨╕╨│╤А╨╛╨▓╤Л╨╡ ╨║╤Г╨▒╨╕╨║╨╕.</p>
+                  <p className="text-terra"><b>╨Ъ╨╗╨╕╨╡╨╜╤В ╨Э╨Х ╨╝╨╛╨╢╨╡╤В:</b> ╨▓╨╕╨┤╨╡╤В╤М ╤Д╨╕╨╛╨╗╨╡╤В╨╛╨▓╤Л╨╡ ╨╖╨░╨╝╨╡╤В╨║╨╕, ╨╛╤В╨║╤А╤Л╨▓╨░╤В╤М ╨▒╨╕╨▒╨╗╨╕╨╛╤В╨╡╨║╤Г ╨╕ ╨╝╨╡╨╜╤П╤В╤М ╨║╨╛╨╗╨╛╨┤╤Л, ╤Г╨┤╨░╨╗╤П╤В╤М ╨▓╤Б╤С ╤Б╨╛ ╤Б╤В╨╛╨╗╨░, ╨▓╨╕╨┤╨╡╤В╤М ╨╗╨░╨╖╨╡╤А╨╜╤Г╤О ╤Г╨║╨░╨╖╨║╤Г (╨╡╤Б╨╗╨╕ ╨╛╨╜╨░ ╨▓╤Л╨║╨╗╤О╤З╨╡╨╜╨░ ╤Г ╨╝╨░╤Б╤В╨╡╤А╨░).</p>
                 </div>
               </div>
               <div className="space-y-4">
-                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> Групповые и Трансформационные игры</h3>
+                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> ╨У╤А╤Г╨┐╨┐╨╛╨▓╤Л╨╡ ╨╕ ╨в╤А╨░╨╜╤Б╤Д╨╛╤А╨╝╨░╤Ж╨╕╨╛╨╜╨╜╤Л╨╡ ╨╕╨│╤А╤Л</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
-                  <p>Для групповых игр в платформу встроена система <b>приватности карт</b>:</p>
+                  <p>╨Ф╨╗╤П ╨│╤А╤Г╨┐╨┐╨╛╨▓╤Л╤Е ╨╕╨│╤А ╨▓ ╨┐╨╗╨░╤В╤Д╨╛╤А╨╝╤Г ╨▓╤Б╤В╤А╨╛╨╡╨╜╨░ ╤Б╨╕╤Б╤В╨╡╨╝╨░ <b>╨┐╤А╨╕╨▓╨░╤В╨╜╨╛╤Б╤В╨╕ ╨║╨░╤А╤В</b>:</p>
                   <ul className="space-y-1 list-disc list-inside">
-                    <li>Когда участник (клиент) нажимает <b><Eye size={14} className="inline text-forest" /> Подсмотреть</b> на ничьей закрытой карте, она <b>закрепляется за ним</b>.</li>
-                    <li>Под картой появляется его имя (например, <UserCircle size={12} className="inline" /> Анна).</li>
-                    <li><b>Важно:</b> Никто другой из участников больше не сможет ни подсмотреть, ни перевернуть эту карту.</li>
-                    <li>Вы (Психолог) имеете полный контроль: вы в любой момент можете подсмотреть или перевернуть любую карту любого участника, а также отвязать владельца.</li>
+                    <li>╨Ъ╨╛╨│╨┤╨░ ╤Г╤З╨░╤Б╤В╨╜╨╕╨║ (╨║╨╗╨╕╨╡╨╜╤В) ╨╜╨░╨╢╨╕╨╝╨░╨╡╤В <b><Eye size={14} className="inline text-forest" /> ╨Я╨╛╨┤╤Б╨╝╨╛╤В╤А╨╡╤В╤М</b> ╨╜╨░ ╨╜╨╕╤З╤М╨╡╨╣ ╨╖╨░╨║╤А╤Л╤В╨╛╨╣ ╨║╨░╤А╤В╨╡, ╨╛╨╜╨░ <b>╨╖╨░╨║╤А╨╡╨┐╨╗╤П╨╡╤В╤Б╤П ╨╖╨░ ╨╜╨╕╨╝</b>.</li>
+                    <li>╨Я╨╛╨┤ ╨║╨░╤А╤В╨╛╨╣ ╨┐╨╛╤П╨▓╨╗╤П╨╡╤В╤Б╤П ╨╡╨│╨╛ ╨╕╨╝╤П (╨╜╨░╨┐╤А╨╕╨╝╨╡╤А, <UserCircle size={12} className="inline" /> ╨Р╨╜╨╜╨░).</li>
+                    <li><b>╨Т╨░╨╢╨╜╨╛:</b> ╨Э╨╕╨║╤В╨╛ ╨┤╤А╤Г╨│╨╛╨╣ ╨╕╨╖ ╤Г╤З╨░╤Б╤В╨╜╨╕╨║╨╛╨▓ ╨▒╨╛╨╗╤М╤И╨╡ ╨╜╨╡ ╤Б╨╝╨╛╨╢╨╡╤В ╨╜╨╕ ╨┐╨╛╨┤╤Б╨╝╨╛╤В╤А╨╡╤В╤М, ╨╜╨╕ ╨┐╨╡╤А╨╡╨▓╨╡╤А╨╜╤Г╤В╤М ╤Н╤В╤Г ╨║╨░╤А╤В╤Г.</li>
+                    <li>╨Т╤Л (╨Я╤Б╨╕╤Е╨╛╨╗╨╛╨│) ╨╕╨╝╨╡╨╡╤В╨╡ ╨┐╨╛╨╗╨╜╤Л╨╣ ╨║╨╛╨╜╤В╤А╨╛╨╗╤М: ╨▓╤Л ╨▓ ╨╗╤О╨▒╨╛╨╣ ╨╝╨╛╨╝╨╡╨╜╤В ╨╝╨╛╨╢╨╡╤В╨╡ ╨┐╨╛╨┤╤Б╨╝╨╛╤В╤А╨╡╤В╤М ╨╕╨╗╨╕ ╨┐╨╡╤А╨╡╨▓╨╡╤А╨╜╤Г╤В╤М ╨╗╤О╨▒╤Г╤О ╨║╨░╤А╤В╤Г ╨╗╤О╨▒╨╛╨│╨╛ ╤Г╤З╨░╤Б╤В╨╜╨╕╨║╨░, ╨░ ╤В╨░╨║╨╢╨╡ ╨╛╤В╨▓╤П╨╖╨░╤В╤М ╨▓╨╗╨░╨┤╨╡╨╗╤М╤Ж╨░.</li>
                   </ul>
                 </div>
               </div>
               <div className="space-y-4">
-                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><LayoutGrid size={16}/> Панель инструментов</h3>
+                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><LayoutGrid size={16}/> ╨Я╨░╨╜╨╡╨╗╤М ╨╕╨╜╤Б╤В╤А╤Г╨╝╨╡╨╜╤В╨╛╨▓</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
-                  <div className="flex items-start gap-2"><AlertCircle size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Проверка перед сессией:</b> Проверяет комнату, синхронизацию, камеру/микрофон, скриншоты и локальную копию стола. Если что-то не работает, показывает понятную причину.</div></div>
-                  <div className="flex items-start gap-2"><Crosshair size={16} className="text-red-500 mt-0.5 shrink-0"/> <div><b>Лазерная указка:</b> Обычная мышка скрыта от клиента. Указка включает красную точку, которую видят все (удобно показывать детали).</div></div>
-                  <div className="flex items-start gap-2"><Camera size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Скриншот:</b> Делает качественный снимок всего рабочего стола и скачивает на ваше устройство.</div></div>
-                  <div className="flex items-start gap-2"><Save size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Сохранить сессию:</b> Сохраняет весь расклад в историю (вкладка СЕССИИ), чтобы загрузить его на следующих встречах. Локальная копия стола обновляется автоматически.</div></div>
-                  <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Настройки Поля:</b> Изменение фона стола (нейро-текстуры) или загрузка своего игрового поля (картинки, на которую можно класть карты).</div></div>
-                  <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Очистить стол:</b> Удаляет все незакрепленные объекты. Внизу появится кнопка отмены (действует 10 секунд).</div></div>
-                  <div className="flex items-start gap-2"><Timer size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Таймер:</b> Устанавливает общее время (60/90 мин). Синхронизирован с клиентом.</div></div>
-                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Связь:</b> Встроенная прямо в кабинет. В окне можно выбрать <b>Видео</b> или <b>Только микрофон</b>, обновить список устройств, выбрать внешнюю камеру и микрофон. На телефоне окно связи можно двигать одним пальцем и менять размер двумя пальцами. Если встроенная связь не запускается, продолжайте работу на столе, а голос/видео включите во внешнем приложении.</div></div>
-                  <div className="flex items-start gap-2"><Volume2 size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Звуки:</b> Кнопка громкости включает или отключает звуки действий и кубиков.</div></div>
+                  <div className="flex items-start gap-2"><AlertCircle size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>╨Я╤А╨╛╨▓╨╡╤А╨║╨░ ╨┐╨╡╤А╨╡╨┤ ╤Б╨╡╤Б╤Б╨╕╨╡╨╣:</b> ╨Я╤А╨╛╨▓╨╡╤А╤П╨╡╤В ╨║╨╛╨╝╨╜╨░╤В╤Г, ╤Б╨╕╨╜╤Е╤А╨╛╨╜╨╕╨╖╨░╤Ж╨╕╤О, ╨║╨░╨╝╨╡╤А╤Г/╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜, ╤Б╨║╤А╨╕╨╜╤И╨╛╤В╤Л ╨╕ ╨╗╨╛╨║╨░╨╗╤М╨╜╤Г╤О ╨║╨╛╨┐╨╕╤О ╤Б╤В╨╛╨╗╨░. ╨Х╤Б╨╗╨╕ ╤З╤В╨╛-╤В╨╛ ╨╜╨╡ ╤А╨░╨▒╨╛╤В╨░╨╡╤В, ╨┐╨╛╨║╨░╨╖╤Л╨▓╨░╨╡╤В ╨┐╨╛╨╜╤П╤В╨╜╤Г╤О ╨┐╤А╨╕╤З╨╕╨╜╤Г.</div></div>
+                  <div className="flex items-start gap-2"><Crosshair size={16} className="text-red-500 mt-0.5 shrink-0"/> <div><b>╨Ы╨░╨╖╨╡╤А╨╜╨░╤П ╤Г╨║╨░╨╖╨║╨░:</b> ╨Ю╨▒╤Л╤З╨╜╨░╤П ╨╝╤Л╤И╨║╨░ ╤Б╨║╤А╤Л╤В╨░ ╨╛╤В ╨║╨╗╨╕╨╡╨╜╤В╨░. ╨г╨║╨░╨╖╨║╨░ ╨▓╨║╨╗╤О╤З╨░╨╡╤В ╨║╤А╨░╤Б╨╜╤Г╤О ╤В╨╛╤З╨║╤Г, ╨║╨╛╤В╨╛╤А╤Г╤О ╨▓╨╕╨┤╤П╤В ╨▓╤Б╨╡ (╤Г╨┤╨╛╨▒╨╜╨╛ ╨┐╨╛╨║╨░╨╖╤Л╨▓╨░╤В╤М ╨┤╨╡╤В╨░╨╗╨╕).</div></div>
+                  <div className="flex items-start gap-2"><Camera size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>╨б╨║╤А╨╕╨╜╤И╨╛╤В:</b> ╨Ф╨╡╨╗╨░╨╡╤В ╨║╨░╤З╨╡╤Б╤В╨▓╨╡╨╜╨╜╤Л╨╣ ╤Б╨╜╨╕╨╝╨╛╨║ ╨▓╤Б╨╡╨│╨╛ ╤А╨░╨▒╨╛╤З╨╡╨│╨╛ ╤Б╤В╨╛╨╗╨░ ╨╕ ╤Б╨║╨░╤З╨╕╨▓╨░╨╡╤В ╨╜╨░ ╨▓╨░╤И╨╡ ╤Г╤Б╤В╤А╨╛╨╣╤Б╤В╨▓╨╛.</div></div>
+                  <div className="flex items-start gap-2"><Save size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>╨б╨╛╤Е╤А╨░╨╜╨╕╤В╤М ╤Б╨╡╤Б╤Б╨╕╤О:</b> ╨б╨╛╤Е╤А╨░╨╜╤П╨╡╤В ╨▓╨╡╤Б╤М ╤А╨░╤Б╨║╨╗╨░╨┤ ╨▓ ╨╕╤Б╤В╨╛╤А╨╕╤О (╨▓╨║╨╗╨░╨┤╨║╨░ ╨б╨Х╨б╨б╨Ш╨Ш), ╤З╤В╨╛╨▒╤Л ╨╖╨░╨│╤А╤Г╨╖╨╕╤В╤М ╨╡╨│╨╛ ╨╜╨░ ╤Б╨╗╨╡╨┤╤Г╤О╤Й╨╕╤Е ╨▓╤Б╤В╤А╨╡╤З╨░╤Е. ╨Ы╨╛╨║╨░╨╗╤М╨╜╨░╤П ╨║╨╛╨┐╨╕╤П ╤Б╤В╨╛╨╗╨░ ╨╛╨▒╨╜╨╛╨▓╨╗╤П╨╡╤В╤Б╤П ╨░╨▓╤В╨╛╨╝╨░╤В╨╕╤З╨╡╤Б╨║╨╕.</div></div>
+                  <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>╨Э╨░╤Б╤В╤А╨╛╨╣╨║╨╕ ╨Я╨╛╨╗╤П:</b> ╨Ш╨╖╨╝╨╡╨╜╨╡╨╜╨╕╨╡ ╤Д╨╛╨╜╨░ ╤Б╤В╨╛╨╗╨░ (╨╜╨╡╨╣╤А╨╛-╤В╨╡╨║╤Б╤В╤Г╤А╤Л) ╨╕╨╗╨╕ ╨╖╨░╨│╤А╤Г╨╖╨║╨░ ╤Б╨▓╨╛╨╡╨│╨╛ ╨╕╨│╤А╨╛╨▓╨╛╨│╨╛ ╨┐╨╛╨╗╤П (╨║╨░╤А╤В╨╕╨╜╨║╨╕, ╨╜╨░ ╨║╨╛╤В╨╛╤А╤Г╤О ╨╝╨╛╨╢╨╜╨╛ ╨║╨╗╨░╤Б╤В╤М ╨║╨░╤А╤В╤Л).</div></div>
+                  <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>╨Ю╤З╨╕╤Б╤В╨╕╤В╤М ╤Б╤В╨╛╨╗:</b> ╨г╨┤╨░╨╗╤П╨╡╤В ╨▓╤Б╨╡ ╨╜╨╡╨╖╨░╨║╤А╨╡╨┐╨╗╨╡╨╜╨╜╤Л╨╡ ╨╛╨▒╤К╨╡╨║╤В╤Л. ╨Т╨╜╨╕╨╖╤Г ╨┐╨╛╤П╨▓╨╕╤В╤Б╤П ╨║╨╜╨╛╨┐╨║╨░ ╨╛╤В╨╝╨╡╨╜╤Л (╨┤╨╡╨╣╤Б╤В╨▓╤Г╨╡╤В 10 ╤Б╨╡╨║╤Г╨╜╨┤).</div></div>
+                  <div className="flex items-start gap-2"><Timer size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>╨в╨░╨╣╨╝╨╡╤А:</b> ╨г╤Б╤В╨░╨╜╨░╨▓╨╗╨╕╨▓╨░╨╡╤В ╨╛╨▒╤Й╨╡╨╡ ╨▓╤А╨╡╨╝╤П (60/90 ╨╝╨╕╨╜). ╨б╨╕╨╜╤Е╤А╨╛╨╜╨╕╨╖╨╕╤А╨╛╨▓╨░╨╜ ╤Б ╨║╨╗╨╕╨╡╨╜╤В╨╛╨╝.</div></div>
+                  <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>╨б╨▓╤П╨╖╤М:</b> ╨Т╤Б╤В╤А╨╛╨╡╨╜╨╜╨░╤П ╨┐╤А╤П╨╝╨╛ ╨▓ ╨║╨░╨▒╨╕╨╜╨╡╤В. ╨Т ╨╛╨║╨╜╨╡ ╨╝╨╛╨╢╨╜╨╛ ╨▓╤Л╨▒╤А╨░╤В╤М <b>╨Т╨╕╨┤╨╡╨╛</b> ╨╕╨╗╨╕ <b>╨в╨╛╨╗╤М╨║╨╛ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜</b>, ╨╛╨▒╨╜╨╛╨▓╨╕╤В╤М ╤Б╨┐╨╕╤Б╨╛╨║ ╤Г╤Б╤В╤А╨╛╨╣╤Б╤В╨▓, ╨▓╤Л╨▒╤А╨░╤В╤М ╨▓╨╜╨╡╤И╨╜╤О╤О ╨║╨░╨╝╨╡╤А╤Г ╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜. ╨Э╨░ ╤В╨╡╨╗╨╡╤Д╨╛╨╜╨╡ ╨╛╨║╨╜╨╛ ╤Б╨▓╤П╨╖╨╕ ╨╝╨╛╨╢╨╜╨╛ ╨┤╨▓╨╕╨│╨░╤В╤М ╨╛╨┤╨╜╨╕╨╝ ╨┐╨░╨╗╤М╤Ж╨╡╨╝ ╨╕ ╨╝╨╡╨╜╤П╤В╤М ╤А╨░╨╖╨╝╨╡╤А ╨┤╨▓╤Г╨╝╤П ╨┐╨░╨╗╤М╤Ж╨░╨╝╨╕. ╨Х╤Б╨╗╨╕ ╨▓╤Б╤В╤А╨╛╨╡╨╜╨╜╨░╤П ╤Б╨▓╤П╨╖╤М ╨╜╨╡ ╨╖╨░╨┐╤Г╤Б╨║╨░╨╡╤В╤Б╤П, ╨┐╤А╨╛╨┤╨╛╨╗╨╢╨░╨╣╤В╨╡ ╤А╨░╨▒╨╛╤В╤Г ╨╜╨░ ╤Б╤В╨╛╨╗╨╡, ╨░ ╨│╨╛╨╗╨╛╤Б/╨▓╨╕╨┤╨╡╨╛ ╨▓╨║╨╗╤О╤З╨╕╤В╨╡ ╨▓╨╛ ╨▓╨╜╨╡╤И╨╜╨╡╨╝ ╨┐╤А╨╕╨╗╨╛╨╢╨╡╨╜╨╕╨╕.</div></div>
+                  <div className="flex items-start gap-2"><Volume2 size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>╨Ч╨▓╤Г╨║╨╕:</b> ╨Ъ╨╜╨╛╨┐╨║╨░ ╨│╤А╨╛╨╝╨║╨╛╤Б╤В╨╕ ╨▓╨║╨╗╤О╤З╨░╨╡╤В ╨╕╨╗╨╕ ╨╛╤В╨║╨╗╤О╤З╨░╨╡╤В ╨╖╨▓╤Г╨║╨╕ ╨┤╨╡╨╣╤Б╤В╨▓╨╕╨╣ ╨╕ ╨║╤Г╨▒╨╕╨║╨╛╨▓.</div></div>
                 </div>
               </div>
               <div className="space-y-4">
-                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Type size={16}/> Работа с заметками</h3>
+                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Type size={16}/> ╨а╨░╨▒╨╛╤В╨░ ╤Б ╨╖╨░╨╝╨╡╤В╨║╨░╨╝╨╕</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
                   <div className="flex items-start gap-3 bg-yellow-50 p-3 rounded-xl border border-yellow-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-terra shrink-0"><Type size={16} /></div>
-                    <div><b>Желтая (Общая):</b> Видят оба. И вы, и клиент можете печатать в ней текст одновременно.</div>
+                    <div><b>╨Ц╨╡╨╗╤В╨░╤П (╨Ю╨▒╤Й╨░╤П):</b> ╨Т╨╕╨┤╤П╤В ╨╛╨▒╨░. ╨Ш ╨▓╤Л, ╨╕ ╨║╨╗╨╕╨╡╨╜╤В ╨╝╨╛╨╢╨╡╤В╨╡ ╨┐╨╡╤З╨░╤В╨░╤В╤М ╨▓ ╨╜╨╡╨╣ ╤В╨╡╨║╤Б╤В ╨╛╨┤╨╜╨╛╨▓╤А╨╡╨╝╨╡╨╜╨╜╨╛.</div>
                   </div>
                   <div className="flex items-start gap-3 bg-purple-50 p-3 rounded-xl border border-purple-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-purple-600 relative shrink-0"><Type size={16} /><EyeOff size={8} className="absolute bottom-1 right-1" /></div>
-                    <div><b className="text-purple-900">Фиолетовая (Секретная):</b> <b>Видите только вы</b>. Она хранится отдельно в личной области психолога и не попадает в общий стол клиента.</div>
+                    <div><b className="text-purple-900">╨д╨╕╨╛╨╗╨╡╤В╨╛╨▓╨░╤П (╨б╨╡╨║╤А╨╡╤В╨╜╨░╤П):</b> <b>╨Т╨╕╨┤╨╕╤В╨╡ ╤В╨╛╨╗╤М╨║╨╛ ╨▓╤Л</b>. ╨Ю╨╜╨░ ╤Е╤А╨░╨╜╨╕╤В╤Б╤П ╨╛╤В╨┤╨╡╨╗╤М╨╜╨╛ ╨▓ ╨╗╨╕╤З╨╜╨╛╨╣ ╨╛╨▒╨╗╨░╤Б╤В╨╕ ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│╨░ ╨╕ ╨╜╨╡ ╨┐╨╛╨┐╨░╨┤╨░╨╡╤В ╨▓ ╨╛╨▒╤Й╨╕╨╣ ╤Б╤В╨╛╨╗ ╨║╨╗╨╕╨╡╨╜╤В╨░.</div>
                   </div>
                   <div className="flex items-start gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-blue-600 shrink-0"><BookOpen size={16} /></div>
-                    <div><b className="text-blue-900">Мои Техники:</b> Записная книжка Психолога. Запишите в неё свои скрипты до сессии. В один клик текст из неё выкладывается на стол в виде Секретной заметки!</div>
+                    <div><b className="text-blue-900">╨Ь╨╛╨╕ ╨в╨╡╤Е╨╜╨╕╨║╨╕:</b> ╨Ч╨░╨┐╨╕╤Б╨╜╨░╤П ╨║╨╜╨╕╨╢╨║╨░ ╨Я╤Б╨╕╤Е╨╛╨╗╨╛╨│╨░. ╨Ч╨░╨┐╨╕╤И╨╕╤В╨╡ ╨▓ ╨╜╨╡╤С ╤Б╨▓╨╛╨╕ ╤Б╨║╤А╨╕╨┐╤В╤Л ╨┤╨╛ ╤Б╨╡╤Б╤Б╨╕╨╕. ╨Т ╨╛╨┤╨╕╨╜ ╨║╨╗╨╕╨║ ╤В╨╡╨║╤Б╤В ╨╕╨╖ ╨╜╨╡╤С ╨▓╤Л╨║╨╗╨░╨┤╤Л╨▓╨░╨╡╤В╤Б╤П ╨╜╨░ ╤Б╤В╨╛╨╗ ╨▓ ╨▓╨╕╨┤╨╡ ╨б╨╡╨║╤А╨╡╤В╨╜╨╛╨╣ ╨╖╨░╨╝╨╡╤В╨║╨╕!</div>
                   </div>
                 </div>
               </div>
               <div className="space-y-4">
-                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Layers size={16}/> Плавающие панели</h3>
+                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Layers size={16}/> ╨Я╨╗╨░╨▓╨░╤О╤Й╨╕╨╡ ╨┐╨░╨╜╨╡╨╗╨╕</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
                   <div className="flex items-start gap-3 bg-emerald-50 p-3 rounded-xl border border-emerald-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-emerald-700 shrink-0"><FigureIcon gender="male" color={COLORS.forest} isMenu={true} className="w-[18px] h-[18px] opacity-80" /></div>
-                    <div><b className="text-emerald-800">Фигурки для расстановок:</b> Кнопка с фигуркой вверху открывает панель. Вы можете выбирать цвет, указывать имя, добавлять объёмные фигурки и стрелки. Есть переключатель вида (Сбоку/Сверху).</div>
+                    <div><b className="text-emerald-800">╨д╨╕╨│╤Г╤А╨║╨╕ ╨┤╨╗╤П ╤А╨░╤Б╤Б╤В╨░╨╜╨╛╨▓╨╛╨║:</b> ╨Ъ╨╜╨╛╨┐╨║╨░ ╤Б ╤Д╨╕╨│╤Г╤А╨║╨╛╨╣ ╨▓╨▓╨╡╤А╤Е╤Г ╨╛╤В╨║╤А╤Л╨▓╨░╨╡╤В ╨┐╨░╨╜╨╡╨╗╤М. ╨Т╤Л ╨╝╨╛╨╢╨╡╤В╨╡ ╨▓╤Л╨▒╨╕╤А╨░╤В╤М ╤Ж╨▓╨╡╤В, ╤Г╨║╨░╨╖╤Л╨▓╨░╤В╤М ╨╕╨╝╤П, ╨┤╨╛╨▒╨░╨▓╨╗╤П╤В╤М ╨╛╨▒╤К╤С╨╝╨╜╤Л╨╡ ╤Д╨╕╨│╤Г╤А╨║╨╕ ╨╕ ╤Б╤В╤А╨╡╨╗╨║╨╕. ╨Х╤Б╤В╤М ╨┐╨╡╤А╨╡╨║╨╗╤О╤З╨░╤В╨╡╨╗╤М ╨▓╨╕╨┤╨░ (╨б╨▒╨╛╨║╤Г/╨б╨▓╨╡╤А╤Е╤Г).</div>
                   </div>
                   <div className="flex items-start gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
                     <div className="p-2 bg-white rounded-lg shadow-sm text-blue-700 shrink-0"><Dices size={18} /></div>
-                    <div><b className="text-blue-800">Игровые кубики и фишки:</b> Кнопка с кубиками открывает панель. Доступны цветные маркеры и кубики (d6, d10 и d12). Бросать кубик может и клиент.</div>
+                    <div><b className="text-blue-800">╨Ш╨│╤А╨╛╨▓╤Л╨╡ ╨║╤Г╨▒╨╕╨║╨╕ ╨╕ ╤Д╨╕╤И╨║╨╕:</b> ╨Ъ╨╜╨╛╨┐╨║╨░ ╤Б ╨║╤Г╨▒╨╕╨║╨░╨╝╨╕ ╨╛╤В╨║╤А╤Л╨▓╨░╨╡╤В ╨┐╨░╨╜╨╡╨╗╤М. ╨Ф╨╛╤Б╤В╤Г╨┐╨╜╤Л ╤Ж╨▓╨╡╤В╨╜╤Л╨╡ ╨╝╨░╤А╨║╨╡╤А╤Л ╨╕ ╨║╤Г╨▒╨╕╨║╨╕ (d6, d10 ╨╕ d12). ╨С╤А╨╛╤Б╨░╤В╤М ╨║╤Г╨▒╨╕╨║ ╨╝╨╛╨╢╨╡╤В ╨╕ ╨║╨╗╨╕╨╡╨╜╤В.</div>
                   </div>
                 </div>
               </div>
               <div className="space-y-4">
-                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><MousePointer2 size={16}/> Действия с объектами</h3>
+                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><MousePointer2 size={16}/> ╨Ф╨╡╨╣╤Б╤В╨▓╨╕╤П ╤Б ╨╛╨▒╤К╨╡╨║╤В╨░╨╝╨╕</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2">
-                  <p className="mb-2">Наведите курсор на любую карту или фигурку на столе, чтобы появилось меню:</p>
+                  <p className="mb-2">╨Э╨░╨▓╨╡╨┤╨╕╤В╨╡ ╨║╤Г╤А╤Б╨╛╤А ╨╜╨░ ╨╗╤О╨▒╤Г╤О ╨║╨░╤А╤В╤Г ╨╕╨╗╨╕ ╤Д╨╕╨│╤Г╤А╨║╤Г ╨╜╨░ ╤Б╤В╨╛╨╗╨╡, ╤З╤В╨╛╨▒╤Л ╨┐╨╛╤П╨▓╨╕╨╗╨╛╤Б╤М ╨╝╨╡╨╜╤О:</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><RefreshCw size={14} className="text-gray-500" /> Перевернуть (лицо/рубашка)</div>
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Eye size={14} className="text-forest" /> Подсмотреть (только если закрыта)</div>
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Maximize2 size={14} className="text-gray-500" /> Увеличить объект</div>
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><RotateCw size={14} className="text-gray-500" /> Повернуть</div>
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><ArrowUpToLine size={14} className="text-gray-500" /> На передний план</div>
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Lock size={14} className="text-gray-500" /> Закрепить (от сдвигов)</div>
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><EyeOff size={14} className="text-gray-500" /> Уложить/Разбудить (сон/смерть для фигур)</div>
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><UserMinus size={14} className="text-terra" /> Уронить/поднять фигурку в расстановке</div>
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><ArrowUp size={14} className="text-plum" /> У фигурок есть желтый указатель взгляда: потяните его вокруг фигурки, и фигурка развернётся лицом, боком или спиной.</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><RefreshCw size={14} className="text-gray-500" /> ╨Я╨╡╤А╨╡╨▓╨╡╤А╨╜╤Г╤В╤М (╨╗╨╕╤Ж╨╛/╤А╤Г╨▒╨░╤И╨║╨░)</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Eye size={14} className="text-forest" /> ╨Я╨╛╨┤╤Б╨╝╨╛╤В╤А╨╡╤В╤М (╤В╨╛╨╗╤М╨║╨╛ ╨╡╤Б╨╗╨╕ ╨╖╨░╨║╤А╤Л╤В╨░)</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Maximize2 size={14} className="text-gray-500" /> ╨г╨▓╨╡╨╗╨╕╤З╨╕╤В╤М ╨╛╨▒╤К╨╡╨║╤В</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><RotateCw size={14} className="text-gray-500" /> ╨Я╨╛╨▓╨╡╤А╨╜╤Г╤В╤М</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><ArrowUpToLine size={14} className="text-gray-500" /> ╨Э╨░ ╨┐╨╡╤А╨╡╨┤╨╜╨╕╨╣ ╨┐╨╗╨░╨╜</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs"><Lock size={14} className="text-gray-500" /> ╨Ч╨░╨║╤А╨╡╨┐╨╕╤В╤М (╨╛╤В ╤Б╨┤╨▓╨╕╨│╨╛╨▓)</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><EyeOff size={14} className="text-gray-500" /> ╨г╨╗╨╛╨╢╨╕╤В╤М/╨а╨░╨╖╨▒╤Г╨┤╨╕╤В╤М (╤Б╨╛╨╜/╤Б╨╝╨╡╤А╤В╤М ╨┤╨╗╤П ╤Д╨╕╨│╤Г╤А)</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><UserMinus size={14} className="text-terra" /> ╨г╤А╨╛╨╜╨╕╤В╤М/╨┐╨╛╨┤╨╜╤П╤В╤М ╤Д╨╕╨│╤Г╤А╨║╤Г ╨▓ ╤А╨░╤Б╤Б╤В╨░╨╜╨╛╨▓╨║╨╡</div>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-lg border text-xs sm:col-span-2"><ArrowUp size={14} className="text-plum" /> ╨г ╤Д╨╕╨│╤Г╤А╨╛╨║ ╨╡╤Б╤В╤М ╨╢╨╡╨╗╤В╤Л╨╣ ╤Г╨║╨░╨╖╨░╤В╨╡╨╗╤М ╨▓╨╖╨│╨╗╤П╨┤╨░: ╨┐╨╛╤В╤П╨╜╨╕╤В╨╡ ╨╡╨│╨╛ ╨▓╨╛╨║╤А╤Г╨│ ╤Д╨╕╨│╤Г╤А╨║╨╕, ╨╕ ╤Д╨╕╨│╤Г╤А╨║╨░ ╤А╨░╨╖╨▓╨╡╤А╨╜╤С╤В╤Б╤П ╨╗╨╕╤Ж╨╛╨╝, ╨▒╨╛╨║╨╛╨╝ ╨╕╨╗╨╕ ╤Б╨┐╨╕╨╜╨╛╨╣.</div>
                   </div>
                   <p className="mt-3 text-xs bg-gray-50 p-3 rounded-lg flex flex-col gap-2">
-                    <span><Move size={14} className="inline text-plum"/> Чтобы <b>изменить размер</b>, потяните за правый нижний угол.</span>
-                    <span><Maximize2 size={14} className="inline text-plum"/> На телефоне <b>пустое место стола</b> масштабирует весь рабочий стол двумя пальцами, а жест двумя пальцами <b>на карте</b> меняет размер самой карты.</span>
-                    <span><RotateCw size={14} className="inline text-plum"/> Чтобы <b>свободно направить взгляд фигурки</b>, потяните желтый указатель вокруг неё. Для карт используйте кнопки Влево/Вправо в меню.</span>
+                    <span><Move size={14} className="inline text-plum"/> ╨з╤В╨╛╨▒╤Л <b>╨╕╨╖╨╝╨╡╨╜╨╕╤В╤М ╤А╨░╨╖╨╝╨╡╤А</b>, ╨┐╨╛╤В╤П╨╜╨╕╤В╨╡ ╨╖╨░ ╨┐╤А╨░╨▓╤Л╨╣ ╨╜╨╕╨╢╨╜╨╕╨╣ ╤Г╨│╨╛╨╗.</span>
+                    <span><Maximize2 size={14} className="inline text-plum"/> ╨Э╨░ ╤В╨╡╨╗╨╡╤Д╨╛╨╜╨╡ <b>╨┐╤Г╤Б╤В╨╛╨╡ ╨╝╨╡╤Б╤В╨╛ ╤Б╤В╨╛╨╗╨░</b> ╨╝╨░╤Б╤И╤В╨░╨▒╨╕╤А╤Г╨╡╤В ╨▓╨╡╤Б╤М ╤А╨░╨▒╨╛╤З╨╕╨╣ ╤Б╤В╨╛╨╗ ╨┤╨▓╤Г╨╝╤П ╨┐╨░╨╗╤М╤Ж╨░╨╝╨╕, ╨░ ╨╢╨╡╤Б╤В ╨┤╨▓╤Г╨╝╤П ╨┐╨░╨╗╤М╤Ж╨░╨╝╨╕ <b>╨╜╨░ ╨║╨░╤А╤В╨╡</b> ╨╝╨╡╨╜╤П╨╡╤В ╤А╨░╨╖╨╝╨╡╤А ╤Б╨░╨╝╨╛╨╣ ╨║╨░╤А╤В╤Л.</span>
+                    <span><RotateCw size={14} className="inline text-plum"/> ╨з╤В╨╛╨▒╤Л <b>╤Б╨▓╨╛╨▒╨╛╨┤╨╜╨╛ ╨╜╨░╨┐╤А╨░╨▓╨╕╤В╤М ╨▓╨╖╨│╨╗╤П╨┤ ╤Д╨╕╨│╤Г╤А╨║╨╕</b>, ╨┐╨╛╤В╤П╨╜╨╕╤В╨╡ ╨╢╨╡╨╗╤В╤Л╨╣ ╤Г╨║╨░╨╖╨░╤В╨╡╨╗╤М ╨▓╨╛╨║╤А╤Г╨│ ╨╜╨╡╤С. ╨Ф╨╗╤П ╨║╨░╤А╤В ╨╕╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╣╤В╨╡ ╨║╨╜╨╛╨┐╨║╨╕ ╨Т╨╗╨╡╨▓╨╛/╨Т╨┐╤А╨░╨▓╨╛ ╨▓ ╨╝╨╡╨╜╤О.</span>
                   </p>
                 </div>
               </div>
               <div className="space-y-4 lg:col-span-2">
-                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><FolderOpen size={16}/> Библиотека Мастера</h3>
+                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><FolderOpen size={16}/> ╨С╨╕╨▒╨╗╨╕╨╛╤В╨╡╨║╨░ ╨Ь╨░╤Б╤В╨╡╤А╨░</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
-                  <p>Вызывается длинной кнопкой <b>«Библиотека Мастера»</b> в самом низу экрана.</p>
+                  <p>╨Т╤Л╨╖╤Л╨▓╨░╨╡╤В╤Б╤П ╨┤╨╗╨╕╨╜╨╜╨╛╨╣ ╨║╨╜╨╛╨┐╨║╨╛╨╣ <b>┬л╨С╨╕╨▒╨╗╨╕╨╛╤В╨╡╨║╨░ ╨Ь╨░╤Б╤В╨╡╤А╨░┬╗</b> ╨▓ ╤Б╨░╨╝╨╛╨╝ ╨╜╨╕╨╖╤Г ╤Н╨║╤А╨░╨╜╨░.</p>
                   <ul className="space-y-1 list-disc list-inside grid grid-cols-1 md:grid-cols-2">
-                    <li><b>БАЗА:</b> Стандартные колоды, доступные всегда.</li>
-                    <li><b>ОБЛАКО:</b> Колоды, загруженные разработчиком специально для вас.</li>
-                    <li><b>МОИ:</b> Ваше личное пространство. Можно добавить колоды ссылкой с вашего Google Диска. Видите их только вы.</li>
-                    <li><b>СЕССИИ:</b> Сохраненные столы, история раскладов, постоянные ссылки и восстановление локальной копии.</li>
+                    <li><b>╨С╨Р╨Ч╨Р:</b> ╨б╤В╨░╨╜╨┤╨░╤А╤В╨╜╤Л╨╡ ╨║╨╛╨╗╨╛╨┤╤Л, ╨┤╨╛╤Б╤В╤Г╨┐╨╜╤Л╨╡ ╨▓╤Б╨╡╨│╨┤╨░.</li>
+                    <li><b>╨Ю╨С╨Ы╨Р╨Ъ╨Ю:</b> ╨Ъ╨╛╨╗╨╛╨┤╤Л, ╨╖╨░╨│╤А╤Г╨╢╨╡╨╜╨╜╤Л╨╡ ╤А╨░╨╖╤А╨░╨▒╨╛╤В╤З╨╕╨║╨╛╨╝ ╤Б╨┐╨╡╤Ж╨╕╨░╨╗╤М╨╜╨╛ ╨┤╨╗╤П ╨▓╨░╤Б.</li>
+                    <li><b>╨Ь╨Ю╨Ш:</b> ╨Т╨░╤И╨╡ ╨╗╨╕╤З╨╜╨╛╨╡ ╨┐╤А╨╛╤Б╤В╤А╨░╨╜╤Б╤В╨▓╨╛. ╨Ь╨╛╨╢╨╜╨╛ ╨┤╨╛╨▒╨░╨▓╨╕╤В╤М ╨║╨╛╨╗╨╛╨┤╤Л ╤Б╤Б╤Л╨╗╨║╨╛╨╣ ╤Б ╨▓╨░╤И╨╡╨│╨╛ Google ╨Ф╨╕╤Б╨║╨░. ╨Т╨╕╨┤╨╕╤В╨╡ ╨╕╤Е ╤В╨╛╨╗╤М╨║╨╛ ╨▓╤Л.</li>
+                    <li><b>╨б╨Х╨б╨б╨Ш╨Ш:</b> ╨б╨╛╤Е╤А╨░╨╜╨╡╨╜╨╜╤Л╨╡ ╤Б╤В╨╛╨╗╤Л, ╨╕╤Б╤В╨╛╤А╨╕╤П ╤А╨░╤Б╨║╨╗╨░╨┤╨╛╨▓, ╨┐╨╛╤Б╤В╨╛╤П╨╜╨╜╤Л╨╡ ╤Б╤Б╤Л╨╗╨║╨╕ ╨╕ ╨▓╨╛╤Б╤Б╤В╨░╨╜╨╛╨▓╨╗╨╡╨╜╨╕╨╡ ╨╗╨╛╨║╨░╨╗╤М╨╜╨╛╨╣ ╨║╨╛╨┐╨╕╨╕.</li>
                   </ul>
                   <div className="bg-plum/10 p-3 rounded-lg border border-plum/20 mt-2">
-                    <p className="font-bold text-plum mb-1">Как вытаскивать карты?</p>
-                    <p className="text-xs">Выберите колоду в левом списке. Нажмите <b>«Наугад»</b> (вытащит случайную рубашкой вверх) или нажмите кнопку <b>«Открыть колоду»</b> справа вверху, чтобы увидеть все изображения и выбрать конкретную.</p>
-                    <p className="text-xs mt-2"><b>На телефоне:</b> после выбора колоды панель становится компактной горизонтальной лентой карт. Чтобы сменить колоду, нажмите кнопку разворота справа сверху.</p>
+                    <p className="font-bold text-plum mb-1">╨Ъ╨░╨║ ╨▓╤Л╤В╨░╤Б╨║╨╕╨▓╨░╤В╤М ╨║╨░╤А╤В╤Л?</p>
+                    <p className="text-xs">╨Т╤Л╨▒╨╡╤А╨╕╤В╨╡ ╨║╨╛╨╗╨╛╨┤╤Г ╨▓ ╨╗╨╡╨▓╨╛╨╝ ╤Б╨┐╨╕╤Б╨║╨╡. ╨Э╨░╨╢╨╝╨╕╤В╨╡ <b>┬л╨Э╨░╤Г╨│╨░╨┤┬╗</b> (╨▓╤Л╤В╨░╤Й╨╕╤В ╤Б╨╗╤Г╤З╨░╨╣╨╜╤Г╤О ╤А╤Г╨▒╨░╤И╨║╨╛╨╣ ╨▓╨▓╨╡╤А╤Е) ╨╕╨╗╨╕ ╨╜╨░╨╢╨╝╨╕╤В╨╡ ╨║╨╜╨╛╨┐╨║╤Г <b>┬л╨Ю╤В╨║╤А╤Л╤В╤М ╨║╨╛╨╗╨╛╨┤╤Г┬╗</b> ╤Б╨┐╤А╨░╨▓╨░ ╨▓╨▓╨╡╤А╤Е╤Г, ╤З╤В╨╛╨▒╤Л ╤Г╨▓╨╕╨┤╨╡╤В╤М ╨▓╤Б╨╡ ╨╕╨╖╨╛╨▒╤А╨░╨╢╨╡╨╜╨╕╤П ╨╕ ╨▓╤Л╨▒╤А╨░╤В╤М ╨║╨╛╨╜╨║╤А╨╡╤В╨╜╤Г╤О.</p>
+                    <p className="text-xs mt-2"><b>╨Э╨░ ╤В╨╡╨╗╨╡╤Д╨╛╨╜╨╡:</b> ╨┐╨╛╤Б╨╗╨╡ ╨▓╤Л╨▒╨╛╤А╨░ ╨║╨╛╨╗╨╛╨┤╤Л ╨┐╨░╨╜╨╡╨╗╤М ╤Б╤В╨░╨╜╨╛╨▓╨╕╤В╤Б╤П ╨║╨╛╨╝╨┐╨░╨║╤В╨╜╨╛╨╣ ╨│╨╛╤А╨╕╨╖╨╛╨╜╤В╨░╨╗╤М╨╜╨╛╨╣ ╨╗╨╡╨╜╤В╨╛╨╣ ╨║╨░╤А╤В. ╨з╤В╨╛╨▒╤Л ╤Б╨╝╨╡╨╜╨╕╤В╤М ╨║╨╛╨╗╨╛╨┤╤Г, ╨╜╨░╨╢╨╝╨╕╤В╨╡ ╨║╨╜╨╛╨┐╨║╤Г ╤А╨░╨╖╨▓╨╛╤А╨╛╤В╨░ ╤Б╨┐╤А╨░╨▓╨░ ╤Б╨▓╨╡╤А╤Е╤Г.</p>
                   </div>
                   <div className="bg-forest/10 p-3 rounded-lg border border-forest/20">
-                    <p className="font-bold text-forest mb-1">Как быстро находить нужные колоды?</p>
+                    <p className="font-bold text-forest mb-1">╨Ъ╨░╨║ ╨▒╤Л╤Б╤В╤А╨╛ ╨╜╨░╤Е╨╛╨┤╨╕╤В╤М ╨╜╤Г╨╢╨╜╤Л╨╡ ╨║╨╛╨╗╨╛╨┤╤Л?</p>
                     <ul className="text-xs space-y-1 list-disc list-inside">
-                      <li><Search size={12} className="inline" /> <b>Поиск по колодам:</b> введите часть названия, чтобы быстро отфильтровать список.</li>
-                      <li><Star size={12} className="inline text-terra" /> <b>Избранные:</b> нажмите звёздочку у часто используемой колоды, и она закрепится сверху.</li>
-                      <li><EyeOff size={12} className="inline" /> <b>Скрыть лишние:</b> нажмите глаз у колоды. Вернуть её можно кнопкой <b>«Показать скрытые»</b>.</li>
+                      <li><Search size={12} className="inline" /> <b>╨Я╨╛╨╕╤Б╨║ ╨┐╨╛ ╨║╨╛╨╗╨╛╨┤╨░╨╝:</b> ╨▓╨▓╨╡╨┤╨╕╤В╨╡ ╤З╨░╤Б╤В╤М ╨╜╨░╨╖╨▓╨░╨╜╨╕╤П, ╤З╤В╨╛╨▒╤Л ╨▒╤Л╤Б╤В╤А╨╛ ╨╛╤В╤Д╨╕╨╗╤М╤В╤А╨╛╨▓╨░╤В╤М ╤Б╨┐╨╕╤Б╨╛╨║.</li>
+                      <li><Star size={12} className="inline text-terra" /> <b>╨Ш╨╖╨▒╤А╨░╨╜╨╜╤Л╨╡:</b> ╨╜╨░╨╢╨╝╨╕╤В╨╡ ╨╖╨▓╤С╨╖╨┤╨╛╤З╨║╤Г ╤Г ╤З╨░╤Б╤В╨╛ ╨╕╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╡╨╝╨╛╨╣ ╨║╨╛╨╗╨╛╨┤╤Л, ╨╕ ╨╛╨╜╨░ ╨╖╨░╨║╤А╨╡╨┐╨╕╤В╤Б╤П ╤Б╨▓╨╡╤А╤Е╤Г.</li>
+                      <li><EyeOff size={12} className="inline" /> <b>╨б╨║╤А╤Л╤В╤М ╨╗╨╕╤И╨╜╨╕╨╡:</b> ╨╜╨░╨╢╨╝╨╕╤В╨╡ ╨│╨╗╨░╨╖ ╤Г ╨║╨╛╨╗╨╛╨┤╤Л. ╨Т╨╡╤А╨╜╤Г╤В╤М ╨╡╤С ╨╝╨╛╨╢╨╜╨╛ ╨║╨╜╨╛╨┐╨║╨╛╨╣ <b>┬л╨Я╨╛╨║╨░╨╖╨░╤В╤М ╤Б╨║╤А╤Л╤В╤Л╨╡┬╗</b>.</li>
                     </ul>
                   </div>
                   <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                    <p className="font-bold text-blue-900 mb-1">Колоды с Google Диска</p>
+                    <p className="font-bold text-blue-900 mb-1">╨Ъ╨╛╨╗╨╛╨┤╤Л ╤Б Google ╨Ф╨╕╤Б╨║╨░</p>
                     <ul className="text-xs space-y-1 list-disc list-inside">
-                      <li>Во вкладке <b>МОИ</b> нажмите <b>«Вставить ссылку на папку»</b>.</li>
-                      <li>Карты называйте числами: <b>1</b>, <b>2</b>, <b>3</b> и так далее.</li>
-                      <li>Индивидуальная рубашка пишется строго через <b>-1</b>: <b>1-1</b> для карты <b>1</b>, <b>2-1</b> для карты <b>2</b>, <b>3-1</b> для карты <b>3</b>.</li>
-                      <li>Файл с названием, где есть слово <b>«коробк»</b>, станет картинкой коробки колоды до выбора.</li>
-                      <li>Если файлов <b>1-1</b>, <b>2-1</b> и подобных нет, колода работает как раньше.</li>
-                      <li>Папки Google Диска загружаются постранично, поэтому колоды больше 100 карт тоже подтягиваются, если доступ к папке открыт.</li>
+                      <li>╨Т╨╛ ╨▓╨║╨╗╨░╨┤╨║╨╡ <b>╨Ь╨Ю╨Ш</b> ╨╜╨░╨╢╨╝╨╕╤В╨╡ <b>┬л╨Т╤Б╤В╨░╨▓╨╕╤В╤М ╤Б╤Б╤Л╨╗╨║╤Г ╨╜╨░ ╨┐╨░╨┐╨║╤Г┬╗</b>.</li>
+                      <li>╨Ъ╨░╤А╤В╤Л ╨╜╨░╨╖╤Л╨▓╨░╨╣╤В╨╡ ╤З╨╕╤Б╨╗╨░╨╝╨╕: <b>1</b>, <b>2</b>, <b>3</b> ╨╕ ╤В╨░╨║ ╨┤╨░╨╗╨╡╨╡.</li>
+                      <li>╨Ш╨╜╨┤╨╕╨▓╨╕╨┤╤Г╨░╨╗╤М╨╜╨░╤П ╤А╤Г╨▒╨░╤И╨║╨░ ╨┐╨╕╤И╨╡╤В╤Б╤П ╤Б╤В╤А╨╛╨│╨╛ ╤З╨╡╤А╨╡╨╖ <b>-1</b>: <b>1-1</b> ╨┤╨╗╤П ╨║╨░╤А╤В╤Л <b>1</b>, <b>2-1</b> ╨┤╨╗╤П ╨║╨░╤А╤В╤Л <b>2</b>, <b>3-1</b> ╨┤╨╗╤П ╨║╨░╤А╤В╤Л <b>3</b>.</li>
+                      <li>╨д╨░╨╣╨╗ ╤Б ╨╜╨░╨╖╨▓╨░╨╜╨╕╨╡╨╝, ╨│╨┤╨╡ ╨╡╤Б╤В╤М ╤Б╨╗╨╛╨▓╨╛ <b>┬л╨║╨╛╤А╨╛╨▒╨║┬╗</b>, ╤Б╤В╨░╨╜╨╡╤В ╨║╨░╤А╤В╨╕╨╜╨║╨╛╨╣ ╨║╨╛╤А╨╛╨▒╨║╨╕ ╨║╨╛╨╗╨╛╨┤╤Л ╨┤╨╛ ╨▓╤Л╨▒╨╛╤А╨░.</li>
+                      <li>╨Х╤Б╨╗╨╕ ╤Д╨░╨╣╨╗╨╛╨▓ <b>1-1</b>, <b>2-1</b> ╨╕ ╨┐╨╛╨┤╨╛╨▒╨╜╤Л╤Е ╨╜╨╡╤В, ╨║╨╛╨╗╨╛╨┤╨░ ╤А╨░╨▒╨╛╤В╨░╨╡╤В ╨║╨░╨║ ╤А╨░╨╜╤М╤И╨╡.</li>
+                      <li>╨Я╨░╨┐╨║╨╕ Google ╨Ф╨╕╤Б╨║╨░ ╨╖╨░╨│╤А╤Г╨╢╨░╤О╤В╤Б╤П ╨┐╨╛╤Б╤В╤А╨░╨╜╨╕╤З╨╜╨╛, ╨┐╨╛╤Н╤В╨╛╨╝╤Г ╨║╨╛╨╗╨╛╨┤╤Л ╨▒╨╛╨╗╤М╤И╨╡ 100 ╨║╨░╤А╤В ╤В╨╛╨╢╨╡ ╨┐╨╛╨┤╤В╤П╨│╨╕╨▓╨░╤О╤В╤Б╤П, ╨╡╤Б╨╗╨╕ ╨┤╨╛╤Б╤В╤Г╨┐ ╨║ ╨┐╨░╨┐╨║╨╡ ╨╛╤В╨║╤А╤Л╤В.</li>
                     </ul>
                   </div>
                 </div>
@@ -3405,8 +3405,8 @@ export default function App() {
                  <div className="w-16 h-16 rounded-full flex items-center justify-center border border-white/20 bg-white/10 shadow-lg">
                    <Mic size={30} />
                  </div>
-                 <div className="text-[10px] font-black uppercase tracking-widest opacity-90">Аудиозвонок</div>
-                 <div className="text-[9px] font-bold opacity-60">Камера выключена, работает только микрофон</div>
+                 <div className="text-[10px] font-black uppercase tracking-widest opacity-90">╨Р╤Г╨┤╨╕╨╛╨╖╨▓╨╛╨╜╨╛╨║</div>
+                 <div className="text-[9px] font-bold opacity-60">╨Ъ╨░╨╝╨╡╤А╨░ ╨▓╤Л╨║╨╗╤О╤З╨╡╨╜╨░, ╤А╨░╨▒╨╛╤В╨░╨╡╤В ╤В╨╛╨╗╤М╨║╨╛ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜</div>
                </div>
              ) : (
                <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
@@ -3432,66 +3432,66 @@ export default function App() {
             <button onClick={() => setIsVideoModalOpen(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
               <X size={20} style={{ color: COLORS.ink }} />
             </button>
-            <h2 className="text-xl font-black uppercase mb-4 text-center" style={{ color: COLORS.ink }}>Связь</h2>
+            <h2 className="text-xl font-black uppercase mb-4 text-center" style={{ color: COLORS.ink }}>╨б╨▓╤П╨╖╤М</h2>
             <p className="text-[10px] text-center mb-6 font-medium leading-relaxed" style={{ color: `${COLORS.ink}99` }}>
-              Создайте приватную комнату для встроенного звонка. Можно включить видео или оставить только микрофон.
+              ╨б╨╛╨╖╨┤╨░╨╣╤В╨╡ ╨┐╤А╨╕╨▓╨░╤В╨╜╤Г╤О ╨║╨╛╨╝╨╜╨░╤В╤Г ╨┤╨╗╤П ╨▓╤Б╤В╤А╨╛╨╡╨╜╨╜╨╛╨│╨╛ ╨╖╨▓╨╛╨╜╨║╨░. ╨Ь╨╛╨╢╨╜╨╛ ╨▓╨║╨╗╤О╤З╨╕╤В╤М ╨▓╨╕╨┤╨╡╨╛ ╨╕╨╗╨╕ ╨╛╤Б╤В╨░╨▓╨╕╤В╤М ╤В╨╛╨╗╤М╨║╨╛ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜.
             </p>
             <div className="flex p-1 rounded-2xl mb-4 bg-black/5">
               <button onClick={() => setCallMediaMode('video')} className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${callMediaMode === 'video' ? 'bg-white shadow-sm text-forest' : 'text-ink/60 hover:opacity-70'}`}>
-                <Video size={13} /> Видео
+                <Video size={13} /> ╨Т╨╕╨┤╨╡╨╛
               </button>
               <button onClick={() => setCallMediaMode('audio')} className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${callMediaMode === 'audio' ? 'bg-white shadow-sm text-forest' : 'text-ink/60 hover:opacity-70'}`}>
-                <Mic size={13} /> Только микрофон
+                <Mic size={13} /> ╨в╨╛╨╗╤М╨║╨╛ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜
               </button>
             </div>
             <div className="rounded-2xl p-3 mb-4 border text-[10px]" style={{ backgroundColor: `${COLORS.forest}08`, borderColor: `${COLORS.forest}20` }}>
               <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="font-black uppercase tracking-widest" style={{ color: COLORS.forest }}>{callMediaMode === 'audio' ? 'Микрофон' : 'Камера и микрофон'}</div>
+                <div className="font-black uppercase tracking-widest" style={{ color: COLORS.forest }}>{callMediaMode === 'audio' ? '╨Ь╨╕╨║╤А╨╛╤Д╨╛╨╜' : '╨Ъ╨░╨╝╨╡╤А╨░ ╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜'}</div>
                 <button onClick={() => refreshMediaDevices(true, callMediaMode)} disabled={isLoadingMediaDevices} className="px-3 py-1.5 rounded-xl font-black uppercase tracking-widest text-[8px] transition-all hover:opacity-80 disabled:opacity-50 flex items-center gap-1" style={{ backgroundColor: COLORS.forest, color: 'white' }}>
                   {isLoadingMediaDevices ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
-                  Обновить
+                  ╨Ю╨▒╨╜╨╛╨▓╨╕╤В╤М
                 </button>
               </div>
               <div className="flex flex-col gap-2">
                 {callMediaMode !== 'audio' && (
                   <select value={selectedVideoDeviceId} onChange={e => setSelectedVideoDeviceId(e.target.value)} className="w-full px-3 py-2 rounded-xl border outline-none font-bold bg-white" style={{ borderColor: `${COLORS.ink}12`, color: COLORS.ink }}>
-                    <option value="">Камера по умолчанию</option>
+                    <option value="">╨Ъ╨░╨╝╨╡╤А╨░ ╨┐╨╛ ╤Г╨╝╨╛╨╗╤З╨░╨╜╨╕╤О</option>
                     {videoDevices.map((device, index) => (
-                      <option key={device.deviceId || index} value={device.deviceId}>{device.label || `Камера ${index + 1}`}</option>
+                      <option key={device.deviceId || index} value={device.deviceId}>{device.label || `╨Ъ╨░╨╝╨╡╤А╨░ ${index + 1}`}</option>
                     ))}
                   </select>
                 )}
                 <select value={selectedAudioDeviceId} onChange={e => setSelectedAudioDeviceId(e.target.value)} className="w-full px-3 py-2 rounded-xl border outline-none font-bold bg-white" style={{ borderColor: `${COLORS.ink}12`, color: COLORS.ink }}>
-                  <option value="">Микрофон по умолчанию</option>
+                  <option value="">╨Ь╨╕╨║╤А╨╛╤Д╨╛╨╜ ╨┐╨╛ ╤Г╨╝╨╛╨╗╤З╨░╨╜╨╕╤О</option>
                   {audioDevices.map((device, index) => (
-                    <option key={device.deviceId || index} value={device.deviceId}>{device.label || `Микрофон ${index + 1}`}</option>
+                    <option key={device.deviceId || index} value={device.deviceId}>{device.label || `╨Ь╨╕╨║╤А╨╛╤Д╨╛╨╜ ${index + 1}`}</option>
                   ))}
                 </select>
               </div>
               <p className="mt-2 leading-relaxed font-medium" style={{ color: `${COLORS.ink}80` }}>
-                {callMediaMode === 'audio' ? 'В этом режиме камера не включается: нужен только микрофон.' : 'Если внешней вебкамеры нет в списке, нажмите «Обновить» и разрешите доступ к камере в браузере.'}
+                {callMediaMode === 'audio' ? '╨Т ╤Н╤В╨╛╨╝ ╤А╨╡╨╢╨╕╨╝╨╡ ╨║╨░╨╝╨╡╤А╨░ ╨╜╨╡ ╨▓╨║╨╗╤О╤З╨░╨╡╤В╤Б╤П: ╨╜╤Г╨╢╨╡╨╜ ╤В╨╛╨╗╤М╨║╨╛ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜.' : '╨Х╤Б╨╗╨╕ ╨▓╨╜╨╡╤И╨╜╨╡╨╣ ╨▓╨╡╨▒╨║╨░╨╝╨╡╤А╤Л ╨╜╨╡╤В ╨▓ ╤Б╨┐╨╕╤Б╨║╨╡, ╨╜╨░╨╢╨╝╨╕╤В╨╡ ┬л╨Ю╨▒╨╜╨╛╨▓╨╕╤В╤М┬╗ ╨╕ ╤А╨░╨╖╤А╨╡╤И╨╕╤В╨╡ ╨┤╨╛╤Б╤В╤Г╨┐ ╨║ ╨║╨░╨╝╨╡╤А╨╡ ╨▓ ╨▒╤А╨░╤Г╨╖╨╡╤А╨╡.'}
               </p>
             </div>
             <div className="rounded-2xl p-3 mb-4 border text-[10px] leading-relaxed" style={{ backgroundColor: `${COLORS.terra}10`, borderColor: `${COLORS.terra}25`, color: COLORS.ink }}>
               <div className="font-black uppercase tracking-widest mb-1 flex items-center gap-1.5" style={{ color: COLORS.terra }}>
-                <AlertCircle size={13} /> Резервный план связи
+                <AlertCircle size={13} /> ╨а╨╡╨╖╨╡╤А╨▓╨╜╤Л╨╣ ╨┐╨╗╨░╨╜ ╤Б╨▓╤П╨╖╨╕
               </div>
-              <div>Если видео не соединится, платформа попробует переключить звонок на <b>«Только микрофон»</b>. Если микрофон тоже не работает, созвонитесь через телефон, MAX, Telegram или Zoom: стол, карты и заметки продолжат синхронизироваться здесь.</div>
+              <div>╨Х╤Б╨╗╨╕ ╨▓╨╕╨┤╨╡╨╛ ╨╜╨╡ ╤Б╨╛╨╡╨┤╨╕╨╜╨╕╤В╤Б╤П, ╨┐╨╗╨░╤В╤Д╨╛╤А╨╝╨░ ╨┐╨╛╨┐╤А╨╛╨▒╤Г╨╡╤В ╨┐╨╡╤А╨╡╨║╨╗╤О╤З╨╕╤В╤М ╨╖╨▓╨╛╨╜╨╛╨║ ╨╜╨░ <b>┬л╨в╨╛╨╗╤М╨║╨╛ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜┬╗</b>. ╨Х╤Б╨╗╨╕ ╨╝╨╕╨║╤А╨╛╤Д╨╛╨╜ ╤В╨╛╨╢╨╡ ╨╜╨╡ ╤А╨░╨▒╨╛╤В╨░╨╡╤В, ╤Б╨╛╨╖╨▓╨╛╨╜╨╕╤В╨╡╤Б╤М ╤З╨╡╤А╨╡╨╖ ╤В╨╡╨╗╨╡╤Д╨╛╨╜, MAX, Telegram ╨╕╨╗╨╕ Zoom: ╤Б╤В╨╛╨╗, ╨║╨░╤А╤В╤Л ╨╕ ╨╖╨░╨╝╨╡╤В╨║╨╕ ╨┐╤А╨╛╨┤╨╛╨╗╨╢╨░╤В ╤Б╨╕╨╜╤Е╤А╨╛╨╜╨╕╨╖╨╕╤А╨╛╨▓╨░╤В╤М╤Б╤П ╨╖╨┤╨╡╤Б╤М.</div>
             </div>
             <button onClick={runSessionCheck} className="w-full py-3 mb-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all hover:bg-black/5 flex items-center justify-center gap-2 border" style={{ color: COLORS.forest, borderColor: `${COLORS.forest}25`, backgroundColor: `${COLORS.forest}08` }}>
-              <AlertCircle size={14} /> Проверить связь перед запуском
+              <AlertCircle size={14} /> ╨Я╤А╨╛╨▓╨╡╤А╨╕╤В╤М ╤Б╨▓╤П╨╖╤М ╨┐╨╡╤А╨╡╨┤ ╨╖╨░╨┐╤Г╤Б╨║╨╛╨╝
             </button>
             <button onClick={async () => {
                 setIsVideoModalOpen(false);
                 startNativeCall(callMediaMode);
-                notify(callMediaMode === 'audio' ? "Аудиосвязь запущена!" : "Встроенная видеосвязь запущена!");
+                notify(callMediaMode === 'audio' ? "╨Р╤Г╨┤╨╕╨╛╤Б╨▓╤П╨╖╤М ╨╖╨░╨┐╤Г╤Й╨╡╨╜╨░!" : "╨Т╤Б╤В╤А╨╛╨╡╨╜╨╜╨░╤П ╨▓╨╕╨┤╨╡╨╛╤Б╨▓╤П╨╖╤М ╨╖╨░╨┐╤Г╤Й╨╡╨╜╨░!");
               }}
               className="w-full py-4 rounded-xl text-white font-black uppercase tracking-widest shadow-md transition-all hover:scale-[1.02] flex items-center justify-center gap-2" style={{ backgroundColor: COLORS.forest }}>
-              {callMediaMode === 'audio' ? <Mic size={18} /> : <Video size={18} />} {callMediaMode === 'audio' ? 'Запустить аудиозвонок' : 'Запустить звонок'}
+              {callMediaMode === 'audio' ? <Mic size={18} /> : <Video size={18} />} {callMediaMode === 'audio' ? '╨Ч╨░╨┐╤Г╤Б╤В╨╕╤В╤М ╨░╤Г╨┤╨╕╨╛╨╖╨▓╨╛╨╜╨╛╨║' : '╨Ч╨░╨┐╤Г╤Б╤В╨╕╤В╤М ╨╖╨▓╨╛╨╜╨╛╨║'}
             </button>
             <div className="flex gap-3 mt-3">
               {isVideoCallReady && (
-                <button onClick={async () => { endNativeCall(); setIsVideoModalOpen(false); notify("Связь удалена"); }} className="w-full py-3 font-bold rounded-xl text-[10px] uppercase tracking-widest transition-colors hover:opacity-80" style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}>Завершить звонок (Удалить)</button>
+                <button onClick={async () => { endNativeCall(); setIsVideoModalOpen(false); notify("╨б╨▓╤П╨╖╤М ╤Г╨┤╨░╨╗╨╡╨╜╨░"); }} className="w-full py-3 font-bold rounded-xl text-[10px] uppercase tracking-widest transition-colors hover:opacity-80" style={{ backgroundColor: `${COLORS.terra}20`, color: COLORS.terra }}>╨Ч╨░╨▓╨╡╤А╤И╨╕╤В╤М ╨╖╨▓╨╛╨╜╨╛╨║ (╨г╨┤╨░╨╗╨╕╤В╤М)</button>
               )}
             </div>
           </div>
@@ -3504,10 +3504,10 @@ export default function App() {
             <button onClick={() => setIsFieldModalOpen(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors">
               <X size={24} style={{ color: COLORS.ink }} />
             </button>
-            <h2 className="text-xl md:text-2xl font-black uppercase mb-6" style={{ color: COLORS.ink }}>Оформление стола</h2>
+            <h2 className="text-xl md:text-2xl font-black uppercase mb-6" style={{ color: COLORS.ink }}>╨Ю╤Д╨╛╤А╨╝╨╗╨╡╨╜╨╕╨╡ ╤Б╤В╨╛╨╗╨░</h2>
             <div className="mb-8">
               <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3 opacity-50 flex items-center gap-2">
-                <LayoutGrid size={14} /> Фон всего пространства (Нейро-дизайн)
+                <LayoutGrid size={14} /> ╨д╨╛╨╜ ╨▓╤Б╨╡╨│╨╛ ╨┐╤А╨╛╤Б╤В╤А╨░╨╜╤Б╤В╨▓╨░ (╨Э╨╡╨╣╤А╨╛-╨┤╨╕╨╖╨░╨╣╨╜)
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                 {TABLE_BACKGROUNDS.map(bg => (
@@ -3526,47 +3526,47 @@ export default function App() {
                 <label className="relative h-20 md:h-24 rounded-2xl overflow-hidden border-2 border-dashed flex flex-col items-center justify-center gap-1 cursor-pointer transition-all hover:bg-black/5" style={{ borderColor: `${COLORS.plum}4D`, color: COLORS.plum }}>
                   <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                     const f = e.target.files[0]; if (!f) return;
-                    setIsUploadingBg(true); notify("Загружаю фон...", 4000);
+                    setIsUploadingBg(true); notify("╨Ч╨░╨│╤А╤Г╨╢╨░╤О ╤Д╨╛╨╜...", 4000);
                     try {
                       const data = await new Promise(r => { const rd = new FileReader(); rd.onload = ev => r(ev.target.result); rd.readAsDataURL(f); });
                       let comp = await compressImage(data, 1920, 1920);
                       const url = await uploadImageToStorage(comp, `backgrounds/${user.uid}/${Date.now()}.jpg`);
-                      const customBg = { id: 'custom', name: 'Свой фон', type: 'image', value: url, bgSize: 'cover', bgColor: COLORS.haze, opacity: 1, repeat: 'no-repeat', blendMode: 'normal' };
+                      const customBg = { id: 'custom', name: '╨б╨▓╨╛╨╣ ╤Д╨╛╨╜', type: 'image', value: url, bgSize: 'cover', bgColor: COLORS.haze, opacity: 1, repeat: 'no-repeat', blendMode: 'normal' };
                       setTableBg(customBg);
                       if (isDbConnected && roomId) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_settings'), { tableBg: customBg }, { merge: true });
-                      notify("Фон установлен! ✓");
-                    } catch(err) { notify("Ошибка: " + err.message); } finally { setIsUploadingBg(false); e.target.value = ''; }
+                      notify("╨д╨╛╨╜ ╤Г╤Б╤В╨░╨╜╨╛╨▓╨╗╨╡╨╜! тЬУ");
+                    } catch(err) { notify("╨Ю╤И╨╕╨▒╨║╨░: " + err.message); } finally { setIsUploadingBg(false); e.target.value = ''; }
                   }} />
                   {isUploadingBg ? <Loader2 size={20} className="animate-spin" /> : <ImageIcon size={20} />}
-                  <span className="text-[9px] md:text-[10px] font-black uppercase text-center leading-tight">Свой<br/>Фон</span>
+                  <span className="text-[9px] md:text-[10px] font-black uppercase text-center leading-tight">╨б╨▓╨╛╨╣<br/>╨д╨╛╨╜</span>
             </label>
               </div>
             </div>
             <div>
               <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3 opacity-50 flex items-center gap-2">
-                <ImageIcon size={14} /> Отдельное игровое поле (Как объект)
+                <ImageIcon size={14} /> ╨Ю╤В╨┤╨╡╨╗╤М╨╜╨╛╨╡ ╨╕╨│╤А╨╛╨▓╨╛╨╡ ╨┐╨╛╨╗╨╡ (╨Ъ╨░╨║ ╨╛╨▒╤К╨╡╨║╤В)
               </h3>
-              <p className="text-[10px] font-medium mb-4 leading-relaxed" style={{ color: COLORS.ink }}>Используйте это, если нужно загрузить конкретную карту игры как перемещаемый объект на столе (она сохранит свои пропорции и на нее можно будет класть карты).</p>
+              <p className="text-[10px] font-medium mb-4 leading-relaxed" style={{ color: COLORS.ink }}>╨Ш╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╣╤В╨╡ ╤Н╤В╨╛, ╨╡╤Б╨╗╨╕ ╨╜╤Г╨╢╨╜╨╛ ╨╖╨░╨│╤А╤Г╨╖╨╕╤В╤М ╨║╨╛╨╜╨║╤А╨╡╤В╨╜╤Г╤О ╨║╨░╤А╤В╤Г ╨╕╨│╤А╤Л ╨║╨░╨║ ╨┐╨╡╤А╨╡╨╝╨╡╤Й╨░╨╡╨╝╤Л╨╣ ╨╛╨▒╤К╨╡╨║╤В ╨╜╨░ ╤Б╤В╨╛╨╗╨╡ (╨╛╨╜╨░ ╤Б╨╛╤Е╤А╨░╨╜╨╕╤В ╤Б╨▓╨╛╨╕ ╨┐╤А╨╛╨┐╨╛╤А╤Ж╨╕╨╕ ╨╕ ╨╜╨░ ╨╜╨╡╨╡ ╨╝╨╛╨╢╨╜╨╛ ╨▒╤Г╨┤╨╡╤В ╨║╨╗╨░╤Б╤В╤М ╨║╨░╤А╤В╤Л).</p>
               <label className="w-full py-4 rounded-2xl cursor-pointer transition-all hover:opacity-80 flex flex-col items-center justify-center gap-2 shadow-md" style={{ backgroundColor: COLORS.forest, color: 'white' }}>
                 <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                   const f = e.target.files[0];
                   if (!f) return;
                   setIsFieldModalOpen(false);
-                  notify("Сжимаю изображение...", 5000);
+                  notify("╨б╨╢╨╕╨╝╨░╤О ╨╕╨╖╨╛╨▒╤А╨░╨╢╨╡╨╜╨╕╨╡...", 5000);
                   try {
                     const data = await new Promise(r => { const rd = new FileReader(); rd.onload = (ev) => r(ev.target.result); rd.readAsDataURL(f); });
                     let comp = await compressImage(data, 1200, 1200);
                     if (comp.length > 900000) comp = await compressImage(data, 900, 900);
                     if (comp.length > 900000) comp = await compressImage(data, 700, 700);
                     const sizeKB = Math.round(comp.length / 1024);
-                    if (comp.length > 900000) return notify(`Файл слишком большой (${sizeKB}KB). Попробуйте другое изображение.`);
-                    notify(`Размещаю поле на столе (${sizeKB}KB)...`, 4000);
+                    if (comp.length > 900000) return notify(`╨д╨░╨╣╨╗ ╤Б╨╗╨╕╤И╨║╨╛╨╝ ╨▒╨╛╨╗╤М╤И╨╛╨╣ (${sizeKB}KB). ╨Я╨╛╨┐╤А╨╛╨▒╤Г╨╣╤В╨╡ ╨┤╤А╤Г╨│╨╛╨╡ ╨╕╨╖╨╛╨▒╤А╨░╨╢╨╡╨╜╨╕╨╡.`);
+                    notify(`╨а╨░╨╖╨╝╨╡╤Й╨░╤О ╨┐╨╛╨╗╨╡ ╨╜╨░ ╤Б╤В╨╛╨╗╨╡ (${sizeKB}KB)...`, 4000);
                     await addElement('field', { img: comp });
-                    notify("Игровое поле появилось на столе! ✓");
-                  } catch (err) { notify("Ошибка: " + err.message); } finally { e.target.value = ''; }
+                    notify("╨Ш╨│╤А╨╛╨▓╨╛╨╡ ╨┐╨╛╨╗╨╡ ╨┐╨╛╤П╨▓╨╕╨╗╨╛╤Б╤М ╨╜╨░ ╤Б╤В╨╛╨╗╨╡! тЬУ");
+                  } catch (err) { notify("╨Ю╤И╨╕╨▒╨║╨░: " + err.message); } finally { e.target.value = ''; }
                 }} />
                 <ImageIcon size={24} />
-                <span className="text-[10px] font-black uppercase tracking-widest">Загрузить поле для игры</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">╨Ч╨░╨│╤А╤Г╨╖╨╕╤В╤М ╨┐╨╛╨╗╨╡ ╨┤╨╗╤П ╨╕╨│╤А╤Л</span>
               </label>
             </div>
           </div>
@@ -3589,7 +3589,7 @@ export default function App() {
               </h1>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className="text-[8px] md:text-[9px] font-bold tracking-widest uppercase flex items-center gap-1" style={{ color: COLORS.plum }}>
-                  СЕССИЯ: {roomId} <span className="opacity-50">|</span> ВЫ: {userName}
+                  ╨б╨Х╨б╨б╨Ш╨п: {roomId} <span className="opacity-50">|</span> ╨Т╨л: {userName}
                 </span>
                 {clientPanelMessage && (
                   <span className="text-[8px] md:text-[9px] font-black uppercase flex items-center gap-1 px-2 py-1 rounded-full" style={{ color: COLORS.terra, backgroundColor: `${COLORS.terra}12` }}>
@@ -3611,28 +3611,28 @@ export default function App() {
         
         <div className={`w-full md:w-auto flex items-center gap-2 flex-wrap justify-center md:justify-end transition-all duration-300 overflow-hidden ${isMobileMenuOpen ? 'max-h-[800px] opacity-100 mt-2' : 'max-h-0 opacity-0 md:max-h-[800px] md:opacity-100 md:mt-0'}`}>
           <div className="flex bg-black/5 p-1 rounded-2xl shadow-inner border border-ink/5 gap-1 mr-1">
-             <button onClick={() => setIsFiguresPanelOpen(!isFiguresPanelOpen)} className={`p-2 rounded-xl transition-all flex items-center justify-center ${isFiguresPanelOpen ? 'bg-white shadow-sm text-plum' : 'hover:bg-white text-ink/70'}`} title="Открыть фигурки и стрелки">
+             <button onClick={() => setIsFiguresPanelOpen(!isFiguresPanelOpen)} className={`p-2 rounded-xl transition-all flex items-center justify-center ${isFiguresPanelOpen ? 'bg-white shadow-sm text-plum' : 'hover:bg-white text-ink/70'}`} title="╨Ю╤В╨║╤А╤Л╤В╤М ╤Д╨╕╨│╤Г╤А╨║╨╕ ╨╕ ╤Б╤В╤А╨╡╨╗╨║╨╕">
                 <FigureIcon gender="male" color={isFiguresPanelOpen ? COLORS.plum : 'currentColor'} isMenu={true} className="w-[18px] h-[18px] opacity-80" />
              </button>
-             <button onClick={() => setIsDicePanelOpen(!isDicePanelOpen)} className={`p-2 rounded-xl transition-all flex items-center justify-center ${isDicePanelOpen ? 'bg-white shadow-sm text-forest' : 'hover:bg-white text-ink/70'}`} title="Открыть кубики и фишки">
+             <button onClick={() => setIsDicePanelOpen(!isDicePanelOpen)} className={`p-2 rounded-xl transition-all flex items-center justify-center ${isDicePanelOpen ? 'bg-white shadow-sm text-forest' : 'hover:bg-white text-ink/70'}`} title="╨Ю╤В╨║╤А╤Л╤В╤М ╨║╤Г╨▒╨╕╨║╨╕ ╨╕ ╤Д╨╕╤И╨║╨╕">
                 <Dices size={18} />
              </button>
           </div>
           {!isClientMode ? (
             <div className="flex items-center gap-1 bg-white/50 p-1 rounded-[1rem] border shadow-sm" style={{ borderColor: `${COLORS.forest}30`, backgroundColor: `${COLORS.forest}10` }}>
-              <button onClick={() => { setIsVideoModalOpen(true); }} className="p-2 rounded-xl transition-all hover:bg-white text-forest" title="Настроить связь">
+              <button onClick={() => { setIsVideoModalOpen(true); }} className="p-2 rounded-xl transition-all hover:bg-white text-forest" title="╨Э╨░╤Б╤В╤А╨╛╨╕╤В╤М ╤Б╨▓╤П╨╖╤М">
                 <Video size={16} />
               </button>
            </div>
           ) : (
             isVideoCallReady && (
               <button onClick={joinNativeCall} className="flex items-center gap-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black text-white shadow-[0_0_15px_rgba(45,74,62,0.4)] transition-all hover:scale-105 uppercase animate-pulse" style={{ backgroundColor: COLORS.forest }}>
-                {callMediaMode === 'audio' ? <Mic size={14} /> : <Video size={14} />} {callMediaMode === 'audio' ? 'Подключиться к аудио' : 'Подключиться к видео'}
+                {callMediaMode === 'audio' ? <Mic size={14} /> : <Video size={14} />} {callMediaMode === 'audio' ? '╨Я╨╛╨┤╨║╨╗╤О╤З╨╕╤В╤М╤Б╤П ╨║ ╨░╤Г╨┤╨╕╨╛' : '╨Я╨╛╨┤╨║╨╗╤О╤З╨╕╤В╤М╤Б╤П ╨║ ╨▓╨╕╨┤╨╡╨╛'}
              </button>
             )
           )}
           {!isClientMode && (
-            <button onClick={runSessionCheck} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5 shadow-sm border" style={{ backgroundColor: 'white', color: COLORS.forest, borderColor: `${COLORS.forest}25` }} title="Проверка перед сессией">
+            <button onClick={runSessionCheck} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5 shadow-sm border" style={{ backgroundColor: 'white', color: COLORS.forest, borderColor: `${COLORS.forest}25` }} title="╨Я╤А╨╛╨▓╨╡╤А╨║╨░ ╨┐╨╡╤А╨╡╨┤ ╤Б╨╡╤Б╤Б╨╕╨╡╨╣">
               <AlertCircle size={18} />
             </button>
           )}
@@ -3642,7 +3642,7 @@ export default function App() {
                 <Timer size={14} />{timerDisplay}
               </div>
               {!isClientMode && (
-                <button onClick={stopTimer} className="p-2 rounded-2xl hover:bg-black/5 transition-colors" style={{ color: COLORS.terra }} title="Остановить таймер">
+                <button onClick={stopTimer} className="p-2 rounded-2xl hover:bg-black/5 transition-colors" style={{ color: COLORS.terra }} title="╨Ю╤Б╤В╨░╨╜╨╛╨▓╨╕╤В╤М ╤В╨░╨╣╨╝╨╡╤А">
                   <TimerOff size={15} />
                 </button>
               )}
@@ -3651,8 +3651,8 @@ export default function App() {
             !isClientMode && (
               <div className="flex items-center gap-1 bg-white/50 p-1 rounded-2xl border shadow-sm" style={{ borderColor: `${COLORS.plum}30`, backgroundColor: `${COLORS.plum}10` }}>
                 <Timer size={14} className="ml-1" style={{ color: COLORS.plum }} />
-                <button onClick={() => startTimer(60)} className="px-2 py-1 rounded-xl text-[10px] font-black hover:opacity-70 transition-all" style={{ color: COLORS.plum, backgroundColor: 'white' }} title="Таймер 60 мин">60</button>
-                <button onClick={() => startTimer(90)} className="px-2 py-1 rounded-xl text-[10px] font-black hover:opacity-70 transition-all" style={{ color: COLORS.plum, backgroundColor: 'white' }} title="Таймер 90 мин">90</button>
+                <button onClick={() => startTimer(60)} className="px-2 py-1 rounded-xl text-[10px] font-black hover:opacity-70 transition-all" style={{ color: COLORS.plum, backgroundColor: 'white' }} title="╨в╨░╨╣╨╝╨╡╤А 60 ╨╝╨╕╨╜">60</button>
+                <button onClick={() => startTimer(90)} className="px-2 py-1 rounded-xl text-[10px] font-black hover:opacity-70 transition-all" style={{ color: COLORS.plum, backgroundColor: 'white' }} title="╨в╨░╨╣╨╝╨╡╤А 90 ╨╝╨╕╨╜">90</button>
               </div>
             )
           )}
@@ -3662,20 +3662,20 @@ export default function App() {
           </button>
           
           {!isClientMode && (
-          <button onClick={shareLinkToClient} className="px-3 md:px-4 py-2.5 rounded-[1rem] text-[10px] font-black border flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-105 min-w-[40px]" style={{ backgroundColor: copyFeedback ? COLORS.forest : 'white', borderColor: copyFeedback ? COLORS.forest : `${COLORS.plum}30`, color: copyFeedback ? 'white' : COLORS.plum }} title="Постоянная ссылка для психолога и клиента">
+          <button onClick={shareLinkToClient} className="px-3 md:px-4 py-2.5 rounded-[1rem] text-[10px] font-black border flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-105 min-w-[40px]" style={{ backgroundColor: copyFeedback ? COLORS.forest : 'white', borderColor: copyFeedback ? COLORS.forest : `${COLORS.plum}30`, color: copyFeedback ? 'white' : COLORS.plum }} title="╨Я╨╛╤Б╤В╨╛╤П╨╜╨╜╨░╤П ╤Б╤Б╤Л╨╗╨║╨░ ╨┤╨╗╤П ╨┐╤Б╨╕╤Е╨╛╨╗╨╛╨│╨░ ╨╕ ╨║╨╗╨╕╨╡╨╜╤В╨░">
             {copyFeedback ? <CheckCircle size={14} /> : <UserPlus size={14} />}
-              <span className="ml-1 text-[9px] md:text-[10px] whitespace-nowrap">{copyFeedback ? "СКОПИРОВАНО" : "ССЫЛКА"}</span>
+              <span className="ml-1 text-[9px] md:text-[10px] whitespace-nowrap">{copyFeedback ? "╨б╨Ъ╨Ю╨Я╨Ш╨а╨Ю╨Т╨Р╨Э╨Ю" : "╨б╨б╨л╨Ы╨Ъ╨Р"}</span>
             </button>
           )}
           {!isClientMode && (
             <div className="flex bg-black/5 p-1 rounded-[1rem] gap-1 shadow-inner border border-ink/5">
-              <button onClick={() => setIsLaserMode(!isLaserMode)} className={`p-2 rounded-xl transition-all ${isLaserMode ? 'bg-white shadow-sm text-red-500' : 'hover:bg-white text-ink/70'}`} title={isLaserMode ? "Отключить указку" : "Лазерная указка (клиент видит точку)"}>
+              <button onClick={() => setIsLaserMode(!isLaserMode)} className={`p-2 rounded-xl transition-all ${isLaserMode ? 'bg-white shadow-sm text-red-500' : 'hover:bg-white text-ink/70'}`} title={isLaserMode ? "╨Ю╤В╨║╨╗╤О╤З╨╕╤В╤М ╤Г╨║╨░╨╖╨║╤Г" : "╨Ы╨░╨╖╨╡╤А╨╜╨░╤П ╤Г╨║╨░╨╖╨║╨░ (╨║╨╗╨╕╨╡╨╜╤В ╨▓╨╕╨┤╨╕╤В ╤В╨╛╤З╨║╤Г)"}>
                 <Crosshair size={16} />
               </button>
-              <button onClick={takeScreenshot} className="p-2 rounded-xl transition-all hover:bg-white text-ink/70" title="Скриншот стола">
+              <button onClick={takeScreenshot} className="p-2 rounded-xl transition-all hover:bg-white text-ink/70" title="╨б╨║╤А╨╕╨╜╤И╨╛╤В ╤Б╤В╨╛╨╗╨░">
                 <Camera size={16} />
               </button>
-              <button onClick={saveCurrentSession} className="p-2 rounded-xl transition-all hover:bg-white text-ink/70" title="Сохранить сессию">
+              <button onClick={saveCurrentSession} className="p-2 rounded-xl transition-all hover:bg-white text-ink/70" title="╨б╨╛╤Е╤А╨░╨╜╨╕╤В╤М ╤Б╨╡╤Б╤Б╨╕╤О">
                 <Save size={16} />
               </button>
             </div>
@@ -3683,30 +3683,30 @@ export default function App() {
           
           {!isClientMode && (
             <>
-              <button onClick={() => setIsNotebookOpen(true)} className="relative p-2.5 rounded-[1rem] transition-all hover:scale-105 shadow-sm border" style={{ backgroundColor: '#E0F2FE', color: '#2563EB', borderColor: '#BFDBFE' }} title="Мои Техники (Записная книжка)">
+              <button onClick={() => setIsNotebookOpen(true)} className="relative p-2.5 rounded-[1rem] transition-all hover:scale-105 shadow-sm border" style={{ backgroundColor: '#E0F2FE', color: '#2563EB', borderColor: '#BFDBFE' }} title="╨Ь╨╛╨╕ ╨в╨╡╤Е╨╜╨╕╨║╨╕ (╨Ч╨░╨┐╨╕╤Б╨╜╨░╤П ╨║╨╜╨╕╨╢╨║╨░)">
                 <BookOpen size={18} />
               </button>
-              <button onClick={() => addElement('private-text', { text: "" })} className="relative p-2.5 rounded-[1rem] transition-all hover:scale-105 shadow-sm border" style={{ backgroundColor: '#F3E8FF', color: '#9333EA', borderColor: '#D8B4FE' }} title="Скрытая заметка (не видна клиенту)">
+              <button onClick={() => addElement('private-text', { text: "" })} className="relative p-2.5 rounded-[1rem] transition-all hover:scale-105 shadow-sm border" style={{ backgroundColor: '#F3E8FF', color: '#9333EA', borderColor: '#D8B4FE' }} title="╨б╨║╤А╤Л╤В╨░╤П ╨╖╨░╨╝╨╡╤В╨║╨░ (╨╜╨╡ ╨▓╨╕╨┤╨╜╨░ ╨║╨╗╨╕╨╡╨╜╤В╤Г)">
                 <Type size={18} />
                 <EyeOff size={10} className="absolute bottom-1 right-1 opacity-70" />
               </button>
-              <button onClick={() => addElement('text', { text: "" })} className="p-2.5 rounded-[1rem] transition-all hover:scale-105 shadow-sm border" style={{ backgroundColor: '#FFF9C4', color: COLORS.terra, borderColor: '#FDE047' }} title="Добавить публичную заметку">
+              <button onClick={() => addElement('text', { text: "" })} className="p-2.5 rounded-[1rem] transition-all hover:scale-105 shadow-sm border" style={{ backgroundColor: '#FFF9C4', color: COLORS.terra, borderColor: '#FDE047' }} title="╨Ф╨╛╨▒╨░╨▓╨╕╤В╤М ╨┐╤Г╨▒╨╗╨╕╤З╨╜╤Г╤О ╨╖╨░╨╝╨╡╤В╨║╤Г">
                 <Type size={18} />
               </button>
-              <button onClick={() => setIsFieldModalOpen(true)} className="px-3 py-2.5 rounded-[1rem] border transition-all hover:bg-black/5 hover:scale-105 flex items-center gap-2" style={{ backgroundColor: 'white', color: COLORS.forest, borderColor: `${COLORS.forest}20` }} title="Настройки стола и поля">
+              <button onClick={() => setIsFieldModalOpen(true)} className="px-3 py-2.5 rounded-[1rem] border transition-all hover:bg-black/5 hover:scale-105 flex items-center gap-2" style={{ backgroundColor: 'white', color: COLORS.forest, borderColor: `${COLORS.forest}20` }} title="╨Э╨░╤Б╤В╤А╨╛╨╣╨║╨╕ ╤Б╤В╨╛╨╗╨░ ╨╕ ╨┐╨╛╨╗╤П">
                 <LayoutGrid size={14} />
-                <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">ПОЛЕ</span>
+                <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">╨Я╨Ю╨Ы╨Х</span>
               </button>
-              <button onClick={clearTable} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5" style={{ color: COLORS.terra }} title="Очистить стол">
+              <button onClick={clearTable} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5" style={{ color: COLORS.terra }} title="╨Ю╤З╨╕╤Б╤В╨╕╤В╤М ╤Б╤В╨╛╨╗">
                 <Trash2 size={18} />
               </button>
             </>
           )}
-          <button onClick={() => setIsHelpOpen(true)} className="px-3 py-2.5 rounded-[1rem] border transition-all hover:bg-black/5 hover:scale-105 flex items-center gap-2 shadow-sm" style={{ backgroundColor: 'white', color: COLORS.plum, borderColor: `${COLORS.plum}30` }} title="Инструкция">
+          <button onClick={() => setIsHelpOpen(true)} className="px-3 py-2.5 rounded-[1rem] border transition-all hover:bg-black/5 hover:scale-105 flex items-center gap-2 shadow-sm" style={{ backgroundColor: 'white', color: COLORS.plum, borderColor: `${COLORS.plum}30` }} title="╨Ш╨╜╤Б╤В╤А╤Г╨║╤Ж╨╕╤П">
             <HelpCircle size={14} />
-            <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">ИНСТРУКЦИЯ</span>
+            <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">╨Ш╨Э╨б╨в╨а╨г╨Ъ╨ж╨Ш╨п</span>
           </button>
-          <button onClick={() => window.location.reload()} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5" style={{ color: `${COLORS.ink}80` }} title="Выйти">
+          <button onClick={() => window.location.reload()} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5" style={{ color: `${COLORS.ink}80` }} title="╨Т╤Л╨╣╤В╨╕">
             <LogOut size={18} />
           </button>
         </div>
@@ -3774,7 +3774,7 @@ export default function App() {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_dice_d12_state'), { value: v, timestamp: Date.now() });
               }
             }} disabled={diceType === 6 ? isAnimating : diceType === 10 ? isAnimatingD10 : isAnimatingD12} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="w-full py-2 rounded-xl text-[10px] font-black uppercase shadow-md hover:scale-105 transition-all disabled:opacity-50">
-              Бросить
+              ╨С╤А╨╛╤Б╨╕╤В╤М
             </button>
           </div>
         )}
@@ -3782,11 +3782,11 @@ export default function App() {
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex flex-wrap md:flex-nowrap items-center justify-center gap-2 md:gap-4 bg-white/95 backdrop-blur-xl px-5 py-3 rounded-2xl md:rounded-full shadow-[0_10px_40px_rgb(0,0,0,0.15)] border border-white transition-all pointer-events-auto w-[95%] md:w-max" style={{ animation: 'popup 0.2s ease-out' }}>
             
             <div className="flex bg-[#F3F4F6] p-1 rounded-full">
-              <button onClick={() => updateGlobalFigureView('side')} className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'side' ? 'bg-white shadow-sm text-plum' : 'text-gray-500'}`}>Сбоку</button>
-              <button onClick={() => updateGlobalFigureView('top')} className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'top' ? 'bg-white shadow-sm text-plum' : 'text-gray-500'}`}>Сверху</button>
+              <button onClick={() => updateGlobalFigureView('side')} className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'side' ? 'bg-white shadow-sm text-plum' : 'text-gray-500'}`}>╨б╨▒╨╛╨║╤Г</button>
+              <button onClick={() => updateGlobalFigureView('top')} className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${figureViewMode === 'top' ? 'bg-white shadow-sm text-plum' : 'text-gray-500'}`}>╨б╨▓╨╡╤А╤Е╤Г</button>
             </div>
             <div className="w-[1px] h-6 bg-gray-200 hidden md:block"></div>
-            <input type="text" value={figureName} onChange={e => setFigureName(e.target.value)} placeholder="Имя" maxLength={12} className="w-20 md:w-24 px-3 py-1.5 rounded-full border-2 text-[10px] font-bold outline-none text-center transition-colors focus:border-plum/30" style={{ borderColor: '#F3F4F6', color: COLORS.ink }} />
+            <input type="text" value={figureName} onChange={e => setFigureName(e.target.value)} placeholder="╨Ш╨╝╤П" maxLength={12} className="w-20 md:w-24 px-3 py-1.5 rounded-full border-2 text-[10px] font-bold outline-none text-center transition-colors focus:border-plum/30" style={{ borderColor: '#F3F4F6', color: COLORS.ink }} />
             <div className="w-[1px] h-6 bg-gray-200 hidden md:block"></div>
             <div className="flex gap-1.5 p-1.5 rounded-full bg-[#F3F4F6]">
               {['#8B3252', '#2D4A3E', '#C4714A', '#4A90E2', '#E2A94A', '#8E44AD', '#34495E', '#D35400'].map(color => (
@@ -3797,15 +3797,15 @@ export default function App() {
             <div className="flex gap-1.5">
               <button onClick={() => { addElement('figure', { gender: 'male', color: figureColor, name: figureName }); setFigureName(''); }} className="px-4 py-2 bg-white rounded-full border border-gray-100 hover:border-plum/30 flex items-center gap-2 transition-all shadow-sm hover:scale-105">
                 <FigureIcon gender="male" color={figureColor} isMenu={true} className="w-4 h-4" />
-                <span className="text-[10px] font-black uppercase text-gray-600 hidden lg:block">Муж</span>
+                <span className="text-[10px] font-black uppercase text-gray-600 hidden lg:block">╨Ь╤Г╨╢</span>
               </button>
               <button onClick={() => { addElement('figure', { gender: 'female', color: figureColor, name: figureName }); setFigureName(''); }} className="px-4 py-2 bg-white rounded-full border border-gray-100 hover:border-plum/30 flex items-center gap-2 transition-all shadow-sm hover:scale-105">
                 <FigureIcon gender="female" color={figureColor} isMenu={true} className="w-4 h-4" />
-                <span className="text-[10px] font-black uppercase text-gray-600 hidden lg:block">Жен</span>
+                <span className="text-[10px] font-black uppercase text-gray-600 hidden lg:block">╨Ц╨╡╨╜</span>
               </button>
               <button onClick={() => addElement('arrow', { color: figureColor })} className="px-4 py-2 bg-white rounded-full border border-gray-100 hover:border-plum/30 flex items-center gap-2 transition-all shadow-sm hover:scale-105">
                 <ArrowElementIcon color={figureColor} className="w-4 h-4" />
-                <span className="text-[10px] font-black uppercase text-gray-600 hidden lg:block">Стрелка</span>
+                <span className="text-[10px] font-black uppercase text-gray-600 hidden lg:block">╨б╤В╤А╨╡╨╗╨║╨░</span>
               </button>
             </div>
             <button onClick={() => setIsFiguresPanelOpen(false)} className="ml-1 p-2 text-gray-400 hover:text-terra hover:bg-gray-100 rounded-full transition-colors">
@@ -3818,9 +3818,9 @@ export default function App() {
             onClick={() => setBoardScale(1)}
             className="absolute top-4 left-4 z-40 px-3 py-2 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-md border bg-white/90 backdrop-blur-xl transition-all hover:scale-105"
             style={{ color: COLORS.plum, borderColor: `${COLORS.plum}25` }}
-            title="Сбросить масштаб стола"
+            title="╨б╨▒╤А╨╛╤Б╨╕╤В╤М ╨╝╨░╤Б╤И╤В╨░╨▒ ╤Б╤В╨╛╨╗╨░"
           >
-            Стол {Math.round(boardScale * 100)}%
+            ╨б╤В╨╛╨╗ {Math.round(boardScale * 100)}%
           </button>
         )}
         <div
@@ -3850,20 +3850,20 @@ export default function App() {
               ))}
             
             {Object.entries(cursors).map(([id, cur]) => {
-              const isMasterCursor = cur.name?.includes('(Мастер)');
+              const isMasterCursor = cur.name?.includes('(╨Ь╨░╤Б╤В╨╡╤А)');
               if (isClientMode && isMasterCursor && !cur.isLaser) return null;
               if (cur.isLaser) {
                 return (
                   <div key={id} className="absolute pointer-events-none z-[2000] transition-all duration-150 ease-out" style={{ left: cur.x, top: cur.y, transform: 'translate(-50%, -50%)' }}>
                     <div className="w-4 h-4 rounded-full bg-red-500/80 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.8)] border-2 border-white/50" />
-                    <span className="absolute top-5 left-1/2 -translate-x-1/2 text-[9px] font-bold text-white px-1.5 py-0.5 rounded shadow-md bg-red-500/80 whitespace-nowrap">{cur.name || 'Гость'}</span>
+                    <span className="absolute top-5 left-1/2 -translate-x-1/2 text-[9px] font-bold text-white px-1.5 py-0.5 rounded shadow-md bg-red-500/80 whitespace-nowrap">{cur.name || '╨У╨╛╤Б╤В╤М'}</span>
                   </div>
                 );
               }
               return (
                 <div key={id} className="absolute pointer-events-none z-[2000] flex flex-col items-center transition-all duration-150 ease-out" style={{ left: cur.x, top: cur.y }}>
                   <MousePointer2 size={24} fill={cur.color} color="white" strokeWidth={2} className="drop-shadow-md -rotate-12 transform -translate-x-2 -translate-y-2" />
-                  <span className="text-[9px] font-bold text-white px-1.5 py-0.5 rounded mt-1 shadow-md" style={{ backgroundColor: cur.color }}>{cur.name || 'Гость'}</span>
+                  <span className="text-[9px] font-bold text-white px-1.5 py-0.5 rounded mt-1 shadow-md" style={{ backgroundColor: cur.color }}>{cur.name || '╨У╨╛╤Б╤В╤М'}</span>
                 </div>
               );
             })}
@@ -3873,8 +3873,8 @@ export default function App() {
         {undoStack && (
           <div className="fixed z-[110] flex items-center gap-3 px-5 py-3 rounded-3xl shadow-[0_10px_40px_rgb(0,0,0,0.2)] border" style={{ bottom: isLibraryOpen ? '320px' : '80px', left: '50%', transform: 'translateX(-50%)', backgroundColor: COLORS.ink, borderColor: `${COLORS.terra}40`, transition: 'bottom 0.4s ease' }}>
             <Undo2 size={16} color={COLORS.terra} />
-            <span className="text-white text-sm font-bold whitespace-nowrap">{undoStack.cards.length} {undoStack.cards.length === 1 ? 'объект' : 'объектов'} удалено</span>
-            <button onClick={undoClear} className="px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:opacity-80 transition-all" style={{ backgroundColor: COLORS.plum, color: 'white' }}>ОТМЕНА</button>
+            <span className="text-white text-sm font-bold whitespace-nowrap">{undoStack.cards.length} {undoStack.cards.length === 1 ? '╨╛╨▒╤К╨╡╨║╤В' : '╨╛╨▒╤К╨╡╨║╤В╨╛╨▓'} ╤Г╨┤╨░╨╗╨╡╨╜╨╛</span>
+            <button onClick={undoClear} className="px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:opacity-80 transition-all" style={{ backgroundColor: COLORS.plum, color: 'white' }}>╨Ю╨в╨Ь╨Х╨Э╨Р</button>
             <UndoTimer expiresAt={undoStack.expiresAt} />
           </div>
         )}
@@ -3885,7 +3885,7 @@ export default function App() {
               <button onClick={toggleLibrary} className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-black/5 transition-colors rounded-t-[3rem]">
                 <div className="w-12 h-1.5 bg-ink/10 rounded-full mb-1"></div>
                 <span className="text-[10px] font-black uppercase tracking-widest leading-none text-plum flex items-center gap-2">
-                  <Layers size={14} /> {isClientMode ? "Выбор карты" : "Библиотека Мастера"}
+                  <Layers size={14} /> {isClientMode ? "╨Т╤Л╨▒╨╛╤А ╨║╨░╤А╤В╤Л" : "╨С╨╕╨▒╨╗╨╕╨╛╤В╨╡╨║╨░ ╨Ь╨░╤Б╤В╨╡╤А╨░"}
                 </span>
               </button>
               {isLibraryOpen && (
@@ -3899,39 +3899,39 @@ export default function App() {
               {!isClientMode && (
                 <div className={`w-full md:w-72 border-b md:border-b-0 md:border-r pb-3 md:pb-0 pr-0 md:pr-6 md:h-auto flex-shrink-0 overflow-y-auto custom-scrollbar flex flex-col gap-3 min-h-0 ${activeDeckData && !isLibraryFullscreen ? 'hidden md:flex' : 'flex-1 md:flex-none'}`} style={{ borderColor: `${COLORS.ink}10` }}>
                   <div className="flex p-1 rounded-xl mb-1 flex-shrink-0 bg-black/5">
-                    <button onClick={() => setActiveTab('platform')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'platform' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>БАЗА</button>
-                    <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'cloud' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>ОБЛАКО</button>
-                    <button onClick={() => setActiveTab('local')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'local' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>МОИ</button>
-                    <button onClick={() => setActiveTab('sessions')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'sessions' ? 'bg-white shadow-sm text-forest' : 'hover:opacity-70 text-ink/60'}`}>СЕССИИ</button>
+                    <button onClick={() => setActiveTab('platform')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'platform' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>╨С╨Р╨Ч╨Р</button>
+                    <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'cloud' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>╨Ю╨С╨Ы╨Р╨Ъ╨Ю</button>
+                    <button onClick={() => setActiveTab('local')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'local' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>╨Ь╨Ю╨Ш</button>
+                    <button onClick={() => setActiveTab('sessions')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'sessions' ? 'bg-white shadow-sm text-forest' : 'hover:opacity-70 text-ink/60'}`}>╨б╨Х╨б╨б╨Ш╨Ш</button>
                   </div>
                   {activeTab === 'sessions' && (
                     <div className="flex flex-col gap-2 flex-shrink-0">
-                      <div className="text-[10px] font-bold text-center mb-2" style={{ color: COLORS.ink }}>СОХРАНЕННЫЕ СЕССИИ</div>
+                      <div className="text-[10px] font-bold text-center mb-2" style={{ color: COLORS.ink }}>╨б╨Ю╨е╨а╨Р╨Э╨Х╨Э╨Э╨л╨Х ╨б╨Х╨б╨б╨Ш╨Ш</div>
                       <div className="rounded-2xl p-3 text-[9px] leading-relaxed border" style={{ backgroundColor: `${COLORS.forest}08`, color: `${COLORS.ink}AA`, borderColor: `${COLORS.forest}20` }}>
-                        <div className="font-black uppercase tracking-widest mb-1 flex items-center gap-1" style={{ color: COLORS.forest }}><Save size={11} /> История и восстановление</div>
-                        <div>Кнопка сохранения записывает текущий расклад в историю. Зеленая кнопка загружает сохранение в текущую комнату, поэтому клиент увидит карты. Название можно поменять карандашом.</div>
+                        <div className="font-black uppercase tracking-widest mb-1 flex items-center gap-1" style={{ color: COLORS.forest }}><Save size={11} /> ╨Ш╤Б╤В╨╛╤А╨╕╤П ╨╕ ╨▓╨╛╤Б╤Б╤В╨░╨╜╨╛╨▓╨╗╨╡╨╜╨╕╨╡</div>
+                        <div>╨Ъ╨╜╨╛╨┐╨║╨░ ╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜╨╕╤П ╨╖╨░╨┐╨╕╤Б╤Л╨▓╨░╨╡╤В ╤В╨╡╨║╤Г╤Й╨╕╨╣ ╤А╨░╤Б╨║╨╗╨░╨┤ ╨▓ ╨╕╤Б╤В╨╛╤А╨╕╤О. ╨Ч╨╡╨╗╨╡╨╜╨░╤П ╨║╨╜╨╛╨┐╨║╨░ ╨╖╨░╨│╤А╤Г╨╢╨░╨╡╤В ╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜╨╕╨╡ ╨▓ ╤В╨╡╨║╤Г╤Й╤Г╤О ╨║╨╛╨╝╨╜╨░╤В╤Г, ╨┐╨╛╤Н╤В╨╛╨╝╤Г ╨║╨╗╨╕╨╡╨╜╤В ╤Г╨▓╨╕╨┤╨╕╤В ╨║╨░╤А╤В╤Л. ╨Э╨░╨╖╨▓╨░╨╜╨╕╨╡ ╨╝╨╛╨╢╨╜╨╛ ╨┐╨╛╨╝╨╡╨╜╤П╤В╤М ╨║╨░╤А╨░╨╜╨┤╨░╤И╨╛╨╝.</div>
                         {hasLocalBoardBackup && (
                           <button onClick={restoreLocalBoardBackup} className="mt-3 w-full py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.02]" style={{ backgroundColor: COLORS.forest }}>
-                            <UploadCloud size={12} /> Восстановить локальную копию
+                            <UploadCloud size={12} /> ╨Т╨╛╤Б╤Б╤В╨░╨╜╨╛╨▓╨╕╤В╤М ╨╗╨╛╨║╨░╨╗╤М╨╜╤Г╤О ╨║╨╛╨┐╨╕╤О
                           </button>
                         )}
                       </div>
-                      {savedSessions.length === 0 && <div className="text-[9px] text-center opacity-50">Нет сохраненных сессий</div>}
+                      {savedSessions.length === 0 && <div className="text-[9px] text-center opacity-50">╨Э╨╡╤В ╤Б╨╛╤Е╤А╨░╨╜╨╡╨╜╨╜╤Л╤Е ╤Б╨╡╤Б╤Б╨╕╨╣</div>}
                       {savedSessions.map(session => (
                         <div key={session.id} className="group flex items-center justify-between p-3 rounded-2xl border border-gray-100 hover:bg-black/5 transition-colors">
                            <div>
                               <div className="text-[10px] font-bold" style={{ color: COLORS.ink }}>{session.name}</div>
-                              <div className="text-[8px] text-gray-500">{new Date(session.createdAt).toLocaleDateString()} {session.counts?.total ? `| ${session.counts.total} объектов` : ''}</div>
-                              {session.activeDeckName && <div className="text-[8px] text-gray-400 truncate max-w-[150px]">Колода: {session.activeDeckName}</div>}
+                              <div className="text-[8px] text-gray-500">{new Date(session.createdAt).toLocaleDateString()} {session.counts?.total ? `| ${session.counts.total} ╨╛╨▒╤К╨╡╨║╤В╨╛╨▓` : ''}</div>
+                              {session.activeDeckName && <div className="text-[8px] text-gray-400 truncate max-w-[150px]">╨Ъ╨╛╨╗╨╛╨┤╨░: {session.activeDeckName}</div>}
                             </div>
                             <div className="flex gap-1">
-                              <button onClick={() => renameSavedSession(session)} className="p-2 text-ink/70 hover:bg-black/5 rounded-lg transition-colors" title="Переименовать сессию"><Edit2 size={14}/></button>
-                              <button onClick={() => loadSavedSession(session)} className="p-2 text-forest hover:bg-forest/10 rounded-lg transition-colors" title="Загрузить в текущую комнату"><UploadCloud size={14}/></button>
-                              <button onClick={() => copySavedSessionLink(session)} className="p-2 text-plum hover:bg-plum/10 rounded-lg transition-colors" title="Скопировать ссылку и открыть эту сессию у себя"><LinkIcon size={14}/></button>
+                              <button onClick={() => renameSavedSession(session)} className="p-2 text-ink/70 hover:bg-black/5 rounded-lg transition-colors" title="╨Я╨╡╤А╨╡╨╕╨╝╨╡╨╜╨╛╨▓╨░╤В╤М ╤Б╨╡╤Б╤Б╨╕╤О"><Edit2 size={14}/></button>
+                              <button onClick={() => loadSavedSession(session)} className="p-2 text-forest hover:bg-forest/10 rounded-lg transition-colors" title="╨Ч╨░╨│╤А╤Г╨╖╨╕╤В╤М ╨▓ ╤В╨╡╨║╤Г╤Й╤Г╤О ╨║╨╛╨╝╨╜╨░╤В╤Г"><UploadCloud size={14}/></button>
+                              <button onClick={() => copySavedSessionLink(session)} className="p-2 text-plum hover:bg-plum/10 rounded-lg transition-colors" title="╨б╨║╨╛╨┐╨╕╤А╨╛╨▓╨░╤В╤М ╤Б╤Б╤Л╨╗╨║╤Г ╨╕ ╨╛╤В╨║╤А╤Л╤В╤М ╤Н╤В╤Г ╤Б╨╡╤Б╤Б╨╕╤О ╤Г ╤Б╨╡╨▒╤П"><LinkIcon size={14}/></button>
                               <button onClick={async () => {
-                                const ok = await askConfirm('Удалить эту сессию навсегда?');
+                                const ok = await askConfirm('╨г╨┤╨░╨╗╨╕╤В╤М ╤Н╤В╤Г ╤Б╨╡╤Б╤Б╨╕╤О ╨╜╨░╨▓╤Б╨╡╨│╨┤╨░?');
                                 if(ok) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions', session.id));
-                              }} className="p-2 text-terra hover:bg-terra/10 rounded-lg transition-colors" title="Удалить сессию"><Trash2 size={14}/></button>
+                              }} className="p-2 text-terra hover:bg-terra/10 rounded-lg transition-colors" title="╨г╨┤╨░╨╗╨╕╤В╤М ╤Б╨╡╤Б╤Б╨╕╤О"><Trash2 size={14}/></button>
                            </div>
                         </div>
                       ))}
@@ -3941,17 +3941,17 @@ export default function App() {
                   {activeTab === 'local' && (
                     <div className="flex flex-col gap-3 flex-shrink-0">
                       <div className="rounded-2xl p-3 text-[9px] leading-relaxed" style={{ backgroundColor: `${COLORS.forest}12`, color: COLORS.forest, border: `1px solid ${COLORS.forest}25` }}>
-                        <div className="font-black uppercase tracking-widest mb-2 flex items-center gap-1"><FolderOpen size={11} /> Как добавить колоду с Google Диска:</div>
+                        <div className="font-black uppercase tracking-widest mb-2 flex items-center gap-1"><FolderOpen size={11} /> ╨Ъ╨░╨║ ╨┤╨╛╨▒╨░╨▓╨╕╤В╤М ╨║╨╛╨╗╨╛╨┤╤Г ╤Б Google ╨Ф╨╕╤Б╨║╨░:</div>
                         <div className="space-y-1 font-medium" style={{ color: `${COLORS.ink}99` }}>
-                          <div>1. Откройте папку с картами на Google Диске</div>
-                          <div>2. Правая кнопка → <b>"Поделиться"</b></div>
-                          <div>3. В разделе доступа выберите <b>"Все, у кого есть ссылка"</b></div>
-                          <div>4. Нажмите <b>"Копировать ссылку"</b> и вставьте ниже</div>
-                          <div>5. <b>Важно:</b> "1-1" станет рубашкой карты "1", "2-1" - карты "2". Файл с "коробк" будет картинкой коробки колоды.</div>
+                          <div>1. ╨Ю╤В╨║╤А╨╛╨╣╤В╨╡ ╨┐╨░╨┐╨║╤Г ╤Б ╨║╨░╤А╤В╨░╨╝╨╕ ╨╜╨░ Google ╨Ф╨╕╤Б╨║╨╡</div>
+                          <div>2. ╨Я╤А╨░╨▓╨░╤П ╨║╨╜╨╛╨┐╨║╨░ тЖТ <b>"╨Я╨╛╨┤╨╡╨╗╨╕╤В╤М╤Б╤П"</b></div>
+                          <div>3. ╨Т ╤А╨░╨╖╨┤╨╡╨╗╨╡ ╨┤╨╛╤Б╤В╤Г╨┐╨░ ╨▓╤Л╨▒╨╡╤А╨╕╤В╨╡ <b>"╨Т╤Б╨╡, ╤Г ╨║╨╛╨│╨╛ ╨╡╤Б╤В╤М ╤Б╤Б╤Л╨╗╨║╨░"</b></div>
+                          <div>4. ╨Э╨░╨╢╨╝╨╕╤В╨╡ <b>"╨Ъ╨╛╨┐╨╕╤А╨╛╨▓╨░╤В╤М ╤Б╤Б╤Л╨╗╨║╤Г"</b> ╨╕ ╨▓╤Б╤В╨░╨▓╤М╤В╨╡ ╨╜╨╕╨╢╨╡</div>
+                          <div>5. <b>╨Т╨░╨╢╨╜╨╛:</b> "1-1" ╤Б╤В╨░╨╜╨╡╤В ╤А╤Г╨▒╨░╤И╨║╨╛╨╣ ╨║╨░╤А╤В╤Л "1", "2-1" - ╨║╨░╤А╤В╤Л "2". ╨д╨░╨╣╨╗ ╤Б "╨║╨╛╤А╨╛╨▒╨║" ╨▒╤Г╨┤╨╡╤В ╨║╨░╤А╤В╨╕╨╜╨║╨╛╨╣ ╨║╨╛╤А╨╛╨▒╨║╨╕ ╨║╨╛╨╗╨╛╨┤╤Л.</div>
                         </div>
                       </div>
                       <button onClick={addDeckByLinks} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black transition-all uppercase hover:opacity-80 shadow-sm" style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }}>
-                        <LinkIcon size={16} /> Вставить ссылку на папку
+                        <LinkIcon size={16} /> ╨Т╤Б╤В╨░╨▓╨╕╤В╤М ╤Б╤Б╤Л╨╗╨║╤Г ╨╜╨░ ╨┐╨░╨┐╨║╤Г
                       </button>
                     </div>
                   )}
@@ -3965,19 +3965,19 @@ export default function App() {
                         <input
                           value={deckSearch}
                           onChange={e => setDeckSearch(e.target.value)}
-                          placeholder="Поиск по колодам"
+                          placeholder="╨Я╨╛╨╕╤Б╨║ ╨┐╨╛ ╨║╨╛╨╗╨╛╨┤╨░╨╝"
                           className="min-w-0 flex-1 bg-transparent outline-none text-[10px] font-bold"
                           style={{ color: COLORS.ink }}
                         />
                         {deckSearch && (
-                          <button onClick={() => setDeckSearch('')} className="p-1 rounded-lg hover:bg-black/5" title="Очистить поиск">
+                          <button onClick={() => setDeckSearch('')} className="p-1 rounded-lg hover:bg-black/5" title="╨Ю╤З╨╕╤Б╤В╨╕╤В╤М ╨┐╨╛╨╕╤Б╨║">
                             <X size={12} />
                           </button>
                         )}
                       </div>
                       <button onClick={() => setShowHiddenDecks(v => !v)} className="flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-[9px] font-black uppercase tracking-widest transition-colors hover:bg-black/5" style={{ color: showHiddenDecks ? COLORS.forest : `${COLORS.ink}70`, backgroundColor: showHiddenDecks ? `${COLORS.forest}10` : 'transparent' }}>
                         {showHiddenDecks ? <Eye size={13} /> : <EyeOff size={13} />}
-                        {showHiddenDecks ? "Скрытые показаны" : "Показать скрытые"}
+                        {showHiddenDecks ? "╨б╨║╤А╤Л╤В╤Л╨╡ ╨┐╨╛╨║╨░╨╖╨░╨╜╤Л" : "╨Я╨╛╨║╨░╨╖╨░╤В╤М ╤Б╨║╤А╤Л╤В╤Л╨╡"}
                         {hiddenDecksCount > 0 && <span className="px-1.5 py-0.5 rounded-full text-[8px] text-white" style={{ backgroundColor: COLORS.terra }}>{hiddenDecksCount}</span>}
                       </button>
                     </div>
@@ -3985,18 +3985,18 @@ export default function App() {
                   {activeTab !== 'sessions' && favoriteDecks.length > 0 && (
                     <div className="flex flex-col gap-2 flex-shrink-0">
                       <div className="text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: COLORS.terra }}>
-                        <Star size={12} fill={COLORS.terra} /> Избранные колоды
+                        <Star size={12} fill={COLORS.terra} /> ╨Ш╨╖╨▒╤А╨░╨╜╨╜╤Л╨╡ ╨║╨╛╨╗╨╛╨┤╤Л
                       </div>
                       {favoriteDecks.map(item => renderDeckItem(item, 'favorite'))}
                     </div>
                   )}
                   {activeTab !== 'sessions' && favoriteDecks.length > 0 && (
-                    <div className="text-[9px] font-black uppercase tracking-widest flex-shrink-0" style={{ color: `${COLORS.ink}60` }}>Все колоды</div>
+                    <div className="text-[9px] font-black uppercase tracking-widest flex-shrink-0" style={{ color: `${COLORS.ink}60` }}>╨Т╤Б╨╡ ╨║╨╛╨╗╨╛╨┤╤Л</div>
                   )}
                   {activeTab !== 'sessions' && visibleLibraryDecks.map(item => renderDeckItem(item))}
                   {activeTab !== 'sessions' && visibleLibraryDecks.length === 0 && favoriteDecks.length === 0 && !isPlatformDecksLoading && !isBaseDecksLoading && (
                     <div className="text-[9px] text-center font-bold py-5 px-3 rounded-2xl flex-shrink-0" style={{ color: `${COLORS.ink}55`, backgroundColor: `${COLORS.ink}06` }}>
-                      {deckSearch ? "По этому запросу колод не найдено" : activeTab === 'cloud' ? "В облаке пока нет колод" : activeTab === 'local' ? "В ваших колодах пока пусто. Нажмите «Вставить ссылку на папку»." : showHiddenDecks ? "В этой вкладке пока нет колод" : "Нет видимых колод. Включите «Показать скрытые», если вы их скрывали."}
+                      {deckSearch ? "╨Я╨╛ ╤Н╤В╨╛╨╝╤Г ╨╖╨░╨┐╤А╨╛╤Б╤Г ╨║╨╛╨╗╨╛╨┤ ╨╜╨╡ ╨╜╨░╨╣╨┤╨╡╨╜╨╛" : activeTab === 'cloud' ? "╨Т ╨╛╨▒╨╗╨░╨║╨╡ ╨┐╨╛╨║╨░ ╨╜╨╡╤В ╨║╨╛╨╗╨╛╨┤" : activeTab === 'local' ? "╨Т ╨▓╨░╤И╨╕╤Е ╨║╨╛╨╗╨╛╨┤╨░╤Е ╨┐╨╛╨║╨░ ╨┐╤Г╤Б╤В╨╛. ╨Э╨░╨╢╨╝╨╕╤В╨╡ ┬л╨Т╤Б╤В╨░╨▓╨╕╤В╤М ╤Б╤Б╤Л╨╗╨║╤Г ╨╜╨░ ╨┐╨░╨┐╨║╤Г┬╗." : showHiddenDecks ? "╨Т ╤Н╤В╨╛╨╣ ╨▓╨║╨╗╨░╨┤╨║╨╡ ╨┐╨╛╨║╨░ ╨╜╨╡╤В ╨║╨╛╨╗╨╛╨┤" : "╨Э╨╡╤В ╨▓╨╕╨┤╨╕╨╝╤Л╤Е ╨║╨╛╨╗╨╛╨┤. ╨Т╨║╨╗╤О╤З╨╕╤В╨╡ ┬л╨Я╨╛╨║╨░╨╖╨░╤В╤М ╤Б╨║╤А╤Л╤В╤Л╨╡┬╗, ╨╡╤Б╨╗╨╕ ╨▓╤Л ╨╕╤Е ╤Б╨║╤А╤Л╨▓╨░╨╗╨╕."}
                     </div>
                   )}
                 </div>
@@ -4009,19 +4009,19 @@ export default function App() {
                       <div className="min-w-0">
                         <span className="block text-[11px] md:text-sm font-black uppercase truncate" style={{ color: `${COLORS.ink}B3` }}>{activeDeckData.name}</span>
                         {!isClientMode && !isLibraryFullscreen && (
-                          <span className="md:hidden text-[8px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}60` }}>Разверните панель, чтобы сменить колоду</span>
+                          <span className="md:hidden text-[8px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}60` }}>╨а╨░╨╖╨▓╨╡╤А╨╜╨╕╤В╨╡ ╨┐╨░╨╜╨╡╨╗╤М, ╤З╤В╨╛╨▒╤Л ╤Б╨╝╨╡╨╜╨╕╤В╤М ╨║╨╛╨╗╨╛╨┤╤Г</span>
                         )}
                       </div>
                       {!isClientMode && (
                         <button onClick={toggleDeckFlip} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="px-3 md:px-4 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest shadow-md hover:scale-105 transition-all shrink-0">
-                          {isLibraryDeckFlipped ? "Скрыть карты" : "Открыть колоду"}
+                          {isLibraryDeckFlipped ? "╨б╨║╤А╤Л╤В╤М ╨║╨░╤А╤В╤Л" : "╨Ю╤В╨║╤А╤Л╤В╤М ╨║╨╛╨╗╨╛╨┤╤Г"}
                         </button>
                       )}
                     </div>
                     <div className="flex-1 overflow-x-auto overflow-y-hidden md:overflow-y-auto md:overflow-x-hidden custom-scrollbar flex flex-nowrap md:flex-wrap gap-3 md:gap-4 content-start pb-4 md:pb-8 pr-2">
                       <button onClick={() => {
                         const availableCards = activeDeckData.cards.filter(img => !usedImages.has(img));
-                        if (availableCards.length === 0) return notify("В колоде больше нет свободных карт!");
+                        if (availableCards.length === 0) return notify("╨Т ╨║╨╛╨╗╨╛╨┤╨╡ ╨▒╨╛╨╗╤М╤И╨╡ ╨╜╨╡╤В ╤Б╨▓╨╛╨▒╨╛╨┤╨╜╤Л╤Е ╨║╨░╤А╤В!");
                         
                         const array = new Uint32Array(1);
                         window.crypto.getRandomValues(array);
@@ -4030,7 +4030,7 @@ export default function App() {
                         addElement('card', { img: randomCard, backImg: getDeckCardBackImage(activeDeckData, randomCard) });
                         if (isLibraryFullscreen) toggleLibrary();
                       }} className="flex-shrink-0 w-20 h-28 md:w-28 md:h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 hover:scale-105 transition-all shadow-sm" style={{ borderColor: `${COLORS.plum}4D`, backgroundColor: `${COLORS.plum}10`, color: COLORS.plum }}>
-                        <Plus size={28} /><span className="text-[9px] font-black uppercase">Наугад</span>
+                        <Plus size={28} /><span className="text-[9px] font-black uppercase">╨Э╨░╤Г╨│╨░╨┤</span>
                       </button>
                       
                       {activeDeckData.cards.map((img, idx) => {
@@ -4038,14 +4038,14 @@ export default function App() {
                         const cardBackImage = getDeckCardBackImage(activeDeckData, img, idx);
                         return (
                           <button key={idx} onClick={() => {
-                            if (isUsed) return notify("Эта карта уже лежит на столе!");
+                            if (isUsed) return notify("╨н╤В╨░ ╨║╨░╤А╤В╨░ ╤Г╨╢╨╡ ╨╗╨╡╨╢╨╕╤В ╨╜╨░ ╤Б╤В╨╛╨╗╨╡!");
                             addElement('card', { img, backImg: cardBackImage });
                             if (isLibraryFullscreen) toggleLibrary();
                           }} className={`relative flex-shrink-0 h-28 md:h-40 rounded-2xl group transition-all flex items-center justify-center ${isUsed ? 'opacity-40 cursor-not-allowed grayscale' : 'shadow-sm hover:shadow-lg hover:scale-105'}`}>
                             {isLibraryDeckFlipped
-                              ? <img src={img} loading="lazy" decoding="async" className="h-full w-auto min-w-[4.5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
+                              ? <img src={img} loading="lazy" decoding="async" className="h-full w-auto min-w-[4.5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`╨Ъ╨░╤А╤В╨░ ${idx + 1}`} />
                               : <div className="h-full w-20 md:w-28 flex items-center justify-center rounded-2xl overflow-hidden relative shadow-sm border border-white/20" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
-                                {cardBackImage ? <img src={cardBackImage} loading="lazy" decoding="async" className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" /> : <Layers size={40} className="text-white opacity-30" />}
+                                {cardBackImage ? <img src={cardBackImage} loading="lazy" decoding="async" className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="╨а╤Г╨▒╨░╤И╨║╨░" /> : <Layers size={40} className="text-white opacity-30" />}
                               </div>}
                             <div className="absolute top-2 left-2 text-white text-[10px] font-black px-2 py-0.5 rounded-md z-10 pointer-events-none backdrop-blur-md bg-black/40 border border-white/20 shadow-sm">{idx + 1}</div>
                             {isUsed && (
@@ -4060,7 +4060,7 @@ export default function App() {
                   </>
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center font-bold uppercase tracking-widest leading-none text-center px-4" style={{ color: `${COLORS.ink}33` }}>
-                    {isClientMode ? "Мастер еще не выбрал колоду" : "Выберите колоду слева"}
+                    {isClientMode ? "╨Ь╨░╤Б╤В╨╡╤А ╨╡╤Й╨╡ ╨╜╨╡ ╨▓╤Л╨▒╤А╨░╨╗ ╨║╨╛╨╗╨╛╨┤╤Г" : "╨Т╤Л╨▒╨╡╤А╨╕╤В╨╡ ╨║╨╛╨╗╨╛╨┤╤Г ╤Б╨╗╨╡╨▓╨░"}
                   </div>
                 )}
               </div>
@@ -4071,13 +4071,13 @@ export default function App() {
       {isNamingDeck && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center backdrop-blur-sm p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl border-4" style={{ borderColor: COLORS.haze }}>
-            <h3 className="text-xl font-black mb-2 uppercase italic" style={{ color: COLORS.ink }}>ИМЯ КОЛОДЫ</h3>
-            <p className="text-[10px] mb-6 font-medium" style={{ color: `${COLORS.ink}66` }}>Выбрано файлов: {pendingFiles.length}. "1-1" станет рубашкой карты "1"; файл с "рубашка" останется общей обложкой.</p>
-            <input autoFocus value={tempDeckName} onChange={e => setTempDeckName(e.target.value)} onKeyDown={e => e.key === 'Enter' && confirmUpload()} placeholder="Напр: Эмоции" className="w-full px-6 py-4 rounded-2xl border-2 mb-8 outline-none font-bold text-base" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
+            <h3 className="text-xl font-black mb-2 uppercase italic" style={{ color: COLORS.ink }}>╨Ш╨Ь╨п ╨Ъ╨Ю╨Ы╨Ю╨Ф╨л</h3>
+            <p className="text-[10px] mb-6 font-medium" style={{ color: `${COLORS.ink}66` }}>╨Т╤Л╨▒╤А╨░╨╜╨╛ ╤Д╨░╨╣╨╗╨╛╨▓: {pendingFiles.length}. "1-1" ╤Б╤В╨░╨╜╨╡╤В ╤А╤Г╨▒╨░╤И╨║╨╛╨╣ ╨║╨░╤А╤В╤Л "1"; ╤Д╨░╨╣╨╗ ╤Б "╤А╤Г╨▒╨░╤И╨║╨░" ╨╛╤Б╤В╨░╨╜╨╡╤В╤Б╤П ╨╛╨▒╤Й╨╡╨╣ ╨╛╨▒╨╗╨╛╨╢╨║╨╛╨╣.</p>
+            <input autoFocus value={tempDeckName} onChange={e => setTempDeckName(e.target.value)} onKeyDown={e => e.key === 'Enter' && confirmUpload()} placeholder="╨Э╨░╨┐╤А: ╨н╨╝╨╛╤Ж╨╕╨╕" className="w-full px-6 py-4 rounded-2xl border-2 mb-8 outline-none font-bold text-base" style={{ borderColor: COLORS.haze, color: COLORS.ink }} />
             {isUploading && (
               <div className="mb-6">
                 <div className="flex justify-between text-[10px] font-bold mb-2" style={{ color: `${COLORS.ink}66` }}>
-                  <span>Загрузка в облако...</span><span>{uploadProgress}%</span>
+                  <span>╨Ч╨░╨│╤А╤Г╨╖╨║╨░ ╨▓ ╨╛╨▒╨╗╨░╨║╨╛...</span><span>{uploadProgress}%</span>
                 </div>
                 <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${COLORS.ink}10` }}>
                   <div className="h-full rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%`, backgroundColor: COLORS.plum }} />
@@ -4085,9 +4085,9 @@ export default function App() {
               </div>
             )}
             <div className="flex gap-4">
-              <button onClick={() => { setIsNamingDeck(false); setPendingFiles([]); }} disabled={isUploading} className="flex-1 font-bold uppercase text-xs hover:opacity-70 transition-colors disabled:opacity-30" style={{ color: `${COLORS.ink}66` }}>Отмена</button>
+              <button onClick={() => { setIsNamingDeck(false); setPendingFiles([]); }} disabled={isUploading} className="flex-1 font-bold uppercase text-xs hover:opacity-70 transition-colors disabled:opacity-30" style={{ color: `${COLORS.ink}66` }}>╨Ю╤В╨╝╨╡╨╜╨░</button>
               <button onClick={confirmUpload} disabled={isUploading} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="flex-[2] py-4 rounded-2xl font-black shadow-lg uppercase text-xs disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-2">
-                {isUploading ? <><Loader2 size={14} className="animate-spin" /> Загрузка {uploadProgress}%</> : "Готово"}
+                {isUploading ? <><Loader2 size={14} className="animate-spin" /> ╨Ч╨░╨│╤А╤Г╨╖╨║╨░ {uploadProgress}%</> : "╨У╨╛╤В╨╛╨▓╨╛"}
               </button>
             </div>
           </div>
@@ -4096,12 +4096,12 @@ export default function App() {
       {previewCard && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}F2` }} onClick={() => setPreviewCard(null)}>
           <div className="absolute top-6 left-1/2 -translate-x-1/2 text-white font-black tracking-widest uppercase bg-black/50 px-6 py-2 rounded-full backdrop-blur-md text-xs text-center w-[90%] md:w-auto">
-            {previewCard.isFlipped ? "Эту карту сейчас видите только вы" : "Эта карта открыта для всех"}
+            {previewCard.isFlipped ? "╨н╤В╤Г ╨║╨░╤А╤В╤Г ╤Б╨╡╨╣╤З╨░╤Б ╨▓╨╕╨┤╨╕╤В╨╡ ╤В╨╛╨╗╤М╨║╨╛ ╨▓╤Л" : "╨н╤В╨░ ╨║╨░╤А╤В╨░ ╨╛╤В╨║╤А╤Л╤В╨░ ╨┤╨╗╤П ╨▓╤Б╨╡╤Е"}
           </div>
           <button className="absolute top-6 right-6 text-white p-2 rounded-full transition-all hover:opacity-70" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
             <X size={40} />
           </button>
-          <img src={previewCard.img} decoding="async" className="max-h-[85vh] max-w-[90vw] h-auto w-auto rounded-2xl shadow-2xl bg-white object-contain" style={{ animation: 'scaleIn 0.2s ease-out' }} alt="Карта" />
+          <img src={previewCard.img} decoding="async" className="max-h-[85vh] max-w-[90vw] h-auto w-auto rounded-2xl shadow-2xl bg-white object-contain" style={{ animation: 'scaleIn 0.2s ease-out' }} alt="╨Ъ╨░╤А╤В╨░" />
         </div>
       )}
       <style>{`
@@ -4365,7 +4365,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
           onTouchStart={handleRotateStart}
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair z-[-1]"
           style={{ width: element.width + 60, height: element.height + 60 }}
-          title="Нажмите на круг, чтобы повернуть"
+          title="╨Э╨░╨╢╨╝╨╕╤В╨╡ ╨╜╨░ ╨║╤А╤Г╨│, ╤З╤В╨╛╨▒╤Л ╨┐╨╛╨▓╨╡╤А╨╜╤Г╤В╤М"
         >
           {[0, 45, 90, 135, 180, 225, 270, 315].map(angle => (
             <div key={angle} className="absolute w-full h-full pointer-events-none" style={{ transform: `rotate(${angle}deg)` }}>
@@ -4387,7 +4387,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
             onMouseDown={handleRotateStart}
             onTouchStart={handleRotateStart}
             className="absolute left-1/2 -top-3 -translate-x-1/2 w-8 h-8 rounded-full bg-yellow-300 text-ink border-2 border-white shadow-lg flex items-center justify-center pointer-events-auto active:scale-95"
-            title="Потяните, чтобы направить взгляд"
+            title="╨Я╨╛╤В╤П╨╜╨╕╤В╨╡, ╤З╤В╨╛╨▒╤Л ╨╜╨░╨┐╤А╨░╨▓╨╕╤В╤М ╨▓╨╖╨│╨╗╤П╨┤"
           >
             <ArrowUp size={15} />
           </button>
@@ -4395,15 +4395,15 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       )}
       {!(isLaserMode && !isClientMode) && (
         <div className="absolute -top-16 left-1/2 -translate-x-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all bg-white/80 backdrop-blur-xl rounded-full px-2 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-20 border border-white">
-          {!isField && <button onClick={(e) => { e.stopPropagation(); onUpdate({ zIndex: maxZIndex + 1 }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="На передний план"><ArrowUpToLine size={16} /></button>}
+          {!isField && <button onClick={(e) => { e.stopPropagation(); onUpdate({ zIndex: maxZIndex + 1 }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="╨Э╨░ ╨┐╨╡╤А╨╡╨┤╨╜╨╕╨╣ ╨┐╨╗╨░╨╜"><ArrowUpToLine size={16} /></button>}
           
           {element.type === 'figure' && (
-            <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLaying: !element.isLaying }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title={element.isLaying ? "Открыть глаза / Поднять фигурку" : "Закрыть глаза (сон/смерть)"}>
+            <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLaying: !element.isLaying }); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title={element.isLaying ? "╨Ю╤В╨║╤А╤Л╤В╤М ╨│╨╗╨░╨╖╨░ / ╨Я╨╛╨┤╨╜╤П╤В╤М ╤Д╨╕╨│╤Г╤А╨║╤Г" : "╨Ч╨░╨║╤А╤Л╤В╤М ╨│╨╗╨░╨╖╨░ (╤Б╨╛╨╜/╤Б╨╝╨╡╤А╤В╤М)"}>
               {element.isLaying ? <Eye size={16} /> : <EyeOff size={16} />}
             </button>
           )}
           {element.type === 'figure' && (
-            <button onClick={(e) => { e.stopPropagation(); onUpdate({ isFallen: !element.isFallen }); }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 ${element.isFallen ? 'bg-terra/10 text-terra' : 'hover:bg-black/5 text-ink/70'}`} title={element.isFallen ? "Поднять фигурку" : "Уронить на пол"}>
+            <button onClick={(e) => { e.stopPropagation(); onUpdate({ isFallen: !element.isFallen }); }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 ${element.isFallen ? 'bg-terra/10 text-terra' : 'hover:bg-black/5 text-ink/70'}`} title={element.isFallen ? "╨Я╨╛╨┤╨╜╤П╤В╤М ╤Д╨╕╨│╤Г╤А╨║╤Г" : "╨г╤А╨╛╨╜╨╕╤В╤М ╨╜╨░ ╨┐╨╛╨╗"}>
               <UserMinus size={16} />
             </button>
           )}
@@ -4412,16 +4412,16 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
               e.stopPropagation();
               if (!element.owner) {
                 if (isClientMode) {
-                   onUpdate({ owner: currentUser?.uid, ownerName: currentUserName || 'Игрок' });
-                   onNotify("Карта закреплена за вами. Только вы и Психолог можете её видеть и переворачивать.");
+                   onUpdate({ owner: currentUser?.uid, ownerName: currentUserName || '╨Ш╨│╤А╨╛╨║' });
+                   onNotify("╨Ъ╨░╤А╤В╨░ ╨╖╨░╨║╤А╨╡╨┐╨╗╨╡╨╜╨░ ╨╖╨░ ╨▓╨░╨╝╨╕. ╨в╨╛╨╗╤М╨║╨╛ ╨▓╤Л ╨╕ ╨Я╤Б╨╕╤Е╨╛╨╗╨╛╨│ ╨╝╨╛╨╢╨╡╤В╨╡ ╨╡╤С ╨▓╨╕╨┤╨╡╤В╤М ╨╕ ╨┐╨╡╤А╨╡╨▓╨╛╤А╨░╤З╨╕╨▓╨░╤В╤М.");
                 }
                 onPreview();
               } else if (element.owner === currentUser?.uid || !isClientMode) {
                 onPreview();
               } else {
-                onNotify(`Эта карта принадлежит: ${element.ownerName}. Подсматривать нельзя! 🤫`);
+                onNotify(`╨н╤В╨░ ╨║╨░╤А╤В╨░ ╨┐╤А╨╕╨╜╨░╨┤╨╗╨╡╨╢╨╕╤В: ${element.ownerName}. ╨Я╨╛╨┤╤Б╨╝╨░╤В╤А╨╕╨▓╨░╤В╤М ╨╜╨╡╨╗╤М╨╖╤П! ЁЯдл`);
               }
-            }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 bg-forest/10 text-forest" title={!element.owner ? "Взять себе и подсмотреть" : (element.owner === currentUser?.uid ? "Подсмотреть свою карту" : "Подсмотреть (только для владельца и Психолога)")}>
+            }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 bg-forest/10 text-forest" title={!element.owner ? "╨Т╨╖╤П╤В╤М ╤Б╨╡╨▒╨╡ ╨╕ ╨┐╨╛╨┤╤Б╨╝╨╛╤В╤А╨╡╤В╤М" : (element.owner === currentUser?.uid ? "╨Я╨╛╨┤╤Б╨╝╨╛╤В╤А╨╡╤В╤М ╤Б╨▓╨╛╤О ╨║╨░╤А╤В╤Г" : "╨Я╨╛╨┤╤Б╨╝╨╛╤В╤А╨╡╤В╤М (╤В╨╛╨╗╤М╨║╨╛ ╨┤╨╗╤П ╨▓╨╗╨░╨┤╨╡╨╗╤М╤Ж╨░ ╨╕ ╨Я╤Б╨╕╤Е╨╛╨╗╨╛╨│╨░)")}>
               <Eye size={16} />
             </button>
           )}
@@ -4430,30 +4430,30 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
             <button onClick={(e) => {
               e.stopPropagation();
               if (element.owner && element.owner !== currentUser?.uid && isClientMode) {
-                onNotify(`Только ${element.ownerName} или Психолог могут перевернуть карту`); return;
+                onNotify(`╨в╨╛╨╗╤М╨║╨╛ ${element.ownerName} ╨╕╨╗╨╕ ╨Я╤Б╨╕╤Е╨╛╨╗╨╛╨│ ╨╝╨╛╨│╤Г╤В ╨┐╨╡╤А╨╡╨▓╨╡╤А╨╜╤Г╤В╤М ╨║╨░╤А╤В╤Г`); return;
               }
               playSound('flip', isMuted); onUpdate({ isFlipped: !element.isFlipped });
-            }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="Перевернуть">
+            }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="╨Я╨╡╤А╨╡╨▓╨╡╤А╨╜╤Г╤В╤М">
               <RefreshCw size={16} />
             </button>
           )}
           
           {(isField || (element.type === 'card' && element.isFlipped)) && (
-            <button onClick={(e) => { e.stopPropagation(); onPreview(); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="Увеличить"><Maximize2 size={16} /></button>
+            <button onClick={(e) => { e.stopPropagation(); onPreview(); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="╨г╨▓╨╡╨╗╨╕╤З╨╕╤В╤М"><Maximize2 size={16} /></button>
           )}
           
           {(!isClientMode || !isField) && !isFigureOrArrow && (
             <div className="flex bg-gray-100 rounded-full p-0.5 shadow-inner border border-gray-200/50 ml-1">
-              <button onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (element.rotation - 90 + 360) % 360 }); }} className="w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white text-ink/70 shadow-sm" title={`Повернуть влево (90°)`}>
+              <button onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (element.rotation - 90 + 360) % 360 }); }} className="w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white text-ink/70 shadow-sm" title={`╨Я╨╛╨▓╨╡╤А╨╜╤Г╤В╤М ╨▓╨╗╨╡╨▓╨╛ (90┬░)`}>
                 <RotateCcw size={14} />
               </button>
-              <button onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (element.rotation + 90) % 360 }); }} className="w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white text-ink/70 shadow-sm" title={`Повернуть вправо (90°)`}>
+              <button onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (element.rotation + 90) % 360 }); }} className="w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white text-ink/70 shadow-sm" title={`╨Я╨╛╨▓╨╡╤А╨╜╤Г╤В╤М ╨▓╨┐╤А╨░╨▓╨╛ (90┬░)`}>
                 <RotateCw size={14} />
               </button>
             </div>
           )}
           {!isClientMode && !isField && (
-            <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 ${isLocked ? 'bg-terra/10 text-terra' : 'hover:bg-black/5 text-ink/70'}`} title={isLocked ? "Открепить" : "Закрепить"}>
+            <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 ${isLocked ? 'bg-terra/10 text-terra' : 'hover:bg-black/5 text-ink/70'}`} title={isLocked ? "╨Ю╤В╨║╤А╨╡╨┐╨╕╤В╤М" : "╨Ч╨░╨║╤А╨╡╨┐╨╕╤В╤М"}>
               {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
             </button>
           )}
@@ -4461,19 +4461,19 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
             <button onClick={(e) => {
               e.stopPropagation();
               onUpdate({ owner: null, ownerName: null });
-              onNotify("Сброшена привязка карты к игроку");
-            }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="Отвязать владельца">
+              onNotify("╨б╨▒╤А╨╛╤И╨╡╨╜╨░ ╨┐╤А╨╕╨▓╤П╨╖╨║╨░ ╨║╨░╤А╤В╤Л ╨║ ╨╕╨│╤А╨╛╨║╤Г");
+            }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-black/5 text-ink/70" title="╨Ю╤В╨▓╤П╨╖╨░╤В╤М ╨▓╨╗╨░╨┤╨╡╨╗╤М╤Ж╨░">
               <UserMinus size={16} />
             </button>
           )}
           {!isClientMode && (
-            <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-terra/10 text-terra" title="Удалить"><Trash2 size={16} /></button>
+            <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-terra/10 text-terra" title="╨г╨┤╨░╨╗╨╕╤В╤М"><Trash2 size={16} /></button>
           )}
         </div>
       )}
       {(!isClientMode && isField && !(isLaserMode && !isClientMode)) && (
         <div className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all z-20" style={{ left: 'calc(100% + 12px)' }}>
-          <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }} className="p-3 rounded-full transition-colors hover:opacity-80 shadow-xl border bg-white/90 backdrop-blur-md" style={{ color: isLocked ? COLORS.terra : `${COLORS.ink}80`, borderColor: isLocked ? COLORS.terra : `${COLORS.ink}20` }} title={isLocked ? "Открепить поле" : "Закрепить поле"}>
+          <button onClick={(e) => { e.stopPropagation(); onUpdate({ isLocked: !isLocked }); }} className="p-3 rounded-full transition-colors hover:opacity-80 shadow-xl border bg-white/90 backdrop-blur-md" style={{ color: isLocked ? COLORS.terra : `${COLORS.ink}80`, borderColor: isLocked ? COLORS.terra : `${COLORS.ink}20` }} title={isLocked ? "╨Ю╤В╨║╤А╨╡╨┐╨╕╤В╤М ╨┐╨╛╨╗╨╡" : "╨Ч╨░╨║╤А╨╡╨┐╨╕╤В╤М ╨┐╨╛╨╗╨╡"}>
             {isLocked ? <Lock size={20} /> : <Unlock size={20} />}
           </button>
         </div>
@@ -4495,11 +4495,11 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
               className={`w-full h-8 flex items-center justify-between px-2 flex-shrink-0 cursor-grab active:cursor-grabbing border-b ${isPrivate ? 'bg-purple-200/50 border-purple-300/50 text-purple-700' : 'bg-yellow-200/50 border-yellow-300/50 text-yellow-800'}`}
             >
               <div className="flex gap-1 items-center">
-                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); document.execCommand('bold', false, null); handleTextInput(); }} className={`p-1 rounded transition-colors ${isPrivate ? 'hover:bg-purple-300/50' : 'hover:bg-yellow-300/50'}`} title="Жирный"><Bold size={12} strokeWidth={3} /></button>
-                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); document.execCommand('italic', false, null); handleTextInput(); }} className={`p-1 rounded transition-colors ${isPrivate ? 'hover:bg-purple-300/50' : 'hover:bg-yellow-300/50'}`} title="Курсив"><Italic size={12} /></button>
-                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); document.execCommand('underline', false, null); handleTextInput(); }} className={`p-1 rounded transition-colors ${isPrivate ? 'hover:bg-purple-300/50' : 'hover:bg-yellow-300/50'}`} title="Подчеркнутый"><Underline size={12} /></button>
-                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); document.execCommand('strikeThrough', false, null); handleTextInput(); }} className={`p-1 rounded transition-colors ${isPrivate ? 'hover:bg-purple-300/50' : 'hover:bg-yellow-300/50'}`} title="Зачеркнутый"><Strikethrough size={12} /></button>
-                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); document.execCommand('insertUnorderedList', false, null); handleTextInput(); }} className={`p-1 rounded transition-colors ${isPrivate ? 'hover:bg-purple-300/50' : 'hover:bg-yellow-300/50'}`} title="Список"><List size={12} /></button>
+                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); document.execCommand('bold', false, null); handleTextInput(); }} className={`p-1 rounded transition-colors ${isPrivate ? 'hover:bg-purple-300/50' : 'hover:bg-yellow-300/50'}`} title="╨Ц╨╕╤А╨╜╤Л╨╣"><Bold size={12} strokeWidth={3} /></button>
+                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); document.execCommand('italic', false, null); handleTextInput(); }} className={`p-1 rounded transition-colors ${isPrivate ? 'hover:bg-purple-300/50' : 'hover:bg-yellow-300/50'}`} title="╨Ъ╤Г╤А╤Б╨╕╨▓"><Italic size={12} /></button>
+                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); document.execCommand('underline', false, null); handleTextInput(); }} className={`p-1 rounded transition-colors ${isPrivate ? 'hover:bg-purple-300/50' : 'hover:bg-yellow-300/50'}`} title="╨Я╨╛╨┤╤З╨╡╤А╨║╨╜╤Г╤В╤Л╨╣"><Underline size={12} /></button>
+                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); document.execCommand('strikeThrough', false, null); handleTextInput(); }} className={`p-1 rounded transition-colors ${isPrivate ? 'hover:bg-purple-300/50' : 'hover:bg-yellow-300/50'}`} title="╨Ч╨░╤З╨╡╤А╨║╨╜╤Г╤В╤Л╨╣"><Strikethrough size={12} /></button>
+                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); document.execCommand('insertUnorderedList', false, null); handleTextInput(); }} className={`p-1 rounded transition-colors ${isPrivate ? 'hover:bg-purple-300/50' : 'hover:bg-yellow-300/50'}`} title="╨б╨┐╨╕╤Б╨╛╨║"><List size={12} /></button>
               </div>
               <div className="flex gap-1.5 opacity-30 pr-2 pointer-events-none">
                 <div className="w-1 h-1 rounded-full bg-current" />
@@ -4517,7 +4517,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
               onTouchStart={(e) => e.stopPropagation()}
               onBlur={flushTextInput}
               className="rich-text flex-1 w-full p-4 bg-transparent outline-none text-[13px] text-gray-800 leading-relaxed min-h-[60px] max-h-[65vh] overflow-y-auto custom-scrollbar"
-              data-placeholder="Заметка..."
+              data-placeholder="╨Ч╨░╨╝╨╡╤В╨║╨░..."
             />
           </>
         ) : element.type === 'token' ? (
@@ -4533,15 +4533,15 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         ) : (
           <div className="relative w-full h-full" style={isField ? {} : { transformStyle: 'preserve-3d', transition: 'transform 0.6s ease', transform: element.isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }} onMouseDown={handleDragStart} onTouchStart={handleDragStart}>
             {isField ? (
-              <img src={element.img} decoding="async" className="w-full h-full object-contain pointer-events-none" alt="Игровое поле" />
+              <img src={element.img} decoding="async" className="w-full h-full object-contain pointer-events-none" alt="╨Ш╨│╤А╨╛╨▓╨╛╨╡ ╨┐╨╛╨╗╨╡" />
             ) : (
               <>
                 <div className="absolute inset-0 rounded-[1rem] overflow-hidden flex items-center justify-center bg-white border border-black/5" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                  <img src={element.img} decoding="async" fetchPriority="high" className="w-full h-full object-contain pointer-events-none" alt="Карта" />
+                  <img src={element.img} decoding="async" fetchPriority="high" className="w-full h-full object-contain pointer-events-none" alt="╨Ъ╨░╤А╤В╨░" />
                 </div>
                 <div className="absolute inset-0 rounded-[1rem] overflow-hidden flex items-center justify-center border border-white/10" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
                   {element.backImg
-                    ? <img src={element.backImg} decoding="async" fetchPriority="high" className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" />
+                    ? <img src={element.backImg} decoding="async" fetchPriority="high" className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="╨а╤Г╨▒╨░╤И╨║╨░" />
                     : <div className="flex flex-col items-center justify-center gap-2 opacity-30"><Layers size={40} className="text-white" /><span className="text-[10px] text-white font-black uppercase tracking-widest leading-none">MAK SPACE</span></div>}
                 </div>
               </>
