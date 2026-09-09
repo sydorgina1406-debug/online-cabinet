@@ -1719,11 +1719,6 @@ export default function App() {
   const deleteElementFromRoom = (targetRoomId, element) => deleteDoc(getElementDocRef(targetRoomId, element));
   useEffect(() => {
     if (inRoom && !isClientMode) {
-      setIsPlatformDecksLoading(true);
-      loadPlatformDecks().then(decks => {
-        setPlatformDecks(decks);
-        setIsPlatformDecksLoading(false);
-      });
       setIsBaseDecksLoading(true);
       loadBaseDecks((msg) => notify(msg, 6000)).then(decks => {
         setBaseDecks(decks);
@@ -2929,8 +2924,8 @@ export default function App() {
     const source = item.isPlatformDeck ? 'платформа база' : item.isBaseDeck ? 'google drive облако' : 'мои личные';
     return `${item.name || ''} ${source}`.toLowerCase().includes(query);
   };
-  const allLibraryDecks = [...platformDecks, ...baseDecks, ...cloudDecks, ...localDecks];
-  const currentLibraryDecks = activeTab === 'platform' ? platformDecks : activeTab === 'local' ? localDecks : [...baseDecks, ...cloudDecks];
+  const allLibraryDecks = [...baseDecks, ...cloudDecks, ...localDecks];
+  const currentLibraryDecks = activeTab === 'local' ? localDecks : [...baseDecks, ...cloudDecks];
   const favoriteDecks = favoriteDeckIds
     .map(id => allLibraryDecks.find(deck => deck.id === id))
     .filter(Boolean)
@@ -3461,9 +3456,8 @@ export default function App() {
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
                   <p>Вызывается длинной кнопкой <b>«Библиотека Мастера»</b> в самом низу экрана.</p>
                   <ul className="space-y-1 list-disc list-inside grid grid-cols-1 md:grid-cols-2">
-                    <li><b>БАЗА:</b> колоды, встроенные в саму платформу. Работают всегда и открываются быстрее прочих.</li>
-                    <li><b>ОБЛАКО:</b> общие колоды платформы <b>и все колоды, которые вы добавили сами</b>. Ваши колоды видите только вы, других психологов они не касаются.</li>
-                    <li><b>МОИ:</b> здесь только кнопка «Вставить ссылку на папку с картами». Сама колода после добавления появляется в <b>ОБЛАКЕ</b>, а не в этой вкладке — так и задумано, вкладка остаётся пустой.</li>
+                    <li><b>КАРТЫ:</b> все ваши колоды — и общие колоды платформы, и те, что вы подключили сами. Подключённые вами колоды видите только вы, других психологов они не касаются.</li>
+                    <li><b>ЗАГРУЗКА КОЛОД:</b> здесь только кнопка «Вставить ссылку на папку с картами» и памятка. Сама колода после добавления появляется во вкладке <b>КАРТЫ</b>, а не здесь — так и задумано, эта вкладка остаётся пустой.</li>
                     <li><b>СЕССИИ:</b> сохранённые расклады и черновики, постоянные ссылки и восстановление запасной копии стола.</li>
                   </ul>
                   <div className="bg-plum/10 p-3 rounded-lg border border-plum/20 mt-2">
@@ -3485,7 +3479,7 @@ export default function App() {
                     <p className="font-bold text-blue-900 mb-1">Колоды с Google Диска</p>
                     <ul className="text-xs space-y-1 list-disc list-inside">
                       <li>На Google Диске откройте папку с картами: правая кнопка → <b>«Поделиться»</b> → в разделе доступа <b>«Все, у кого есть ссылка»</b> → <b>«Копировать ссылку»</b>. Без открытого доступа платформа карты не заберёт.</li>
-                      <li>Во вкладке <b>МОИ</b> нажмите <b>«Вставить ссылку на папку с картами»</b>, вставьте ссылку и придумайте название колоды. Готовая колода появится в <b>ОБЛАКЕ</b>.</li>
+                      <li>Во вкладке <b>ЗАГРУЗКА КОЛОД</b> нажмите <b>«Вставить ссылку на папку с картами»</b>, вставьте ссылку и придумайте название колоды. Готовая колода появится во вкладке <b>КАРТЫ</b>.</li>
                       <li>Вместо папки можно вставить сразу несколько ссылок на отдельные файлы — через пробел или с новой строки.</li>
                       <li><b>Названия файлов могут быть любыми.</b> Карты встанут по порядку названий, причём 2 идёт раньше 10, а не после.</li>
                       <li>Рубашка колоды — файл с названием <b>«Рубашка»</b>. Если такого файла нет, рубашка будет зелёной.</li>
@@ -4022,9 +4016,8 @@ export default function App() {
               {!isClientMode && (
                 <div className={`w-full md:w-72 border-b md:border-b-0 md:border-r pb-3 md:pb-0 pr-0 md:pr-6 md:h-auto flex-shrink-0 overflow-y-auto custom-scrollbar flex flex-col gap-3 min-h-0 ${activeDeckData && !isLibraryFullscreen ? 'hidden md:flex' : 'flex-1 md:flex-none'}`} style={{ borderColor: `${COLORS.ink}10` }}>
                   <div className="flex p-1 rounded-xl mb-1 flex-shrink-0 bg-black/5">
-                    <button onClick={() => setActiveTab('platform')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'platform' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>БАЗА</button>
-                    <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'cloud' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>ОБЛАКО</button>
-                    <button onClick={() => setActiveTab('local')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'local' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>МОИ</button>
+                    <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'cloud' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>КАРТЫ</button>
+                    <button onClick={() => setActiveTab('local')} className={`flex-1 py-2 px-1 text-[9px] font-black rounded-lg transition-all leading-tight ${activeTab === 'local' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>ЗАГРУЗКА КОЛОД</button>
                     <button onClick={() => setActiveTab('sessions')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'sessions' ? 'bg-white shadow-sm text-forest' : 'hover:opacity-70 text-ink/60'}`}>СЕССИИ</button>
                   </div>
                   {activeTab === 'sessions' && (
@@ -4073,7 +4066,7 @@ export default function App() {
                           <div>5. Названия файлов любые — карты встанут по порядку названий.</div>
                           <div>6. <b>Рубашка колоды</b> — файл с названием "Рубашка". Без него рубашка будет зелёной.</div>
                           <div>7. <b>Своя рубашка у каждой карты:</b> карты — числами 1, 2, 3, обороты — 1-1, 2-1, 3-1. Тогда все карты нужно называть числами.</div>
-                          <div>8. Готовая колода появится во вкладке <b>ОБЛАКО</b>.</div>
+                          <div>8. Готовая колода появится во вкладке <b>КАРТЫ</b>.</div>
                         </div>
                       </div>
                       <button onClick={addDeckByLinks} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black transition-all uppercase hover:opacity-80 shadow-sm" style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }}>
@@ -4122,7 +4115,7 @@ export default function App() {
                   {activeTab !== 'sessions' && visibleLibraryDecks.map(item => renderDeckItem(item))}
                   {activeTab !== 'sessions' && visibleLibraryDecks.length === 0 && favoriteDecks.length === 0 && !isPlatformDecksLoading && !isBaseDecksLoading && (
                     <div className="text-[9px] text-center font-bold py-5 px-3 rounded-2xl flex-shrink-0" style={{ color: `${COLORS.ink}55`, backgroundColor: `${COLORS.ink}06` }}>
-                      {deckSearch ? "По этому запросу колод не найдено" : activeTab === 'cloud' ? "В облаке пока нет колод" : activeTab === 'local' ? "В ваших колодах пока пусто. Нажмите «Вставить ссылку на папку с картами» — готовая колода появится во вкладке ОБЛАКО." : showHiddenDecks ? "В этой вкладке пока нет колод" : "Нет видимых колод. Включите «Показать скрытые», если вы их скрывали."}
+                      {deckSearch ? "По этому запросу колод не найдено" : activeTab === 'cloud' ? "Колод пока нет" : activeTab === 'local' ? "Здесь вы подключаете свои колоды. Нажмите «Вставить ссылку на папку с картами» — готовая колода появится во вкладке КАРТЫ." : showHiddenDecks ? "В этой вкладке пока нет колод" : "Нет видимых колод. Включите «Показать скрытые», если вы их скрывали."}
                     </div>
                   )}
                 </div>
