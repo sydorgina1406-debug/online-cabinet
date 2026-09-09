@@ -3312,6 +3312,10 @@ export default function App() {
                 <Video size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.forest }} />
                 <div><b>Как подключиться к связи:</b> если психолог добавил ссылку на звонок, в верхней панели появится зелёная кнопка <b>«Видеозвонок»</b> — она откроет встречу в Zoom, Телемосте, MAX или другом сервисе, который выбрал психолог.</div>
               </div>
+              <div className="flex gap-3 p-3 rounded-2xl border bg-gray-50" style={{ borderColor: `${COLORS.ink}10` }}>
+                <Key size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.plum }} />
+                <div><b>Если работаете за компьютером:</b> клавиша <b>Пробел</b> переворачивает верхнюю карту на столе, <b>Esc</b> закрывает открытое окно.</div>
+              </div>
               <div className="flex gap-3 p-3 rounded-2xl border" style={{ backgroundColor: `${COLORS.terra}10`, borderColor: `${COLORS.terra}25` }}>
                 <AlertCircle size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.terra }} />
                 <div><b>Если связь пропала:</b> не закрывайте стол. Обновите страницу и войдите по той же ссылке — карты и заметки сохранятся. Видеозвонок идёт во внешнем сервисе отдельно от стола, поэтому переподключайтесь к нему через ту же кнопку «Видеозвонок» или напрямую в Zoom/Телемосте.</div>
@@ -3374,7 +3378,7 @@ export default function App() {
                   <div className="flex items-start gap-2"><AlertCircle size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Проверка перед сессией:</b> Проверяет комнату, синхронизацию, камеру/микрофон, скриншоты и локальную копию стола. Если что-то не работает, показывает понятную причину.</div></div>
                   <div className="flex items-start gap-2"><Crosshair size={16} className="text-red-500 mt-0.5 shrink-0"/> <div><b>Лазерная указка:</b> Обычная мышка скрыта от клиента. Указка включает красную точку, которую видят все (удобно показывать детали).</div></div>
                   <div className="flex items-start gap-2"><Camera size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Скриншот:</b> Делает качественный снимок всего рабочего стола и скачивает на ваше устройство.</div></div>
-                  <div className="flex items-start gap-2"><Save size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Сохранить сессию:</b> Сохраняет весь расклад в историю (вкладка СЕССИИ), чтобы загрузить его на следующих встречах. Локальная копия стола обновляется автоматически.</div></div>
+                  <div className="flex items-start gap-2"><Save size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Сохранить сессию:</b> Сохраняет весь расклад в историю (вкладка СЕССИИ), чтобы загрузить его на следующих встречах. Локальная копия стола обновляется автоматически. Кроме того, раз в две минуты платформа сама пишет черновик — запись <b>«Черновик — дата»</b> во вкладке СЕССИИ. Он перезаписывается поверх себя и не засоряет список.</div></div>
                   <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Настройки Поля:</b> Изменение фона стола (нейро-текстуры) или загрузка своего игрового поля (картинки, на которую можно класть карты).</div></div>
                   <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Очистить стол:</b> Удаляет все незакрепленные объекты. Внизу появится кнопка отмены (действует 10 секунд).</div></div>
                   <div className="flex items-start gap-2"><Timer size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Таймер:</b> Устанавливает общее время (60/90 мин). Синхронизирован с клиентом.</div></div>
@@ -3434,6 +3438,24 @@ export default function App() {
                   </p>
                 </div>
               </div>
+              <div className="space-y-4">
+                <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Key size={16}/> Горячие клавиши</h3>
+                <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-2">
+                  <div className="flex items-center gap-3 bg-white p-2 rounded-lg border text-xs">
+                    <kbd className="px-2 py-1 rounded-md bg-gray-100 border font-bold shrink-0">Esc</kbd>
+                    <span>Закрывает окно, которое сейчас открыто: просмотр карты, диалог, полноэкранную библиотеку. Выключает лазерную указку.</span>
+                  </div>
+                  <div className="flex items-center gap-3 bg-white p-2 rounded-lg border text-xs">
+                    <kbd className="px-2 py-1 rounded-md bg-gray-100 border font-bold shrink-0">Ctrl + Z</kbd>
+                    <span>Возвращает карты, убранные корзиной — то же, что кнопка «Отмена» внизу. Работает те же 10 секунд.</span>
+                  </div>
+                  <div className="flex items-center gap-3 bg-white p-2 rounded-lg border text-xs">
+                    <kbd className="px-2 py-1 rounded-md bg-gray-100 border font-bold shrink-0">Пробел</kbd>
+                    <span>Переворачивает верхнюю карту на столе — ту, что легла последней.</span>
+                  </div>
+                  <p className="text-xs text-gray-500">Пока вы печатаете в заметке или в поле ввода, клавиши не срабатывают — можно спокойно ставить пробелы.</p>
+                </div>
+              </div>
               <div className="space-y-4 lg:col-span-2">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><FolderOpen size={16}/> Библиотека Мастера</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
@@ -3448,6 +3470,8 @@ export default function App() {
                     <p className="font-bold text-plum mb-1">Как вытаскивать карты?</p>
                     <p className="text-xs">Выберите колоду в левом списке. Нажмите <b>«Наугад»</b> (вытащит случайную рубашкой вверх) или нажмите кнопку <b>«Открыть колоду»</b> справа вверху, чтобы увидеть все изображения и выбрать конкретную.</p>
                     <p className="text-xs mt-2"><b>На телефоне:</b> после выбора колоды панель становится компактной горизонтальной лентой карт. Чтобы сменить колоду, нажмите кнопку разворота справа сверху.</p>
+                    <p className="text-xs mt-2"><b>Сколько ещё ждать:</b> под названием открытой колоды идёт счётчик <b>«Загружено 12 из 70»</b>. Когда все карты готовы, он меняется на «70 карт готовы».</p>
+                    <p className="text-xs mt-2">В библиотеке карты показываются уменьшенными — так колода открывается в разы быстрее. На стол карта всегда ложится в полном размере.</p>
                   </div>
                   <div className="bg-forest/10 p-3 rounded-lg border border-forest/20">
                     <p className="font-bold text-forest mb-1">Как быстро находить нужные колоды?</p>
