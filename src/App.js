@@ -15,7 +15,7 @@ import {
   FolderOpen, LayoutGrid, Move, Cloud, Copy, CheckCircle,
   Users, LogOut, AlertCircle, ExternalLink, Image as ImageIcon,
   Volume2, VolumeX, ArrowUp, ArrowUpToLine, Save, MousePointer2, UserCircle, UserPlus,
-  Key, Edit2, Loader2, CloudUpload, RefreshCw, Link as LinkIcon, FileJson,
+  Key, Edit2, Loader2, RefreshCw, Link as LinkIcon, FileJson,
   Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, MessageCircle,
   Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff, Dices, UserMinus, BookOpen, Mic,
   Bold, Italic, Underline, Strikethrough, List, MonitorPlay, Search, Star
@@ -341,6 +341,13 @@ const extractDriveFolderId = (url) => {
   return null;
 };
 const getDriveThumbnailUrl = (fileId) => `https://lh3.googleusercontent.com/d/${fileId}=w1000`;
+// Мелкая версия картинки для сеток и списков: Google Диск отдаёт любой размер
+// по тому же адресу, поэтому в библиотеке не нужно тянуть полноразмерные файлы.
+const getSmallImageUrl = (url, width = 300) => {
+  if (!url || typeof url !== 'string') return url;
+  if (!url.includes('lh3.googleusercontent.com')) return url;
+  return url.replace(/=w\d+(-h\d+)?$/, `=w${width}`);
+};
 const normalizeCardNumber = (value) => String(value || '').replace(/^0+(?=\d)/, '');
 const getFileStem = (name = '') => String(name).replace(/\.[^/.]+$/, '').trim();
 const getNumberedCardNumber = (name) => {
@@ -446,18 +453,20 @@ const getImageDimensionsFast = async (src) => {
   const img = await preloadImage(src, 900);
   return img ? { w: img.naturalWidth || img.width, h: img.naturalHeight || img.height } : null;
 };
-const preloadDeckImages = (deck, limit = 12) => {
+const preloadDeckImages = (deck, limit = 40) => {
   if (!deck || typeof window === 'undefined') return;
   const urls = new Set();
-  if (deck.boxImage) urls.add(deck.boxImage);
-  if (deck.backImage) urls.add(deck.backImage);
+  // Предзагружаем мелкие версии — именно они показываются в библиотеке,
+  // поэтому колода открывается заметно быстрее.
+  if (deck.boxImage) urls.add(getSmallImageUrl(deck.boxImage, 200));
+  if (deck.backImage) urls.add(getSmallImageUrl(deck.backImage, 300));
   (deck.cards || []).slice(0, limit).forEach((img, idx) => {
-    if (img) urls.add(img);
+    if (img) urls.add(getSmallImageUrl(img, 300));
     const backImg = getDeckCardBackImage(deck, img, idx);
-    if (backImg) urls.add(backImg);
+    if (backImg) urls.add(getSmallImageUrl(backImg, 300));
   });
   Array.from(urls).forEach((src, idx) => {
-    setTimeout(() => preloadImage(src), idx * 120);
+    setTimeout(() => preloadImage(src), idx * 60);
   });
 };
 const loadDriveFolderFiles = async (folderId, apiKey, imagesOnly = true) => {
@@ -820,6 +829,10 @@ export default function App() {
   const [isBaseDecksLoading, setIsBaseDecksLoading] = useState(false);
   const [selectedDeckId, setSelectedDeckId] = useState(null);
   const [activeDeckData, setActiveDeckData] = useState(null);
+  // Считаем прогруженные карты открытой колоды, чтобы показывать «готово 12 из 70»
+  // вместо бесконечного ожидания без единой цифры.
+  const [loadedDeckCards, setLoadedDeckCards] = useState(0);
+  const отметитьКартуЗагруженной = () => setLoadedDeckCards(n => n + 1);
   const [dice, setDice] = useState({ value: 1, timestamp: 0 });
   const [visualDice, setVisualDice] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -835,6 +848,7 @@ export default function App() {
   const prevDiceTimeD12 = useRef(0);
   const [cursors, setCursors] = useState({});
   const lastCursorSync = useRef(0);
+  const lastCursorPos = useRef({ x: null, y: null });
   const scrollContainerRef = useRef(null);
   const boardRef = useRef(null);
   const boardPinchRef = useRef(null);
@@ -867,6 +881,7 @@ export default function App() {
   const [undoStack, setUndoStack] = useState(null);
   const [customDialog, setCustomDialog] = useState(null);
   const usedImages = new Set(cardsOnTable.filter(c => c.type === 'card').map(c => c.img));
+  useEffect(() => { setLoadedDeckCards(0); }, [activeDeckData?.name, isLibraryDeckFlipped]);
   const notifyTimeoutRef = useRef(null);
   const notify = (text, time = 4000) => {
     setNotification(text);
@@ -1789,19 +1804,27 @@ export default function App() {
   const handleMouseMove = (e) => {
     if (!isAuthorized || !isDbConnected || !user || !roomId) return;
     const now = Date.now();
-    if (now - lastCursorSync.current > 100) {
-      lastCursorSync.current = now;
-      const board = boardRef.current;
-      if (!board) return;
-      const rect = board.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const x = (clientX - rect.left) / Math.max(0.01, boardScale);
-      const y = (clientY - rect.top) / Math.max(0.01, boardScale);
-      setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_cursors`, user.uid), {
-        x, y, color: myCursorColor, timestamp: now, name: userName, isLaser: isLaserMode
-      }).catch(() => {});
-    }
+    // Раньше положение курсора уходило в базу каждые 0,1 сек всё время, пока
+    // движется мышь — за одну сессию это десятки тысяч записей. Теперь часто
+    // пишем только при включённой указке, а в обычном режиме — редко, и лишь
+    // когда курсор действительно сместился.
+    const интервал = isLaserMode ? 150 : 700;
+    if (now - lastCursorSync.current < интервал) return;
+    const board = boardRef.current;
+    if (!board) return;
+    const rect = board.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const x = (clientX - rect.left) / Math.max(0.01, boardScale);
+    const y = (clientY - rect.top) / Math.max(0.01, boardScale);
+    const прошлый = lastCursorPos.current;
+    const порог = isLaserMode ? 3 : 12;
+    if (прошлый.x !== null && Math.abs(x - прошлый.x) < порог && Math.abs(y - прошлый.y) < порог) return;
+    lastCursorSync.current = now;
+    lastCursorPos.current = { x, y };
+    setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}_cursors`, user.uid), {
+      x, y, color: myCursorColor, timestamp: now, name: userName, isLaser: isLaserMode
+    }).catch(() => {});
   };
   const editPlatformName = async () => {
     const newName = await askPrompt("Название вашего кабинета:", platformName);
@@ -2020,6 +2043,42 @@ export default function App() {
       notify("Ошибка сохранения сессии: " + getFriendlyErrorText(e));
     }
   };
+  // Тихое автосохранение: раз в две минуты обновляем один и тот же черновик,
+  // чтобы расклад не пропал, если браузер закроется до ручного сохранения.
+  const черновикДанные = useRef({});
+  черновикДанные.current = { cardsOnTable, tableBg, activeDeckData, roomId, user, isClientMode, isAuthorized, isDbConnected };
+  const последнийЧерновик = useRef('');
+  useEffect(() => {
+    const сохранитьЧерновик = async () => {
+      const д = черновикДанные.current;
+      if (!д.isAuthorized || д.isClientMode || !д.isDbConnected || !д.user?.uid || !д.roomId) return;
+      const элементы = (д.cardsOnTable || []).filter(c => c.id && !c.id.startsWith('_'));
+      if (элементы.length === 0) return;
+      const отпечаток = JSON.stringify(элементы.map(el => [el.id, el.x, el.y, el.width, el.rotation, el.isFlipped, el.text]));
+      if (отпечаток === последнийЧерновик.current) return;
+      последнийЧерновик.current = отпечаток;
+      try {
+        await setDoc(doc(db, 'artifacts', appId, 'users', д.user.uid, 'saved_sessions', `draft_${д.roomId}`), {
+          name: `Черновик — ${new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`,
+          isDraft: true,
+          elements: элементы,
+          roomId: д.roomId,
+          tableBg: д.tableBg,
+          activeDeckData: д.activeDeckData,
+          activeDeckName: д.activeDeckData?.name || '',
+          counts: {
+            cards: элементы.filter(el => el.type === 'card').length,
+            figures: элементы.filter(el => el.type === 'figure').length,
+            notes: элементы.filter(el => el.type === 'text' || el.type === 'private-text').length,
+            total: элементы.length
+          },
+          createdAt: Date.now()
+        });
+      } catch (e) {}
+    };
+    const таймер = setInterval(сохранитьЧерновик, 120000);
+    return () => clearInterval(таймер);
+  }, []);
   const loadSavedSession = async (session, options = {}) => {
     const targetRoomId = options.targetRoomId || roomId || session.roomId;
     if (!targetRoomId) return notify("Сначала войдите в сессию");
@@ -2734,6 +2793,36 @@ export default function App() {
     setUndoStack(null);
     notify("Восстановлено ✓");
   };
+  // Горячие клавиши: Esc закрывает открытое, Ctrl+Z возвращает удалённые карты,
+  // пробел переворачивает верхнюю карту на столе.
+  useEffect(() => {
+    const наКлавишу = (e) => {
+      const цель = e.target;
+      const вводитТекст = Boolean(цель && (цель.tagName === 'INPUT' || цель.tagName === 'TEXTAREA' || цель.isContentEditable));
+      if (e.key === 'Escape') {
+        if (previewCard) { setPreviewCard(null); return; }
+        if (customDialog) { customDialog.onCancel?.(); setCustomDialog(null); return; }
+        if (isLibraryFullscreen) { setIsLibraryFullscreen(false); return; }
+        if (isLaserMode) { setIsLaserMode(false); return; }
+        return;
+      }
+      if (вводитТекст || customDialog) return;
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z' || e.key === 'я' || e.key === 'Я')) {
+        if (undoStack) { e.preventDefault(); undoClear(); }
+        return;
+      }
+      if (e.code === 'Space') {
+        const карты = cardsOnTable.filter(c => c.type === 'card' && !c.isLocked);
+        if (карты.length === 0) return;
+        e.preventDefault();
+        const верхняя = карты.reduce((a, b) => ((b.zIndex || 0) >= (a.zIndex || 0) ? b : a));
+        playSound('flip', isMuted);
+        updateElementOnTable(верхняя, { isFlipped: !верхняя.isFlipped });
+      }
+    };
+    window.addEventListener('keydown', наКлавишу);
+    return () => window.removeEventListener('keydown', наКлавишу);
+  });
   const confirmUpload = async () => {
     if (pendingFiles.length === 0) return;
     setIsUploading(true);
@@ -2861,7 +2950,7 @@ export default function App() {
       <div key={`${area}_${item.id}`} className={`group flex items-center gap-3 p-3 rounded-2xl transition-all relative border flex-shrink-0 ${selectedDeckId === item.id ? 'bg-white shadow-sm border-white' : 'border-transparent hover:bg-black/5'} ${isHidden ? 'opacity-50' : ''}`}>
         <button onClick={() => selectDeck(item)} className="flex-1 flex items-center gap-3 text-left overflow-hidden hover:opacity-70">
           <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden border flex-shrink-0 shadow-sm" style={{ borderColor: `${COLORS.ink}10` }}>
-            {(item.boxImage || item.backImage) ? <img src={item.boxImage || item.backImage} loading="lazy" decoding="async" className="w-full h-full object-contain" alt="" /> : <FolderOpen size={16} color={`${COLORS.ink}4D`} />}
+            {(item.boxImage || item.backImage) ? <img src={getSmallImageUrl(item.boxImage || item.backImage, 200)} loading="lazy" decoding="async" className="w-full h-full object-contain" alt="" /> : <FolderOpen size={16} color={`${COLORS.ink}4D`} />}
           </div>
           <div className="flex flex-col overflow-hidden">
             <span className="text-[10px] font-bold truncate uppercase" style={{ color: COLORS.ink }}>{item.name}</span>
@@ -3373,7 +3462,8 @@ export default function App() {
                     <ul className="text-xs space-y-1 list-disc list-inside">
                       <li>Во вкладке <b>МОИ</b> нажмите <b>«Вставить ссылку на папку»</b>.</li>
                       <li>Карты называйте числами: <b>1</b>, <b>2</b>, <b>3</b> и так далее.</li>
-                      <li>Индивидуальная рубашка пишется строго через <b>-1</b>: <b>1-1</b> для карты <b>1</b>, <b>2-1</b> для карты <b>2</b>, <b>3-1</b> для карты <b>3</b>.</li>
+                      <li>Общая рубашка колоды — файл с названием <b>«рубашка»</b>. Без неё рубашка будет зелёной по умолчанию.</li>
+                      <li>У двусторонних карт оборот пишется строго через <b>-1</b>: <b>1-1</b> для карты <b>1</b>, <b>2-1</b> для карты <b>2</b>, <b>3-1</b> для карты <b>3</b>.</li>
                       <li>Файл с названием, где есть слово <b>«коробк»</b>, станет картинкой коробки колоды до выбора.</li>
                       <li>Если файлов <b>1-1</b>, <b>2-1</b> и подобных нет, колода работает как раньше.</li>
                       <li>Папки Google Диска загружаются постранично, поэтому колоды больше 100 карт тоже подтягиваются, если доступ к папке открыт.</li>
@@ -3955,7 +4045,10 @@ export default function App() {
                           <div>2. Правая кнопка → <b>"Поделиться"</b></div>
                           <div>3. В разделе доступа выберите <b>"Все, у кого есть ссылка"</b></div>
                           <div>4. Нажмите <b>"Копировать ссылку"</b> и вставьте ниже</div>
-                          <div>5. <b>Важно:</b> "1-1" станет рубашкой карты "1", "2-1" - карты "2". Файл с "коробк" будет картинкой коробки колоды.</div>
+                          <div>5. <b>Карты называйте числами по порядку:</b> 1, 2, 3...</div>
+                          <div>6. <b>Рубашка колоды</b> — файл с названием "рубашка". Если её нет, рубашка будет зелёной по умолчанию.</div>
+                          <div>7. <b>Двусторонние карты:</b> "1-1" — оборот карты "1", "2-1" — оборот карты "2". Общая рубашка такой колоде не нужна.</div>
+                          <div>8. Файл со словом "коробк" в названии станет картинкой коробки колоды.</div>
                         </div>
                       </div>
                       <button onClick={addDeckByLinks} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black transition-all uppercase hover:opacity-80 shadow-sm" style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }}>
@@ -4016,6 +4109,13 @@ export default function App() {
                     <div className="flex justify-between items-center mb-2 md:mb-3 flex-shrink-0 gap-2">
                       <div className="min-w-0">
                         <span className="block text-[11px] md:text-sm font-black uppercase truncate" style={{ color: `${COLORS.ink}B3` }}>{activeDeckData.name}</span>
+                        {(activeDeckData.cards?.length > 0) && (
+                          <span className="block text-[8px] md:text-[9px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}60` }}>
+                            {loadedDeckCards >= activeDeckData.cards.length
+                              ? `${activeDeckData.cards.length} карт готовы`
+                              : `Загружено ${Math.min(loadedDeckCards, activeDeckData.cards.length)} из ${activeDeckData.cards.length}`}
+                          </span>
+                        )}
                         {!isClientMode && !isLibraryFullscreen && (
                           <span className="md:hidden text-[8px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}60` }}>Разверните панель, чтобы сменить колоду</span>
                         )}
@@ -4051,9 +4151,9 @@ export default function App() {
                             if (isLibraryFullscreen) toggleLibrary();
                           }} className={`relative flex-shrink-0 h-28 md:h-40 rounded-2xl group transition-all flex items-center justify-center ${isUsed ? 'opacity-40 cursor-not-allowed grayscale' : 'shadow-sm hover:shadow-lg hover:scale-105'}`}>
                             {isLibraryDeckFlipped
-                              ? <img src={img} loading="lazy" decoding="async" className="h-full w-auto min-w-[4.5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
+                              ? <img src={getSmallImageUrl(img, 300)} loading="lazy" decoding="async" onLoad={отметитьКартуЗагруженной} onError={отметитьКартуЗагруженной} className="h-full w-auto min-w-[4.5rem] md:min-w-[6rem] object-contain rounded-2xl bg-white shadow-sm" alt={`Карта ${idx + 1}`} />
                               : <div className="h-full w-20 md:w-28 flex items-center justify-center rounded-2xl overflow-hidden relative shadow-sm border border-white/20" style={{ backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
-                                {cardBackImage ? <img src={cardBackImage} loading="lazy" decoding="async" className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" /> : <Layers size={40} className="text-white opacity-30" />}
+                                {cardBackImage ? <img src={getSmallImageUrl(cardBackImage, 300)} loading="lazy" decoding="async" onLoad={отметитьКартуЗагруженной} onError={отметитьКартуЗагруженной} className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" /> : <Layers size={40} className="text-white opacity-30" />}
                               </div>}
                             <div className="absolute top-2 left-2 text-white text-[10px] font-black px-2 py-0.5 rounded-md z-10 pointer-events-none backdrop-blur-md bg-black/40 border border-white/20 shadow-sm">{idx + 1}</div>
                             {isUsed && (
@@ -4147,6 +4247,42 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
   const pinchState = useRef(null);
   const textSaveTimeout = useRef(null);
   const pendingText = useRef(null);
+  // Пока элемент двигают, тянут или крутят, его положение живёт здесь — на своём
+  // экране он идёт за рукой мгновенно, а в базу уходит не чаще пяти раз в секунду.
+  // Раньше каждое движение мыши было отдельной записью в Firestore.
+  const [localGeom, setLocalGeom] = useState(null);
+  const pendingGeom = useRef(null);
+  const lastGeomWrite = useRef(0);
+  const geomWriteTimer = useRef(null);
+  const geomResetTimer = useRef(null);
+  const geom = localGeom ? { ...element, ...localGeom } : element;
+  const geomRef = useRef(geom);
+  geomRef.current = geom;
+  const flushGeom = () => {
+    if (geomWriteTimer.current) { clearTimeout(geomWriteTimer.current); geomWriteTimer.current = null; }
+    if (!pendingGeom.current) return;
+    const данные = pendingGeom.current;
+    pendingGeom.current = null;
+    lastGeomWrite.current = Date.now();
+    Promise.resolve(onUpdate(данные)).catch(() => {});
+  };
+  const pushGeom = (updates) => {
+    setLocalGeom(prev => ({ ...(prev || {}), ...updates }));
+    pendingGeom.current = { ...(pendingGeom.current || {}), ...updates };
+    if (geomResetTimer.current) { clearTimeout(geomResetTimer.current); geomResetTimer.current = null; }
+    const прошло = Date.now() - lastGeomWrite.current;
+    if (прошло >= 200) { flushGeom(); return; }
+    if (!geomWriteTimer.current) geomWriteTimer.current = setTimeout(flushGeom, 200 - прошло);
+  };
+  const finishGeom = () => {
+    flushGeom();
+    if (geomResetTimer.current) clearTimeout(geomResetTimer.current);
+    geomResetTimer.current = setTimeout(() => setLocalGeom(null), 500);
+  };
+  useEffect(() => () => {
+    if (geomWriteTimer.current) clearTimeout(geomWriteTimer.current);
+    if (geomResetTimer.current) clearTimeout(geomResetTimer.current);
+  }, []);
   const COLORS = { plum: '#8B3252', forest: '#2D4A3E', terra: '#C44D29', ink: '#1C1020', haze: '#F2EFF5' };
   const isField = element.type === 'field';
   const isText = element.type === 'text' || element.type === 'private-text';
@@ -4186,9 +4322,9 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     if (!distance) return true;
     pinchState.current = {
       distance,
-      width: element.width,
-      height: element.height || element.width,
-      ratio: element.width / Math.max(1, element.height || element.width)
+      width: geom.width,
+      height: geom.height || geom.width,
+      ratio: geom.width / Math.max(1, geom.height || geom.width)
     };
     hasMoved.current = true;
     setIsDragging(false);
@@ -4207,7 +4343,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     const point = getBoardPoint(e);
     setIsDragging(true); hasMoved.current = false; clickTimestamp.current = Date.now();
     initialMousePos.current = { x: point.clientX, y: point.clientY };
-    startPos.current = { x: point.x - (element.x || 0), y: point.y - (element.y || 0) };
+    startPos.current = { x: point.x - (geom.x || 0), y: point.y - (geom.y || 0) };
     if (!isField) onUpdate({ zIndex: maxZIndex + 1 });
   };
   const handleResizeStart = (e) => {
@@ -4217,7 +4353,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     if (isField && isClientMode) return;
     if (isLaserMode && !isClientMode) return;
     const point = getBoardPoint(e);
-    setIsResizing(true); startPos.current = { x: point.x, y: point.y }; startDim.current = { w: element.width, h: element.height };
+    setIsResizing(true); startPos.current = { x: point.x, y: point.y }; startDim.current = { w: geom.width, h: geom.height };
   };
   const handleRotateStart = (e) => {
     e.stopPropagation();
@@ -4229,8 +4365,8 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
     if (!boardRef.current) return;
     const boardRect = boardRef.current.getBoundingClientRect();
     const point = getBoardPoint(e);
-    const centerX = boardRect.left + ((element.x || 0) + element.width / 2) * boardScale;
-    const centerY = boardRect.top + ((element.y || 0) + element.height / 2) * boardScale;
+    const centerX = boardRect.left + ((geom.x || 0) + geom.width / 2) * boardScale;
+    const centerY = boardRect.top + ((geom.y || 0) + geom.height / 2) * boardScale;
     const angleRad = Math.atan2(point.clientY - centerY, point.clientX - centerX);
     let angleDeg = angleRad * (180 / Math.PI) + 90;
     if (angleDeg < 0) angleDeg += 360;
@@ -4283,9 +4419,9 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         const minSize = getMinSize();
         const nextWidth = Math.max(minSize, pinchState.current.width * scale);
         if (isText) {
-          onUpdate({ width: nextWidth });
+          pushGeom({ width: nextWidth });
         } else {
-          onUpdate({ width: nextWidth, height: nextWidth / Math.max(0.1, pinchState.current.ratio) });
+          pushGeom({ width: nextWidth, height: nextWidth / Math.max(0.1, pinchState.current.ratio) });
         }
         return;
       }
@@ -4294,31 +4430,33 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
       const cy = point.clientY;
       if (isDragging) {
         if (Math.sqrt(Math.pow(cx - initialMousePos.current.x, 2) + Math.pow(cy - initialMousePos.current.y, 2)) > 5) hasMoved.current = true;
-        onUpdate({ x: Math.max(0, point.x - startPos.current.x), y: Math.max(0, point.y - startPos.current.y) });
+        pushGeom({ x: Math.max(0, point.x - startPos.current.x), y: Math.max(0, point.y - startPos.current.y) });
       } else if (isResizing) {
         const dx = point.x - startPos.current.x;
         if (isText) {
           const nw = Math.max(150, startDim.current.w + dx);
-          onUpdate({ width: nw }); 
+          pushGeom({ width: nw });
         } else {
           const ratio = startDim.current.w / startDim.current.h;
           const nw = Math.max(element.type === 'token' ? 25 : (element.type === 'arrow' ? 30 : 80), startDim.current.w + dx);
-          onUpdate({ width: nw, height: nw / ratio });
+          pushGeom({ width: nw, height: nw / ratio });
         }
       } else if (isRotating) {
         if (!boardRef.current) return;
         const boardRect = boardRef.current.getBoundingClientRect();
-        const centerX = boardRect.left + ((element.x || 0) + element.width / 2) * boardScale;
-        const centerY = boardRect.top + ((element.y || 0) + element.height / 2) * boardScale;
+        const текущий = geomRef.current;
+        const centerX = boardRect.left + ((текущий.x || 0) + текущий.width / 2) * boardScale;
+        const centerY = boardRect.top + ((текущий.y || 0) + текущий.height / 2) * boardScale;
         
         const angleRad = Math.atan2(cy - centerY, cx - centerX);
         let angleDeg = angleRad * (180 / Math.PI) + 90;
         if (angleDeg < 0) angleDeg += 360;
         
-        onUpdate({ rotation: Math.round(angleDeg) });
+        pushGeom({ rotation: Math.round(angleDeg) });
       }
     };
     const end = () => {
+      finishGeom();
       if (pinchState.current) {
         pinchState.current = null;
         playSound('drop', isMuted);
@@ -4344,7 +4482,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
   }, [isDragging, isResizing, isRotating, element, onUpdate, playSound, isMuted, isLocked, isText, isLaserMode, isClientMode, boardRef, boardScale]);
   const canDrag = !isLocked && !(isField && isClientMode) && !(isLaserMode && !isClientMode);
   const isFigureOrArrow = element.type === 'figure' || element.type === 'arrow';
-  const appliedRotation = isFigureOrArrow ? 0 : element.rotation;
+  const appliedRotation = isFigureOrArrow ? 0 : geom.rotation;
   let dragClasses = '';
   if (isDragging || isRotating) {
     dragClasses = isFigureOrArrow ? 'scale-105' : 'scale-105 shadow-2xl';
@@ -4353,15 +4491,15 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
   }
   const baseClasses = `w-full h-full relative ${canDrag ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} transition-transform`;
   const typeClasses = isText ? `rounded-2xl backdrop-blur-md border flex flex-col overflow-hidden ${isPrivate ? 'bg-purple-100/90 border-purple-300' : 'bg-yellow-100/90 border-yellow-300'}` : (isField || isFigureOrArrow ? '' : 'rounded-[1rem]');
-  const figureRotation = ((element.rotation || 0) % 360 + 360) % 360;
+  const figureRotation = ((geom.rotation || 0) % 360 + 360) % 360;
   return (
     <div
       ref={elementRef}
       data-draggable-element="true"
       className={`absolute group ${canDrag ? 'touch-none' : ''} ${(isDragging || isRotating) ? 'z-[1000]' : ''}`}
       style={{
-        left: Math.max(0, element.x || 0), top: Math.max(0, element.y || 0),
-        width: element.width, height: isText ? 'auto' : element.height,
+        left: Math.max(0, geom.x || 0), top: Math.max(0, geom.y || 0),
+        width: geom.width, height: isText ? 'auto' : geom.height,
         zIndex: isField ? 0 : (element.zIndex || 1),
         transform: `rotate(${appliedRotation || 0}deg)`,
         transition: (isDragging || isResizing || isRotating) ? 'none' : 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
@@ -4372,7 +4510,7 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
           onMouseDown={handleRotateStart}
           onTouchStart={handleRotateStart}
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair z-[-1]"
-          style={{ width: element.width + 60, height: element.height + 60 }}
+          style={{ width: geom.width + 60, height: geom.height + 60 }}
           title="Нажмите на круг, чтобы повернуть"
         >
           {[0, 45, 90, 135, 180, 225, 270, 315].map(angle => (
@@ -4386,8 +4524,8 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
         <div
           className="absolute top-1/2 left-1/2 z-30 pointer-events-none"
           style={{
-            width: element.width + 74,
-            height: element.height + 74,
+            width: geom.width + 74,
+            height: geom.height + 74,
             transform: `translate(-50%, -50%) rotate(${figureRotation}deg)`
           }}
         >
@@ -4452,10 +4590,10 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
           
           {(!isClientMode || !isField) && !isFigureOrArrow && (
             <div className="flex bg-gray-100 rounded-full p-0.5 shadow-inner border border-gray-200/50 ml-1">
-              <button onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (element.rotation - 90 + 360) % 360 }); }} className="w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white text-ink/70 shadow-sm" title={`Повернуть влево (90°)`}>
+              <button onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (geom.rotation - 90 + 360) % 360 }); }} className="w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white text-ink/70 shadow-sm" title={`Повернуть влево (90°)`}>
                 <RotateCcw size={14} />
               </button>
-              <button onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (element.rotation + 90) % 360 }); }} className="w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white text-ink/70 shadow-sm" title={`Повернуть вправо (90°)`}>
+              <button onClick={(e) => { e.stopPropagation(); onUpdate({ rotation: (geom.rotation + 90) % 360 }); }} className="w-7 h-7 flex items-center justify-center rounded-full transition-all hover:bg-white text-ink/70 shadow-sm" title={`Повернуть вправо (90°)`}>
                 <RotateCw size={14} />
               </button>
             </div>
@@ -4532,11 +4670,11 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
           <div className="w-full h-full rounded-full shadow-inner border-2 border-white/80" style={{ backgroundColor: element.color }} onMouseDown={handleDragStart} onTouchStart={handleDragStart} />
         ) : element.type === 'arrow' ? (
           <div className="w-full h-full relative flex items-center justify-center" onMouseDown={handleDragStart} onTouchStart={handleDragStart}>
-             <ArrowElementIcon color={element.color} rotation={element.rotation} className="w-full h-full" />
+             <ArrowElementIcon color={element.color} rotation={geom.rotation} className="w-full h-full" />
           </div>
         ) : element.type === 'figure' ? (
           <div className="w-full h-full relative flex items-center justify-center" onMouseDown={handleDragStart} onTouchStart={handleDragStart}>
-             <FigureIcon gender={element.gender} color={element.color} viewMode={globalFigureView} rotation={element.rotation} name={String(element.name || '')} isLaying={element.isLaying} className="w-full h-full" />
+             <FigureIcon gender={element.gender} color={element.color} viewMode={globalFigureView} rotation={geom.rotation} name={String(element.name || '')} isLaying={element.isLaying} className="w-full h-full" />
           </div>
         ) : (
           <div className="relative w-full h-full" style={isField ? {} : { transformStyle: 'preserve-3d', transition: 'transform 0.6s ease', transform: element.isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }} onMouseDown={handleDragStart} onTouchStart={handleDragStart}>
