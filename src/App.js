@@ -3901,7 +3901,7 @@ export default function App() {
             <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">ИНСТРУКЦИЯ</span>
           </button>
           {!isClientMode && (
-            <div className="relative">
+            <div className={`relative ${менюОткрыто ? "z-[210]" : ""}`}>
               <button onClick={() => setМенюОткрыто(v => !v)} className="px-3 py-2.5 rounded-[1rem] border transition-all hover:bg-black/5 flex items-center gap-2 shadow-sm" style={{ backgroundColor: менюОткрыто ? `${COLORS.plum}10` : 'white', color: COLORS.plum, borderColor: `${COLORS.plum}30` }} title="Ещё">
                 <MoreHorizontal size={16} />
                 <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">ЕЩЁ</span>
@@ -3909,7 +3909,7 @@ export default function App() {
               {менюОткрыто && (
                 <>
                   <div className="fixed inset-0 z-[190]" onClick={() => setМенюОткрыто(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border bg-white shadow-2xl z-[200] p-2 flex flex-col gap-0.5" style={{ borderColor: `${COLORS.ink}12` }}>
+                  <div className="fixed right-4 top-[76px] w-72 rounded-2xl border bg-white shadow-2xl z-[200] p-2 flex flex-col gap-0.5" style={{ borderColor: `${COLORS.ink}12` }}>
                     <button onClick={() => { setМенюОткрыто(false); runSessionCheck(); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors hover:bg-black/5">
                       <AlertCircle size={16} style={{ color: COLORS.forest }} />
                       <span className="text-[11px] font-bold" style={{ color: COLORS.ink }}>Проверка перед сессией</span>
