@@ -4016,9 +4016,9 @@ export default function App() {
               {!isClientMode && (
                 <div className={`w-full md:w-72 border-b md:border-b-0 md:border-r pb-3 md:pb-0 pr-0 md:pr-6 md:h-auto flex-shrink-0 overflow-y-auto custom-scrollbar flex flex-col gap-3 min-h-0 ${activeDeckData && !isLibraryFullscreen ? 'hidden md:flex' : 'flex-1 md:flex-none'}`} style={{ borderColor: `${COLORS.ink}10` }}>
                   <div className="flex p-1 rounded-xl mb-1 flex-shrink-0 bg-black/5">
-                    <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'cloud' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>КАРТЫ</button>
-                    <button onClick={() => setActiveTab('local')} className={`flex-1 py-2 px-1 text-[9px] font-black rounded-lg transition-all leading-tight ${activeTab === 'local' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>ЗАГРУЗКА КОЛОД</button>
-                    <button onClick={() => setActiveTab('sessions')} className={`flex-1 py-2 text-[9px] font-black rounded-lg transition-all ${activeTab === 'sessions' ? 'bg-white shadow-sm text-forest' : 'hover:opacity-70 text-ink/60'}`}>СЕССИИ</button>
+                    <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 px-1 text-[8.5px] font-black rounded-lg transition-all whitespace-nowrap ${activeTab === 'cloud' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>КАРТЫ</button>
+                    <button onClick={() => setActiveTab('local')} className={`flex-1 py-2 px-1 text-[8.5px] font-black rounded-lg transition-all whitespace-nowrap ${activeTab === 'local' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>ЗАГРУЗКА КОЛОД</button>
+                    <button onClick={() => setActiveTab('sessions')} className={`flex-1 py-2 px-1 text-[8.5px] font-black rounded-lg transition-all whitespace-nowrap ${activeTab === 'sessions' ? 'bg-white shadow-sm text-forest' : 'hover:opacity-70 text-ink/60'}`}>СЕССИИ</button>
                   </div>
                   {activeTab === 'sessions' && (
                     <div className="flex flex-col gap-2 flex-shrink-0">
