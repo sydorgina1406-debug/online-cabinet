@@ -4077,7 +4077,7 @@ export default function App() {
                         </div>
                       </div>
                       <button onClick={addDeckByLinks} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black transition-all uppercase hover:opacity-80 shadow-sm" style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }}>
-                        <LinkIcon size={16} /> Вставить ссылку на папку
+                        <LinkIcon size={16} /> Вставить ссылку на папку с картами
                       </button>
                     </div>
                   )}
@@ -4122,7 +4122,7 @@ export default function App() {
                   {activeTab !== 'sessions' && visibleLibraryDecks.map(item => renderDeckItem(item))}
                   {activeTab !== 'sessions' && visibleLibraryDecks.length === 0 && favoriteDecks.length === 0 && !isPlatformDecksLoading && !isBaseDecksLoading && (
                     <div className="text-[9px] text-center font-bold py-5 px-3 rounded-2xl flex-shrink-0" style={{ color: `${COLORS.ink}55`, backgroundColor: `${COLORS.ink}06` }}>
-                      {deckSearch ? "По этому запросу колод не найдено" : activeTab === 'cloud' ? "В облаке пока нет колод" : activeTab === 'local' ? "В ваших колодах пока пусто. Нажмите «Вставить ссылку на папку»." : showHiddenDecks ? "В этой вкладке пока нет колод" : "Нет видимых колод. Включите «Показать скрытые», если вы их скрывали."}
+                      {deckSearch ? "По этому запросу колод не найдено" : activeTab === 'cloud' ? "В облаке пока нет колод" : activeTab === 'local' ? "В ваших колодах пока пусто. Нажмите «Вставить ссылку на папку с картами» — готовая колода появится во вкладке ОБЛАКО." : showHiddenDecks ? "В этой вкладке пока нет колод" : "Нет видимых колод. Включите «Показать скрытые», если вы их скрывали."}
                     </div>
                   )}
                 </div>
