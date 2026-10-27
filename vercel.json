@@ -1,0 +1,10 @@
+{
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "online-cabinet.vercel.app" }],
+      "destination": "https://kabinet.sudorgina-studio.ru/:path*",
+      "permanent": false
+    }
+  ]
+}

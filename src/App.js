@@ -37,7 +37,8 @@ const appId = "mak-space-yulia-sudorgina";
 const ROOT_DRIVE_FOLDER_ID = "19-ZI-4tzVgRntc34yJTPGAVzZpyKksHl";
 const DRIVE_API_KEY = "AIzaSyDXSTiw-Sd2jZve2Yv7bnbVRIAYcPre3N4";
 
-const PLATFORM_BASE_URL = "https://online-cabinet.vercel.app";
+// Встроенные колоды лежат на самом сайте: берём с того адреса, где открыт кабинет.
+const PLATFORM_BASE_URL = window.location.origin;
 const PLATFORM_DECKS_URL = `${PLATFORM_BASE_URL}/decks.json`;
 const BOARD_SIZE = 3000;
 const MIN_BOARD_SCALE = 0.35;
