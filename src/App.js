@@ -16,7 +16,7 @@ import {
   Plus, Layers, RotateCw, RotateCcw, Trash2, Maximize2, Minimize2, X, ChevronUp, ChevronDown,
   FolderOpen, LayoutGrid, Move, Cloud, Copy, CheckCircle,
   Users, LogOut, AlertCircle, ExternalLink, Image as ImageIcon,
-  Volume2, VolumeX, ArrowUp, ArrowUpToLine, Save, MousePointer2, UserCircle, UserPlus,
+  Volume2, VolumeX, ArrowUp, ArrowUpToLine, MousePointer2, UserCircle, UserPlus,
   Key, Edit2, Loader2, RefreshCw, Link as LinkIcon, FileJson, MoreHorizontal,
   Eye, Lock, Unlock, Type, Gamepad2, Timer, TimerOff, Undo2, MessageCircle,
   Camera, Crosshair, UploadCloud, Video, HelpCircle, EyeOff, Dices, UserMinus, BookOpen, Mic,
@@ -34,7 +34,6 @@ const firebaseConfig = {
 };
 
 const appId = "mak-space-yulia-sudorgina";
-const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1H65cuAhJ6rUKIvhuDthQCU8OWQ2RqdGgJOqhV24AqVs/export?format=csv&gid=402059779";
 const ROOT_DRIVE_FOLDER_ID = "19-ZI-4tzVgRntc34yJTPGAVzZpyKksHl";
 const DRIVE_API_KEY = "AIzaSyDXSTiw-Sd2jZve2Yv7bnbVRIAYcPre3N4";
 
@@ -298,6 +297,12 @@ const LAST_CLIENT_ROOM_STORAGE_KEY = 'makLastClientRoomV1';
 const ACTIVE_CLIENT_ROOM_SESSION_KEY = 'makActiveClientRoomSessionV1';
 const BOARD_BACKUP_PREFIX = 'makBoardBackupV1_';
 const LAST_ROOM_TTL_MS = 2 * 60 * 60 * 1000;
+// Локальная копия стола живёт в браузере недолго: старше этого срока она стирается сама.
+const BOARD_BACKUP_TTL_MS = 12 * 60 * 60 * 1000;
+// Конец сессии: служебный документ _meta в комнате отмечает, когда психолог последний раз был в ней.
+const META_ОБНОВЛЯЕМ_РАЗ_В_МС = 5 * 60 * 1000;
+const КОМНАТА_ЗАБЫТА_ЧЕРЕЗ_МС = 12 * 60 * 60 * 1000;
+const ДОКУМЕНТОВ_В_ПАЧКЕ = 400;
 // Постоянный адрес кабинета: он собирается из логина психолога, поэтому ссылка
 // для клиента не меняется от входа к входу и её можно отправить заранее.
 // У Юлии комната осталась от прежнего входа «yulia», чтобы отправленные клиентам ссылки не сломались.
@@ -352,7 +357,60 @@ const writeJsonStorage = (key, value) => {
 };
 
 const getBoardBackupKey = (id) => `${BOARD_BACKUP_PREFIX}${id}`;
+// Локальная копия стола: читаем, а если она старше срока — стираем и считаем, что её нет.
+const readBoardBackup = (id) => {
+  const копия = readJsonStorage(getBoardBackupKey(id));
+  if ((копия?.updatedAt && Date.now() - копия.updatedAt > BOARD_BACKUP_TTL_MS)) {
+    try { window.localStorage.removeItem(getBoardBackupKey(id)); } catch (e) {}
+    return null;
+  }
+  return копия;
+};
 const myCursorColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+// Всё, что лежит в облаке про одну комнату. Пути те же, что и у стола: публичная комната
+// public/data/room_<roomId> (roomId уже начинается с room_ — так и оставлено), курсоры
+// public/data/room_<roomId>_cursors и личные заметки психолога users/<uid>/private_room_notes/<roomId>/items.
+// users/<uid>/saved_notes, saved_decks и список подписчиков сюда не входят.
+const публичнаяКомната = (идКомнаты) => collection(db, 'artifacts', appId, 'public', 'data', `room_${идКомнаты}`);
+const личныеЗаметкиКомнаты = (uid, идКомнаты) => collection(db, 'artifacts', appId, 'users', uid, 'private_room_notes', идКомнаты, 'items');
+// Забытая комната: психолог не был в ней дольше 12 часов (или отметки нет вовсе), а на столе или в
+// личных заметках что-то осталось. Пустую комнату не трогаем, чтобы не показывать лишних сообщений.
+const комнатаЗабыта = async (идКомнаты, uid) => {
+  const мета = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${идКомнаты}`, '_meta'));
+  if (мета.exists() && Date.now() - (Number(мета.data().lastActiveAt) || 0) <= КОМНАТА_ЗАБЫТА_ЧЕРЕЗ_МС) return false;
+  const стол = await getDocs(публичнаяКомната(идКомнаты));
+  if (стол.docs.some(d => d.id !== '_meta' && d.id !== '_settings')) return true;
+  const личные = await getDocs(личныеЗаметкиКомнаты(uid, идКомнаты));
+  return !личные.empty;
+};
+// Очистка комнаты: стол, фигурки, записки, служебные документы, курсоры и личные заметки психолога.
+// Из _settings остаются только настройки кабинета (название, ссылка на звонок, фон, вид фигурок).
+const очиститьКомнату = async (идКомнаты, uid) => {
+  if (!идКомнаты || !uid) throw new Error('Не указана комната');
+  const refs = [];
+  const стол = await getDocs(публичнаяКомната(идКомнаты));
+  let настройки = null;
+  стол.docs.forEach(d => {
+    if (d.id === '_settings') { настройки = d; return; }
+    refs.push(d.ref);
+  });
+  const курсоры = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', `room_${идКомнаты}_cursors`));
+  курсоры.docs.forEach(d => refs.push(d.ref));
+  const личные = await getDocs(личныеЗаметкиКомнаты(uid, идКомнаты));
+  личные.docs.forEach(d => refs.push(d.ref));
+  if (настройки) {
+    const данные = настройки.data() || {};
+    const остаются = {};
+    ['platformName', 'externalCallLink', 'tableBg', 'figureViewMode'].forEach(k => { if (данные[k] !== undefined) остаются[k] = данные[k]; });
+    await setDoc(настройки.ref, { ...остаются, isVideoCallReady: false });
+  }
+  for (let i = 0; i < refs.length; i += ДОКУМЕНТОВ_В_ПАЧКЕ) {
+    const пачка = writeBatch(db);
+    refs.slice(i, i + ДОКУМЕНТОВ_В_ПАЧКЕ).forEach(r => пачка.delete(r));
+    await пачка.commit();
+  }
+  try { window.localStorage.removeItem(getBoardBackupKey(идКомнаты)); } catch (e) {}
+};
 const extractDriveFileId = (url) => {
   if (!url) return null;
   let m = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)\//);
@@ -877,7 +935,6 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [roomId, setRoomId] = useState('');
   const [свояСсылка, setСвояСсылка] = useState(false);
-  const [поискСессий, setПоискСессий] = useState('');
   const [менюОткрыто, setМенюОткрыто] = useState(false);
   const менюРеф = useRef(null);
   // Закрываем меню кликом мимо, без невидимой подложки: подложка перекрывала
@@ -1058,17 +1115,14 @@ export default function App() {
   const [figureName, setFigureName] = useState('');
   const [figureViewMode, setFigureViewMode] = useState('side');
   const [emailInput, setEmailInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('');
   const [clientNameInput, setClientNameInput] = useState('');
   const [userName, setUserName] = useState('');
   const [showKeyPrompt, setShowKeyPrompt] = useState(false);
   const [письмоОтправленоНа, setПисьмоОтправленоНа] = useState('');
   const [ссылкаВхода, setСсылкаВхода] = useState(''); // ссылка из письма, ждёт подтверждения почты
-  const [парольныйВход, setПарольныйВход] = useState(false);
   const [cardsOnTable, setCardsOnTable] = useState([]);
   const [localDecks, setLocalDecks] = useState([]);
   const [cloudDecks, setCloudDecks] = useState([]);
-  const [savedSessions, setSavedSessions] = useState([]);
   const [baseDecks, setBaseDecks] = useState([]);
   const [platformDecks, setPlatformDecks] = useState([]);
   const [isPlatformDecksLoading, setIsPlatformDecksLoading] = useState(false);
@@ -1127,11 +1181,6 @@ export default function App() {
   const [undoStack, setUndoStack] = useState(null);
   const [customDialog, setCustomDialog] = useState(null);
   const usedImages = new Set(cardsOnTable.filter(c => c.type === 'card').map(c => c.img));
-  const найденныеСессии = (() => {
-    const запрос = поискСессий.trim().toLowerCase();
-    if (!запрос) return savedSessions;
-    return savedSessions.filter(с => `${с.client || ''} ${с.name || ''}`.toLowerCase().includes(запрос));
-  })();
   useEffect(() => { setLoadedDeckCards(0); }, [activeDeckData?.name, isLibraryDeckFlipped]);
   const notifyTimeoutRef = useRef(null);
   const notify = (text, time = 4000) => {
@@ -1493,7 +1542,7 @@ export default function App() {
       });
     }
     
-    const backup = roomId ? readJsonStorage(getBoardBackupKey(roomId)) : null;
+    const backup = roomId ? readBoardBackup(roomId) : null;
     pushResult({
       id: 'backup',
       title: 'Резервная копия стола',
@@ -1960,7 +2009,7 @@ export default function App() {
   useEffect(() => {
     if (!roomId || !isAuthorized) return;
     const elementsToBackup = cardsOnTable.filter(c => !c.id?.startsWith('_'));
-    const backup = readJsonStorage(getBoardBackupKey(roomId));
+    const backup = readBoardBackup(roomId);
     setHasLocalBoardBackup(Boolean(backup?.elements?.length));
     if (elementsToBackup.length === 0) return;
     writeJsonStorage(getBoardBackupKey(roomId), {
@@ -2013,9 +2062,6 @@ export default function App() {
     const unsubDecks = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_decks'), (s) => {
       setCloudDecks(s.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    const unsubSessions = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions'), (s) => {
-      setSavedSessions(s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => b.createdAt - a.createdAt));
-    });
     const unsubNotes = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_notes'), (s) => {
       setSavedNotes(s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => b.createdAt - a.createdAt));
     });
@@ -2028,6 +2074,8 @@ export default function App() {
     const mergeElements = () => setCardsOnTable([...publicElements, ...privateElements]);
     const tUnsub = onSnapshot(publicRoomCollectionRef(roomId), (snap) => {
       const cards = [];
+      let естьТаймер = false;
+      let естьКолода = false;
       snap.docs.forEach(d => {
         const data = d.data();
         if (d.id === '_dice_state') setDice({ value: data.value, timestamp: data.timestamp });
@@ -2048,8 +2096,8 @@ export default function App() {
           if (libraryData.isFullscreen !== undefined && !window._isClientMode) setIsLibraryFullscreen(libraryData.isFullscreen);
           if (libraryData.isFlipped !== undefined) setIsLibraryDeckFlipped(libraryData.isFlipped);
         }
-        else if (d.id === '_active_deck') { setActiveDeckData(data); }
-        else if (d.id === '_timer_state') { setSessionTimer(data); }
+        else if (d.id === '_active_deck') { естьКолода = true; setActiveDeckData(data); }
+        else if (d.id === '_timer_state') { естьТаймер = true; setSessionTimer(data); }
         else if (!d.id.startsWith('_')) {
           if (data.type === 'private-text') {
             if (!isClientMode && user?.uid) {
@@ -2062,6 +2110,9 @@ export default function App() {
           }
         }
       });
+      // таймер и колода убраны (например, «Завершить сессию») — убираем и у себя
+      if (!естьТаймер) setSessionTimer(null);
+      if (!естьКолода) setActiveDeckData(null);
       publicElements = cards;
       mergeElements();
     });
@@ -2172,7 +2223,7 @@ export default function App() {
       notify("Ошибка синхронизации: " + e.message);
     }
   };
-  // Общий вход в кабинет психолога: нужен и новому входу по ссылке, и запасному по паролю.
+  // Общий вход в кабинет психолога (по ссылке из письма).
   const enterRoomAsPsy = (name, логин) => {
     let своиКабинет = true;
     if (!roomId) {
@@ -2289,69 +2340,6 @@ export default function App() {
     setIsCheckingKey(false);
     return вошли;
   };
-  // ===== ВРЕМЕННЫЙ ЗАПАСНОЙ ВХОД ПО ПАРОЛЮ ИЗ ТАБЛИЦЫ =====
-  // Убрать через две недели после перехода на вход по ссылке: удалить handleLogin целиком,
-  // состояние passwordInput / парольныйВход и блок «Войти по паролю (временно)» на экране входа.
-  const handleLogin = async () => {
-    if (!emailInput || !passwordInput) return notify("Введите Email и Пароль");
-    const inputEmail = emailInput.trim().toLowerCase();
-    const inputPwd = passwordInput.trim();
-    setIsCheckingKey(true);
-    try {
-      let csvText = '';
-      try {
-        const response = await fetch(GOOGLE_SHEET_CSV_URL);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        csvText = await response.text();
-      } catch (directErr) {
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(GOOGLE_SHEET_CSV_URL)}`;
-        const proxyResponse = await fetch(proxyUrl);
-        if (!proxyResponse.ok) throw new Error(`Proxy HTTP ${proxyResponse.status}`);
-        csvText = await proxyResponse.text();
-      }
-      const rows = csvText.split('\n').map(row => {
-        const result = [];
-        let current = '';
-        let inQuotes = false;
-        for (let i = 0; i < row.length; i++) {
-          if (row[i] === '"') { inQuotes = !inQuotes; }
-          else if (row[i] === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
-          else { current += row[i]; }
-        }
-        result.push(current.trim());
-        return result;
-      });
-      let found = null; let valid = false;
-      for (let i = 1; i < rows.length; i++) {
-        if (rows[i].length >= 6 &&
-          rows[i][0].trim().toLowerCase() === inputEmail &&
-          rows[i][1].trim() === inputPwd) {
-          found = rows[i][2].trim();
-          let dateStr = rows[i][5].trim();
-          if (dateStr.includes('.')) {
-            const parts = dateStr.split('.');
-            if (parts.length === 3) dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
-          }
-          const expiry = new Date(dateStr).getTime();
-          if (expiry && Date.now() < (expiry + 86400000)) {
-            valid = true;
-          }
-          break;
-        }
-      }
-      
-      setIsCheckingKey(false);
-      if (found && valid) { 
-        enterRoomAsPsy(found, inputEmail); 
-      } else { 
-        notify(found ? "Подписка истекла (Проверьте формат даты в таблице)" : "Неверный Email или Пароль"); 
-      }
-    } catch (e) {
-      setIsCheckingKey(false);
-      notify("Ошибка связи с таблицей. Включите прокси или убедитесь что таблица опубликована в интернете.");
-    }
-  };
-  // ===== КОНЕЦ ВРЕМЕННОГО ЗАПАСНОГО ВХОДА =====
   const handleClientLogin = () => {
     if (!clientNameInput.trim()) return notify("Укажите ваше имя");
     const clientName = clientNameInput.trim();
@@ -2398,166 +2386,9 @@ export default function App() {
       notify('Не удалось скопировать. Скопируйте ссылку вручную из адресной строки.');
     }
   };
-  const copySavedSessionLink = async (session) => {
-    const targetRoomId = session.roomId || roomId;
-    if (!targetRoomId) return notify("У этой сессии пока нет комнаты");
-    const success = await copyToClipboard(buildRoomLink(targetRoomId));
-    if (success === false) return notify('Не удалось скопировать ссылку');
-    if (targetRoomId === roomId) {
-      notify(`Ссылка на "${session.name}" скопирована. Вы уже в этой сессии.`);
-      return;
-    }
-    notify(`Ссылка на "${session.name}" скопирована. Откройте эту сессию у себя, чтобы синхронизироваться с клиентом.`, 9000);
-    const ok = await askConfirm(`Открыть "${session.name}" у вас сейчас? Тогда вы и клиент будете в одной сессии. Текущий стол будет ОЧИЩЕН и заменён сохранённой сессией.`);
-    if (ok) await loadSavedSession(session, { skipConfirm: true, targetRoomId });
-  };
-  const saveCurrentSession = async () => {
-    const прошлыйКлиент = (() => { try { return window.localStorage.getItem('makLastClientName') || ''; } catch (e) { return ''; } })();
-    const клиент = await askPrompt("С кем была сессия? Впишите имя клиента:", прошлыйКлиент);
-    if (!клиент || !клиент.trim()) return;
-    const имяКлиента = клиент.trim();
-    try { window.localStorage.setItem('makLastClientName', имяКлиента); } catch (e) {}
-    const name = `${имяКлиента} — ${new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
-    notify("Сохраняю сессию...");
-    try {
-      const elementsToSave = cardsOnTable.filter(c => c.id !== '_settings' && c.id !== '_dice_state' && c.id !== '_dice_type' && c.id !== '_library_state' && !c.id.startsWith('_'));
-      const cardCount = elementsToSave.filter(el => el.type === 'card').length;
-      const figureCount = elementsToSave.filter(el => el.type === 'figure').length;
-      const noteCount = elementsToSave.filter(el => el.type === 'text' || el.type === 'private-text').length;
-      await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions'), {
-        name: name.trim(),
-        client: имяКлиента,
-        elements: elementsToSave,
-        roomId,
-        tableBg,
-        activeDeckData,
-        activeDeckName: activeDeckData?.name || '',
-        counts: { cards: cardCount, figures: figureCount, notes: noteCount, total: elementsToSave.length },
-        createdAt: Date.now()
-      });
-      notify("Сессия успешно сохранена! Ищите ее во вкладке СЕССИИ в библиотеке.");
-    } catch (e) {
-      notify("Ошибка сохранения сессии: " + getFriendlyErrorText(e));
-    }
-  };
-  // Тихое автосохранение: раз в две минуты обновляем один и тот же черновик,
-  // чтобы расклад не пропал, если браузер закроется до ручного сохранения.
-  const черновикДанные = useRef({});
-  черновикДанные.current = { cardsOnTable, tableBg, activeDeckData, roomId, user, isClientMode, isAuthorized, isDbConnected };
-  const последнийЧерновик = useRef('');
-  useEffect(() => {
-    const сохранитьЧерновик = async () => {
-      const д = черновикДанные.current;
-      if (!д.isAuthorized || д.isClientMode || !д.isDbConnected || !д.user?.uid || !д.roomId) return;
-      const элементы = (д.cardsOnTable || []).filter(c => c.id && !c.id.startsWith('_'));
-      if (элементы.length === 0) return;
-      const отпечаток = JSON.stringify(элементы.map(el => [el.id, el.x, el.y, el.width, el.rotation, el.isFlipped, el.text]));
-      if (отпечаток === последнийЧерновик.current) return;
-      последнийЧерновик.current = отпечаток;
-      try {
-        await setDoc(doc(db, 'artifacts', appId, 'users', д.user.uid, 'saved_sessions', `draft_${д.roomId}`), {
-          name: `Черновик — ${new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`,
-          isDraft: true,
-          elements: элементы,
-          roomId: д.roomId,
-          tableBg: д.tableBg,
-          activeDeckData: д.activeDeckData,
-          activeDeckName: д.activeDeckData?.name || '',
-          counts: {
-            cards: элементы.filter(el => el.type === 'card').length,
-            figures: элементы.filter(el => el.type === 'figure').length,
-            notes: элементы.filter(el => el.type === 'text' || el.type === 'private-text').length,
-            total: элементы.length
-          },
-          createdAt: Date.now()
-        });
-      } catch (e) {}
-    };
-    const таймер = setInterval(сохранитьЧерновик, 120000);
-    return () => clearInterval(таймер);
-  }, []);
-  const loadSavedSession = async (session, options = {}) => {
-    const targetRoomId = options.targetRoomId || roomId || session.roomId;
-    if (!targetRoomId) return notify("Сначала войдите в сессию");
-    if (!options.skipConfirm) {
-      const ok = await askConfirm(`Вы уверены, что хотите загрузить "${session.name}"? ${targetRoomId !== roomId ? 'Вы перейдёте в постоянную комнату этой сессии. ' : 'Сессия загрузится в текущую комнату, клиент увидит эти карты. '}Текущий стол будет ОЧИЩЕН.`);
-      if (!ok) return;
-    }
-    notify("Загружаю сессию...");
-    try {
-      const batch = writeBatch(db);
-      const targetSnap = await getDocs(publicRoomCollectionRef(targetRoomId));
-      targetSnap.docs.forEach(d => {
-        if (!d.id.startsWith('_')) {
-          batch.delete(publicRoomDocRef(targetRoomId, d.id));
-        }
-      });
-      if (user?.uid) {
-        const privateSnap = await getDocs(privateRoomNotesCollectionRef(targetRoomId));
-        privateSnap.docs.forEach(d => batch.delete(privateRoomNoteDocRef(targetRoomId, d.id)));
-      }
-      const elementsToLoad = (session.elements || [])
-        .filter(Boolean)
-        .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-      const publicElementsToLoad = elementsToLoad.filter(el => !isPrivateElement(el));
-      const shouldPlaceInCurrentView = targetRoomId === roomId;
-      const container = scrollContainerRef.current;
-      const originX = container ? (container.scrollLeft / Math.max(0.01, boardScale)) + 80 : 180;
-      const originY = container ? (container.scrollTop / Math.max(0.01, boardScale)) + 120 : 160;
-      const savedXs = publicElementsToLoad.map(el => Number(el.x)).filter(Number.isFinite);
-      const savedYs = publicElementsToLoad.map(el => Number(el.y)).filter(Number.isFinite);
-      const offsetX = shouldPlaceInCurrentView && savedXs.length ? originX - Math.min(...savedXs) : 0;
-      const offsetY = shouldPlaceInCurrentView && savedYs.length ? originY - Math.min(...savedYs) : 0;
-      elementsToLoad.forEach((el, index) => {
-        const newId = `elem_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
-        const nextEl = { ...el, id: newId };
-        if (!isPrivateElement(nextEl)) {
-          if (shouldPlaceInCurrentView) {
-            const hasSavedPosition = Number.isFinite(Number(el.x)) && Number.isFinite(Number(el.y));
-            nextEl.x = hasSavedPosition ? Math.max(40, Number(el.x) + offsetX) : originX + ((index % 6) * 28);
-            nextEl.y = hasSavedPosition ? Math.max(80, Number(el.y) + offsetY) : originY + (Math.floor(index / 6) * 28);
-          }
-          nextEl.zIndex = nextEl.type === 'field' ? 0 : index + 10;
-          batch.set(publicRoomDocRef(targetRoomId, nextEl.id), nextEl);
-        } else {
-          batch.set(privateRoomNoteDocRef(targetRoomId, nextEl.id), nextEl);
-        }
-      });
-      if (session.tableBg) {
-        batch.set(doc(db, 'artifacts', appId, 'public', 'data', `room_${targetRoomId}`, '_settings'), { tableBg: session.tableBg }, { merge: true });
-      }
-      if (session.activeDeckData) {
-        batch.set(doc(db, 'artifacts', appId, 'public', 'data', `room_${targetRoomId}`, '_active_deck'), session.activeDeckData, { merge: true });
-      }
-      await batch.commit();
-      if (targetRoomId !== roomId) {
-        setRoomId(targetRoomId);
-        roomIdRef.current = targetRoomId;
-        window.history.replaceState({}, '', buildRoomLink(targetRoomId));
-        writeJsonStorage(LAST_ROOM_STORAGE_KEY, { id: targetRoomId, updatedAt: Date.now(), userName });
-        try {
-          window.sessionStorage.setItem(ACTIVE_ROOM_SESSION_KEY, targetRoomId);
-        } catch (e) {}
-      }
-      notify(targetRoomId !== roomId ? "Постоянная комната сессии открыта! ✓" : "Сессия загружена в текущую комнату. Клиент увидит изменения ✓");
-      if (isLibraryOpen) toggleLibrary();
-    } catch (e) {
-      notify("Ошибка загрузки сессии: " + getFriendlyErrorText(e));
-    }
-  };
-  const renameSavedSession = async (session) => {
-    const newName = await askPrompt("Новое название сессии:", session.name);
-    if (!newName || !newName.trim()) return;
-    try {
-      await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions', session.id), { name: newName.trim() });
-      notify("Название сессии обновлено ✓");
-    } catch (e) {
-      notify("Ошибка переименования: " + getFriendlyErrorText(e));
-    }
-  };
   const restoreLocalBoardBackup = async () => {
     if (!roomId || !user) return notify("Сначала войдите в сессию");
-    const backup = readJsonStorage(getBoardBackupKey(roomId));
+    const backup = readBoardBackup(roomId);
     if (!backup?.elements?.length) return notify("Локальная копия стола не найдена");
     const date = backup.updatedAt ? new Date(backup.updatedAt).toLocaleString('ru-RU') : 'без даты';
     const ok = await askConfirm(`Восстановить локальную копию стола от ${date}? Текущий стол будет очищен.`);
@@ -2587,6 +2418,52 @@ export default function App() {
       notify("Не удалось восстановить копию: " + getFriendlyErrorText(e));
     }
   };
+  // Завершить сессию: стол, заметки, записки и служебные документы комнаты удаляются у всех.
+  const завершитьСессию = async () => {
+    if (isClientMode || !roomId || !user?.uid) return;
+    const ок = await askConfirm("Завершить сессию? Стол, заметки и записки будут очищены у вас и у клиента. Это нельзя отменить.");
+    if (!ок) return;
+    if (undoStack?.timeoutId) clearTimeout(undoStack.timeoutId);
+    setUndoStack(null);
+    notify("Очищаю стол...");
+    try {
+      await очиститьКомнату(roomId, user.uid);
+      setHasLocalBoardBackup(false);
+      notify("Сессия завершена, стол очищен");
+    } catch (e) {
+      notify("Не удалось завершить сессию: " + getFriendlyErrorText(e));
+    }
+  };
+  // Пока психолог в своей комнате, раз в 5 минут отмечаем это в служебном документе _meta.
+  // При входе в свою комнату: если отметка старше 12 часов (или её нет, а на столе что-то осталось) —
+  // это забытая сессия, очищаем её без вопросов. Обновление страницы посреди сессии комнату не трогает:
+  // отметка свежая.
+  const забытаяКомнатаПроверена = useRef('');
+  useEffect(() => {
+    if (!inRoom || isClientMode || !isAuthorized || !roomId || !user?.uid || !isDbConnected) return;
+    // только своя комната: постоянная (из логина) или временная ссылка, сделанная самим психологом
+    const своя = свояСсылка || roomId === идКомнатыПсихолога(логинПсихолога);
+    if (!своя) return;
+    const uid = user.uid;
+    const метаДок = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomId}`, '_meta');
+    let отменено = false;
+    const отметиться = () => { if (!отменено) setDoc(метаДок, { lastActiveAt: Date.now() }).catch(() => {}); };
+    (async () => {
+      if (забытаяКомнатаПроверена.current !== roomId) {
+        забытаяКомнатаПроверена.current = roomId;
+        try {
+          if (await комнатаЗабыта(roomId, uid)) {
+            await очиститьКомнату(roomId, uid);
+            setHasLocalBoardBackup(false);
+            if (!отменено) notify("Прошлая сессия очищена");
+          }
+        } catch (e) {}
+      }
+      отметиться();
+    })();
+    const таймер = setInterval(отметиться, META_ОБНОВЛЯЕМ_РАЗ_В_МС);
+    return () => { отменено = true; clearInterval(таймер); };
+  }, [inRoom, isClientMode, isAuthorized, roomId, user?.uid, isDbConnected, свояСсылка, логинПсихолога]);
   const handleNoteImageUpload = async (e) => {
     const f = e.target.files[0];
     if (!f) return;
@@ -3489,31 +3366,19 @@ export default function App() {
                     {ссылкаВхода && <p className="text-sm font-bold leading-relaxed" style={{ color: COLORS.ink }}>Подтвердите почту, на которую пришла ссылка.</p>}
                     <input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && !isCheckingKey && (ссылкаВхода ? завершитьВходПоСсылке(emailInput, ссылкаВхода) : прислатьСсылкуДляВхода())} placeholder="Ваша почта" autoComplete="email" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
                     <div className="flex gap-2 pt-1">
-                      <button onClick={() => { setShowKeyPrompt(false); setСсылкаВхода(''); setПарольныйВход(false); if (!auth.currentUser) signInAnonymously(auth).catch(() => {}); }} className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}80` }}>Назад</button>
+                      <button onClick={() => { setShowKeyPrompt(false); setСсылкаВхода(''); if (!auth.currentUser) signInAnonymously(auth).catch(() => {}); }} className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}80` }}>Назад</button>
                       <button onClick={() => ссылкаВхода ? завершитьВходПоСсылке(emailInput, ссылкаВхода) : прислатьСсылкуДляВхода()} disabled={isCheckingKey} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="flex-[2] font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest shadow-md disabled:opacity-50">
                         {isCheckingKey ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" /> Проверка...</span> : (ссылкаВхода ? "Войти" : "Прислать ссылку для входа")}
                       </button>
                     </div>
                   </>
                 )}
-                {/* ВРЕМЕННО: запасной вход по паролю. Убрать через две недели после перехода на вход по ссылке. */}
-                {!ссылкаВхода && !письмоОтправленоНа && (
-                  <div className="pt-2">
-                    <button onClick={() => setПарольныйВход(v => !v)} className="text-[10px] font-bold underline" style={{ color: `${COLORS.ink}80` }}>Войти по паролю (временно)</button>
-                    {парольныйВход && (
-                      <div className="space-y-3 pt-3">
-                        <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Пароль (почта — в поле выше)" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
-                        <button onClick={handleLogin} disabled={isCheckingKey} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="w-full font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest shadow-md disabled:opacity-50">Войти по паролю</button>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             )
           ) : (
             <div className="space-y-3">
               <p className="font-bold text-[10px] uppercase text-center mb-4" style={{ color: COLORS.ink }}>Представьтесь, чтобы зайти за стол:</p>
-              <input type="text" value={clientNameInput} onChange={e => setClientNameInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleClientLogin()} placeholder="Ваше Имя" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.forest, color: COLORS.forest, backgroundColor: `${COLORS.forest}10` }} />
+              <input type="text" value={clientNameInput} onChange={e => setClientNameInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleClientLogin()} placeholder="Ваше имя (можно без фамилии)" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.forest, color: COLORS.forest, backgroundColor: `${COLORS.forest}10` }} />
               <button onClick={handleClientLogin} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="w-full font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:opacity-90 mt-2">Войти в кабинет</button>
               {roomId && (
                 <button onClick={() => { setIsClientMode(false); window._isClientMode = false; setShowKeyPrompt(true); }} className="w-full py-3 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all hover:bg-black/5" style={{ color: COLORS.plum }}>
@@ -3759,6 +3624,10 @@ export default function App() {
                 <Key size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.plum }} />
                 <div><b>Если работаете за компьютером:</b> клавиша <b>Пробел</b> переворачивает верхнюю карту на столе, <b>Esc</b> закрывает открытое окно.</div>
               </div>
+              <div className="flex gap-3 p-3 rounded-2xl border bg-gray-50" style={{ borderColor: `${COLORS.ink}10` }}>
+                <Trash2 size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.terra }} />
+                <div><b>Что остаётся после встречи:</b> ничего. Когда психолог завершит сессию, стол и заметки удаляются, на платформе ничего не остаётся.</div>
+              </div>
               <div className="flex gap-3 p-3 rounded-2xl border" style={{ backgroundColor: `${COLORS.terra}10`, borderColor: `${COLORS.terra}25` }}>
                 <AlertCircle size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.terra }} />
                 <div><b>Если связь пропала:</b> не закрывайте стол. Обновите страницу и войдите по той же ссылке — карты и заметки сохранятся. Видеозвонок идёт во внешнем сервисе отдельно от стола, поэтому переподключайтесь к нему через ту же кнопку «Видеозвонок» или напрямую в Zoom/Телемосте.</div>
@@ -3822,13 +3691,13 @@ export default function App() {
                   <div className="flex items-start gap-2"><AlertCircle size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Проверка перед сессией:</b> Проверяет комнату, синхронизацию, камеру/микрофон, скриншоты и локальную копию стола. Если что-то не работает, показывает понятную причину.</div></div>
                   <div className="flex items-start gap-2"><Crosshair size={16} className="text-red-500 mt-0.5 shrink-0"/> <div><b>Лазерная указка:</b> Обычная мышка скрыта от клиента. Указка включает красную точку, которую видят все (удобно показывать детали).</div></div>
                   <div className="flex items-start gap-2"><Camera size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Скриншот:</b> Делает качественный снимок всего рабочего стола и скачивает на ваше устройство.</div></div>
-                  <div className="flex items-start gap-2"><Save size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Сохранить сессию:</b> Сохраняет весь расклад в историю (вкладка СЕССИИ), чтобы загрузить его на следующих встречах. Локальная копия стола обновляется автоматически. Кроме того, раз в две минуты платформа сама пишет черновик — запись <b>«Черновик — дата»</b> во вкладке СЕССИИ. Он перезаписывается поверх себя и не засоряет список.</div></div>
+                  <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Завершить сессию</b> (меню «Ещё»): после сессии нажмите «Завершить сессию»: стол и заметки удаляются, на платформе ничего не остаётся. Если забыли, платформа сама очистит прошлую сессию при вашем следующем входе, когда пройдёт больше 12 часов. Сохранённых сессий и черновиков нет: всё живёт только на время встречи.</div></div>
                   <div className="flex items-start gap-2"><LayoutGrid size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Настройки Поля:</b> Изменение фона стола (нейро-текстуры) или загрузка своего игрового поля (картинки, на которую можно класть карты).</div></div>
                   <div className="flex items-start gap-2"><Trash2 size={16} className="text-terra mt-0.5 shrink-0"/> <div><b>Очистить стол:</b> Удаляет все незакрепленные объекты. Внизу появится кнопка отмены (действует 10 секунд). Так же работает удаление одной карты: убрали случайно — внизу появится «Отмена», или нажмите Ctrl+Z.</div></div>
                   <div className="flex items-start gap-2"><Timer size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Таймер:</b> Устанавливает общее время (60/90 мин). Синхронизирован с клиентом.</div></div>
                   <div className="flex items-start gap-2"><Video size={16} className="text-forest mt-0.5 shrink-0"/> <div><b>Ссылка на звонок:</b> нажмите кнопку и вставьте свою постоянную ссылку на Zoom, Телемост, MAX или VK-звонки. Она сохранится в комнате, и клиент увидит у себя кнопку «Видеозвонок», которая откроет эту встречу.</div></div>
                   <div className="flex items-start gap-2"><Volume2 size={16} className="text-gray-500 mt-0.5 shrink-0"/> <div><b>Звуки:</b> Кнопка громкости включает или отключает звуки действий и кубиков.</div></div>
-                  <div className="flex items-start gap-2"><MoreHorizontal size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Ещё:</b> здесь собрано то, что нужно реже — проверка перед сессией, снимок стола, оформление стола, смена ссылки и эта инструкция. Все пункты подписаны словами, искать значок не нужно. На узком экране часть кнопок с панели прячется именно сюда.</div></div>
+                  <div className="flex items-start gap-2"><MoreHorizontal size={16} className="text-plum mt-0.5 shrink-0"/> <div><b>Ещё:</b> здесь собрано то, что нужно реже — проверка перед сессией, снимок стола, оформление стола, смена ссылки, «Завершить сессию» и эта инструкция. Все пункты подписаны словами, искать значок не нужно. На узком экране часть кнопок с панели прячется именно сюда.</div></div>
                 </div>
               </div>
               <div className="space-y-4">
@@ -3909,7 +3778,6 @@ export default function App() {
                     <li><b>КАРТЫ:</b> все ваши колоды — и общие колоды платформы, и те, что вы подключили сами. Подключённые вами колоды видите только вы, других психологов они не касаются.</li>
                     <li>Колоды с пометкой <b>«Всегда доступна»</b> лежат на самой платформе. Они открываются, даже если Google Диск не отвечает — это запас на случай сбоя посреди сессии.</li>
                     <li><b>ЗАГРУЗКА КОЛОД:</b> здесь только кнопка «Вставить ссылку на папку с картами» и памятка. Сама колода после добавления появляется во вкладке <b>КАРТЫ</b>, а не здесь — так и задумано, эта вкладка остаётся пустой.</li>
-                    <li><b>СЕССИИ:</b> сохранённые расклады и черновики, постоянные ссылки и восстановление запасной копии стола.</li>
                   </ul>
                   <div className="bg-plum/10 p-3 rounded-lg border border-plum/20 mt-2">
                     <p className="font-bold text-plum mb-1">Как вытаскивать карты?</p>
@@ -4246,9 +4114,6 @@ export default function App() {
               <button onClick={takeScreenshot} className="hidden 2xl:flex p-2 rounded-xl transition-all hover:bg-white text-ink/70 items-center justify-center" title="Скриншот стола">
                 <Camera size={16} />
               </button>
-              <button onClick={saveCurrentSession} className="p-2 rounded-xl transition-all hover:bg-white text-ink/70" title="Сохранить сессию">
-                <Save size={16} />
-              </button>
             </div>
           )}
           
@@ -4315,6 +4180,17 @@ export default function App() {
                         <span className="text-[11px] font-bold" style={{ color: COLORS.ink }}>Вернуть постоянную ссылку</span>
                       </button>
                     )}
+                    <div className="h-px my-1" style={{ backgroundColor: `${COLORS.ink}10` }} />
+                    {hasLocalBoardBackup && (
+                      <button onClick={() => { setМенюОткрыто(false); restoreLocalBoardBackup(); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors hover:bg-black/5">
+                        <UploadCloud size={16} style={{ color: COLORS.forest }} />
+                        <span className="text-[11px] font-bold leading-tight" style={{ color: COLORS.ink }}>Восстановить копию стола<br /><span className="font-medium opacity-60">из этого браузера, если стол пропал</span></span>
+                      </button>
+                    )}
+                    <button onClick={() => { setМенюОткрыто(false); завершитьСессию(); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors hover:bg-black/5">
+                      <Trash2 size={16} style={{ color: COLORS.terra }} />
+                      <span className="text-[11px] font-bold leading-tight" style={{ color: COLORS.ink }}>Завершить сессию<br /><span className="font-medium opacity-60">стол и заметки будут удалены</span></span>
+                    </button>
                     <div className="h-px my-1" style={{ backgroundColor: `${COLORS.ink}10` }} />
                     <button onClick={() => { setМенюОткрыто(false); setIsHelpOpen(true); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors hover:bg-black/5">
                       <HelpCircle size={16} style={{ color: COLORS.plum }} />
@@ -4520,51 +4396,7 @@ export default function App() {
                   <div className="flex p-1 rounded-xl mb-1 flex-shrink-0 bg-black/5">
                     <button onClick={() => setActiveTab('cloud')} className={`flex-1 py-2 px-1 text-[8.5px] font-black rounded-lg transition-all whitespace-nowrap ${activeTab === 'cloud' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>КАРТЫ</button>
                     <button onClick={() => setActiveTab('local')} className={`flex-1 py-2 px-1 text-[8.5px] font-black rounded-lg transition-all whitespace-nowrap ${activeTab === 'local' ? 'bg-white shadow-sm text-plum' : 'hover:opacity-70 text-ink/60'}`}>ЗАГРУЗКА КОЛОД</button>
-                    <button onClick={() => setActiveTab('sessions')} className={`flex-1 py-2 px-1 text-[8.5px] font-black rounded-lg transition-all whitespace-nowrap ${activeTab === 'sessions' ? 'bg-white shadow-sm text-forest' : 'hover:opacity-70 text-ink/60'}`}>СЕССИИ</button>
                   </div>
-                  {activeTab === 'sessions' && (
-                    <div className="flex flex-col gap-2 flex-shrink-0">
-                      <div className="text-[10px] font-bold text-center mb-2" style={{ color: COLORS.ink }}>СОХРАНЕННЫЕ СЕССИИ</div>
-                      <div className="rounded-2xl p-3 text-[9px] leading-relaxed border" style={{ backgroundColor: `${COLORS.forest}08`, color: `${COLORS.ink}AA`, borderColor: `${COLORS.forest}20` }}>
-                        <div className="font-black uppercase tracking-widest mb-1 flex items-center gap-1" style={{ color: COLORS.forest }}><Save size={11} /> История и восстановление</div>
-                        <div>Кнопка сохранения спрашивает имя клиента и записывает расклад в историю как «Имя — дата». Зелёная кнопка загружает сохранение в текущую комнату, поэтому клиент увидит карты. Название можно поменять карандашом. Когда сессий станет больше трёх, над списком появится поиск по имени клиента.</div>
-                        {hasLocalBoardBackup && (
-                          <button onClick={restoreLocalBoardBackup} className="mt-3 w-full py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.02]" style={{ backgroundColor: COLORS.forest }}>
-                            <UploadCloud size={12} /> Восстановить локальную копию
-                          </button>
-                        )}
-                      </div>
-                      {savedSessions.length > 3 && (
-                        <div className="relative">
-                          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: `${COLORS.ink}60` }} />
-                          <input value={поискСессий} onChange={e => setПоискСессий(e.target.value)} placeholder="Поиск по имени клиента" className="w-full pl-9 pr-8 py-2.5 rounded-2xl border text-[10px] font-bold outline-none" style={{ borderColor: `${COLORS.ink}15`, color: COLORS.ink }} />
-                          {поискСессий && (
-                            <button onClick={() => setПоискСессий('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-black/5" title="Очистить поиск"><X size={12} style={{ color: `${COLORS.ink}80` }} /></button>
-                          )}
-                        </div>
-                      )}
-                      {savedSessions.length === 0 && <div className="text-[9px] text-center opacity-50">Нет сохраненных сессий</div>}
-                      {найденныеСессии.length === 0 && savedSessions.length > 0 && <div className="text-[9px] text-center opacity-50">По этому имени сессий не нашлось</div>}
-                      {найденныеСессии.map(session => (
-                        <div key={session.id} className="group flex items-center justify-between p-3 rounded-2xl border border-gray-100 hover:bg-black/5 transition-colors">
-                           <div>
-                              <div className="text-[10px] font-bold" style={{ color: COLORS.ink }}>{session.name}</div>
-                              <div className="text-[8px] text-gray-500">{new Date(session.createdAt).toLocaleDateString()} {session.counts?.total ? `| ${session.counts.total} объектов` : ''}</div>
-                              {session.activeDeckName && <div className="text-[8px] text-gray-400 truncate max-w-[150px]">Колода: {session.activeDeckName}</div>}
-                            </div>
-                            <div className="flex gap-1">
-                              <button onClick={() => renameSavedSession(session)} className="p-2 text-ink/70 hover:bg-black/5 rounded-lg transition-colors" title="Переименовать сессию"><Edit2 size={14}/></button>
-                              <button onClick={() => loadSavedSession(session)} className="p-2 text-forest hover:bg-forest/10 rounded-lg transition-colors" title="Загрузить в текущую комнату"><UploadCloud size={14}/></button>
-                              <button onClick={() => copySavedSessionLink(session)} className="p-2 text-plum hover:bg-plum/10 rounded-lg transition-colors" title="Скопировать ссылку и открыть эту сессию у себя"><LinkIcon size={14}/></button>
-                              <button onClick={async () => {
-                                const ok = await askConfirm('Удалить эту сессию навсегда?');
-                                if(ok) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'saved_sessions', session.id));
-                              }} className="p-2 text-terra hover:bg-terra/10 rounded-lg transition-colors" title="Удалить сессию"><Trash2 size={14}/></button>
-                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                   
                   {activeTab === 'local' && (
                     <div className="flex flex-col gap-3 flex-shrink-0">
