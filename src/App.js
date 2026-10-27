@@ -673,6 +673,195 @@ const renderDiceFace = (value, dotColor) => {
     </div>
   );
 };
+// ===== Страница «Подписчики» (только для владелицы платформы) =====
+const ПОЧТА_ВЛАДЕЛИЦЫ = 'sydorgina1406@gmail.com';
+// Владелица = вошла по почте (не анонимно), почта совпала. Правила Firestore проверяют то же самое на сервере.
+const этоВладелица = (u) => !!(u && !u.isAnonymous && String(u.email || '').trim().toLowerCase() === ПОЧТА_ВЛАДЕЛИЦЫ);
+const два = (n) => String(n).padStart(2, '0');
+// Дата ГГГГ-ММ-ДД по локальному времени браузера (без toISOString, чтобы не съезжал день).
+const датаВСтроку = (d) => `${d.getFullYear()}-${два(d.getMonth() + 1)}-${два(d.getDate())}`;
+const сегодняСтрокой = () => датаВСтроку(new Date());
+const разобратьДату = (s) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '').trim());
+  if (!m) return null;
+  const г = +m[1], мес = +m[2], д = +m[3];
+  if (мес < 1 || мес > 12 || д < 1 || д > new Date(г, мес, 0).getDate()) return null;
+  return { г, мес, д };
+};
+// + N месяцев с учётом конца месяца: 31 января + 1 месяц = 28/29 февраля.
+const прибавитьМесяцы = (s, n) => {
+  const р = разобратьДату(s);
+  if (!р) return null;
+  const всего = (р.мес - 1) + n;
+  const г = р.г + Math.floor(всего / 12);
+  const мес = ((всего % 12) + 12) % 12; // 0..11
+  const последний = new Date(г, мес + 1, 0).getDate();
+  return `${г}-${два(мес + 1)}-${два(Math.min(р.д, последний))}`;
+};
+const прибавитьДни = (s, n) => {
+  const р = разобратьДату(s);
+  if (!р) return null;
+  return датаВСтроку(new Date(р.г, р.мес - 1, р.д + n));
+};
+// Сколько дней от «сегодня» до даты (отрицательное — уже прошло). Через UTC, чтобы не мешал переход на летнее время.
+const днейДо = (s, сегодня) => {
+  const а = разобратьДату(s), б = разобратьДату(сегодня);
+  if (!а || !б) return null;
+  return Math.round((Date.UTC(а.г, а.мес - 1, а.д) - Date.UTC(б.г, б.мес - 1, б.д)) / 86400000);
+};
+const датаДляЭкрана = (s) => { const р = разобратьДату(s); return р ? `${два(р.д)}.${два(р.мес)}.${р.г}` : '—'; };
+const словоДней = (n) => { const a = Math.abs(n) % 100, b = a % 10; return (a > 10 && a < 20) ? 'дней' : b === 1 ? 'день' : (b >= 2 && b <= 4) ? 'дня' : 'дней'; };
+const СРОКИ_ПОДПИСКИ = [
+  { id: '1', подпись: '1 месяц', мес: 1 }, { id: '3', подпись: '3 месяца', мес: 3 },
+  { id: '6', подпись: '6 месяцев', мес: 6 }, { id: '12', подпись: 'Год', мес: 12 }, { id: 'своя', подпись: 'Своя дата', мес: 0 }
+];
+function ОкноПодписчиков({ onClose, notify, askConfirm, askPrompt, ошибкаТекст }) {
+  const [список, setСписок] = useState(null); // null = ещё грузится
+  const [ошибкаЧтения, setОшибкаЧтения] = useState('');
+  const [занято, setЗанято] = useState(false);
+  const [почта, setПочта] = useState('');
+  const [имя, setИмя] = useState('');
+  const [срок, setСрок] = useState('1');
+  const [своя, setСвоя] = useState('');
+  useEffect(() => {
+    if (!этоВладелица(auth.currentUser)) return undefined;
+    const отписка = onSnapshot(collection(db, 'artifacts', appId, 'subscribers'),
+      (s) => { setОшибкаЧтения(''); setСписок(s.docs.map(d => ({ почта: d.id, имя: String(d.data().name || ''), до: String(d.data().until || '') }))); },
+      (e) => { setСписок([]); setОшибкаЧтения('Не удалось получить список: ' + ошибкаТекст(e)); });
+    return () => отписка();
+  }, []);
+  const сегодня = сегодняСтрокой();
+  const отсортирован = (список || []).slice().sort((a, b) => (a.до < b.до ? -1 : a.до > b.до ? 1 : a.почта.localeCompare(b.почта)));
+  const записать = async (действие, успех) => {
+    if (!этоВладелица(auth.currentUser)) { notify('Эта страница только для владелицы платформы.'); return; }
+    setЗанято(true);
+    try { await действие(); if (успех) notify(успех); }
+    catch (e) { notify('Не удалось сохранить: ' + ошибкаТекст(e), 7000); }
+    finally { setЗанято(false); }
+  };
+  const продлить = (п, мес) => {
+    const текущая = разобратьДату(п.до) ? п.до : сегодня;
+    const основа = текущая > сегодня ? текущая : сегодня;
+    const новая = прибавитьМесяцы(основа, мес);
+    return записать(() => updateDoc(doc(db, 'artifacts', appId, 'subscribers', п.почта), { until: новая }), `Продлено до ${датаДляЭкрана(новая)} ✓`);
+  };
+  const отключить = async (п) => {
+    const себя = п.почта === ПОЧТА_ВЛАДЕЛИЦЫ;
+    const ок = await askConfirm(`Отключить ${п.почта}? Доступ закроется, потом можно продлить.` + (себя ? ' ВНИМАНИЕ: это ваша собственная почта — вы потеряете вход в кабинет.' : ''));
+    if (!ок) return;
+    // позавчера, а не вчера: платформа пускает ещё сутки, а часовой пояс мог бы оставить лишние часы
+    return записать(() => updateDoc(doc(db, 'artifacts', appId, 'subscribers', п.почта), { until: прибавитьДни(сегодня, -2) }), 'Доступ отключён ✓');
+  };
+  const удалить = async (п) => {
+    const себя = п.почта === ПОЧТА_ВЛАДЕЛИЦЫ;
+    const ок = await askConfirm(`Удалить ${п.почта} из списка насовсем?` + (себя ? ' ВНИМАНИЕ: это ваша собственная почта — вы потеряете вход в кабинет.' : ''));
+    if (!ок) return;
+    return записать(() => deleteDoc(doc(db, 'artifacts', appId, 'subscribers', п.почта)), 'Удалено из списка ✓');
+  };
+  // Перенос записи на другую почту: новый документ (те же name и until) и удаление старого — одной пачкой.
+  const изменитьПочту = async (п) => {
+    if (!этоВладелица(auth.currentUser)) { notify('Эта страница только для владелицы платформы.'); return; }
+    if (п.почта === ПОЧТА_ВЛАДЕЛИЦЫ) { notify('Почту владелицы менять нельзя: вы потеряете доступ к этой странице.'); return; }
+    const ввод = await askPrompt(`Новая почта для ${п.почта}:`, п.почта, 'имя@сайт.ру');
+    if (ввод === null) return;
+    const новая = String(ввод).trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(новая)) { notify('Проверьте почту: она должна выглядеть как имя@сайт.ру'); return; }
+    if (новая === п.почта) { notify('Почта не изменилась.'); return; }
+    setЗанято(true);
+    try {
+      const уже = await getDoc(doc(db, 'artifacts', appId, 'subscribers', новая));
+      if (уже.exists()) {
+        const заменить = await askConfirm(`${новая} уже в списке (до ${датаДляЭкрана(String((уже.data() || {}).until || ''))}). Заменить эту запись данными от ${п.почта}? Старая запись ${п.почта} будет удалена.`);
+        if (!заменить) return;
+      }
+      const пачка = writeBatch(db);
+      пачка.set(doc(db, 'artifacts', appId, 'subscribers', новая), { name: п.имя, until: п.до });
+      пачка.delete(doc(db, 'artifacts', appId, 'subscribers', п.почта));
+      await пачка.commit();
+      notify(`Почта изменена на ${новая} ✓`);
+    } catch (e) { notify('Не удалось сохранить: ' + ошибкаТекст(e), 7000); }
+    finally { setЗанято(false); }
+  };
+  const добавить = async () => {
+    if (!этоВладелица(auth.currentUser)) { notify('Эта страница только для владелицы платформы.'); return; }
+    const п = почта.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(п)) { notify('Проверьте почту: она должна выглядеть как имя@сайт.ру'); return; }
+    let до;
+    if (срок === 'своя') {
+      if (!разобратьДату(своя)) { notify('Выберите дату окончания.'); return; }
+      до = своя;
+    } else {
+      до = прибавитьМесяцы(сегодня, СРОКИ_ПОДПИСКИ.find(с => с.id === срок).мес);
+    }
+    setЗанято(true);
+    try {
+      const был = await getDoc(doc(db, 'artifacts', appId, 'subscribers', п));
+      if (был.exists()) {
+        const д = был.data() || {};
+        const заменить = await askConfirm(`${п} уже в списке (до ${датаДляЭкрана(String(д.until || ''))}). Заменить имя и срок на новые?`);
+        if (!заменить) return;
+      }
+      await setDoc(doc(db, 'artifacts', appId, 'subscribers', п), { name: имя.trim(), until: до });
+      notify(`Добавлено: ${п}, до ${датаДляЭкрана(до)} ✓`);
+      setПочта(''); setИмя('');
+    } catch (e) { notify('Не удалось сохранить: ' + ошибкаТекст(e), 7000); }
+    finally { setЗанято(false); }
+  };
+  const кнопка = 'px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-colors hover:bg-black/5 disabled:opacity-40';
+  return (
+    <div className="fixed inset-0 z-[150] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
+      <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-3xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 transition-colors" title="Закрыть">
+          <X size={24} style={{ color: COLORS.ink }} />
+        </button>
+        <h2 className="text-xl md:text-2xl font-black uppercase mb-1 pr-12" style={{ color: COLORS.ink }}>Подписчики</h2>
+        <p className="text-xs mb-5" style={{ color: `${COLORS.ink}99` }}>Кто может входить в кабинет по ссылке из письма. Платформа пускает ещё сутки после даты окончания.</p>
+        <div className="mb-6 p-4 rounded-2xl border" style={{ borderColor: `${COLORS.ink}12`, backgroundColor: COLORS.haze }}>
+          <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3 opacity-60">Добавить подписчика</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+            <input value={почта} onChange={e => setПочта(e.target.value)} placeholder="Почта" type="email" className="px-3 py-2 rounded-xl border outline-none text-sm" style={{ borderColor: `${COLORS.ink}20` }} />
+            <input value={имя} onChange={e => setИмя(e.target.value)} placeholder="Имя" className="px-3 py-2 rounded-xl border outline-none text-sm" style={{ borderColor: `${COLORS.ink}20` }} />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={срок} onChange={e => setСрок(e.target.value)} className="px-3 py-2 rounded-xl border outline-none text-sm bg-white" style={{ borderColor: `${COLORS.ink}20` }}>
+              {СРОКИ_ПОДПИСКИ.map(с => <option key={с.id} value={с.id}>{с.подпись}</option>)}
+            </select>
+            {срок === 'своя' && <input type="date" value={своя} onChange={e => setСвоя(e.target.value)} className="px-3 py-2 rounded-xl border outline-none text-sm bg-white" style={{ borderColor: `${COLORS.ink}20` }} />}
+            <button onClick={добавить} disabled={занято} className="px-4 py-2 rounded-xl text-white text-[11px] font-black uppercase tracking-wider disabled:opacity-40" style={{ backgroundColor: COLORS.plum }}>Добавить</button>
+          </div>
+        </div>
+        {ошибкаЧтения && <div className="mb-4 text-sm font-bold" style={{ color: COLORS.terra }}>{ошибкаЧтения}</div>}
+        {список === null && <div className="text-sm opacity-60 flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Загружаю список...</div>}
+        {список !== null && !ошибкаЧтения && отсортирован.length === 0 && <div className="text-sm opacity-60">Список пока пуст.</div>}
+        <div className="flex flex-col gap-2">
+          {отсортирован.map(п => {
+            const дни = днейДо(п.до, сегодня);
+            const кончилась = дни !== null && дни < 0;
+            const скоро = дни !== null && дни <= 7;
+            const цвет = (дни === null || кончилась) ? '#B3261E' : скоро ? COLORS.terra : COLORS.forest;
+            const текст = дни === null ? 'срок не указан' : кончилась ? `закончилась ${-дни} ${словоДней(дни)} назад` : дни === 0 ? 'последний день' : `осталось ${дни} ${словоДней(дни)}`;
+            return (
+              <div key={п.почта} className="p-3 rounded-2xl border flex flex-col md:flex-row md:items-center gap-2 md:gap-3" style={{ borderColor: `${COLORS.ink}12` }}>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold truncate" style={{ color: COLORS.ink }}>{п.имя || 'без имени'}</div>
+                  <div className="text-xs truncate opacity-70">{п.почта}</div>
+                  <div className="text-xs font-bold mt-0.5" style={{ color: цвет }}>до {датаДляЭкрана(п.до)} · {текст}</div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button disabled={занято} onClick={() => продлить(п, 1)} className={кнопка} style={{ color: COLORS.forest, borderColor: `${COLORS.forest}40` }}>+1 месяц</button>
+                  <button disabled={занято} onClick={() => продлить(п, 3)} className={кнопка} style={{ color: COLORS.forest, borderColor: `${COLORS.forest}40` }}>+3 месяца</button>
+                  <button disabled={занято} onClick={() => отключить(п)} className={кнопка} style={{ color: COLORS.terra, borderColor: `${COLORS.terra}40` }}>Отключить</button>
+                  {п.почта !== ПОЧТА_ВЛАДЕЛИЦЫ && <button disabled={занято} onClick={() => изменитьПочту(п)} className={кнопка} style={{ color: COLORS.plum, borderColor: `${COLORS.plum}40` }}>Изменить почту</button>}
+                  <button disabled={занято} onClick={() => удалить(п)} className={кнопка} style={{ color: '#B3261E', borderColor: '#B3261E40' }}>Удалить</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 function UndoTimer({ expiresAt }) {
   const [sec, setSec] = useState(10);
   useEffect(() => {
@@ -701,6 +890,7 @@ export default function App() {
   }, [менюОткрыто]);
   const [логинПсихолога, setЛогинПсихолога] = useState('');
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isSubscribersOpen, setIsSubscribersOpen] = useState(false);
   const roomIdRef = useRef('');
   const [inRoom, setInRoom] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -3352,7 +3542,7 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen overflow-hidden font-sans select-none relative" style={{ backgroundColor: COLORS.haze }}>
       {notification && (
-        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] text-white px-8 py-3 rounded-full shadow-2xl text-sm font-bold flex items-center gap-2 border" style={{ backgroundColor: COLORS.ink, borderColor: `${COLORS.plum}33` }}>
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[600] text-white px-8 py-3 rounded-full shadow-2xl text-sm font-bold flex items-center gap-2 border" style={{ backgroundColor: COLORS.ink, borderColor: `${COLORS.plum}33` }}>
           <CheckCircle size={16} color={COLORS.terra} /> {notification}
         </div>
       )}
@@ -3878,6 +4068,9 @@ export default function App() {
         </div>
       )}
       
+      {isSubscribersOpen && !isClientMode && этоВладелица(user) && (
+        <ОкноПодписчиков onClose={() => setIsSubscribersOpen(false)} notify={notify} askConfirm={askConfirm} askPrompt={askPrompt} ошибкаТекст={getFriendlyErrorText} />
+      )}
       {isFieldModalOpen && !isClientMode && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center backdrop-blur-md p-4" style={{ backgroundColor: `${COLORS.ink}CC` }}>
           <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-2xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
@@ -4105,6 +4298,12 @@ export default function App() {
                       <LayoutGrid size={16} style={{ color: COLORS.forest }} />
                       <span className="text-[11px] font-bold" style={{ color: COLORS.ink }}>Оформление стола</span>
                     </button>
+                    {этоВладелица(user) && (
+                      <button onClick={() => { setМенюОткрыто(false); setIsSubscribersOpen(true); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors hover:bg-black/5">
+                        <Users size={16} style={{ color: COLORS.plum }} />
+                        <span className="text-[11px] font-bold" style={{ color: COLORS.ink }}>Подписчики</span>
+                      </button>
+                    )}
                     <div className="h-px my-1" style={{ backgroundColor: `${COLORS.ink}10` }} />
                     <button onClick={() => { setМенюОткрыто(false); сменитьСсылкуКабинета(); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors hover:bg-black/5">
                       <LinkIcon size={16} style={{ color: COLORS.plum }} />
