@@ -2094,12 +2094,17 @@ export default function App() {
     return вошли;
   };
   // ===== ВРЕМЕННЫЙ ЗАПАСНОЙ ВХОД ПО ПАРОЛЮ ИЗ ТАБЛИЦЫ =====
-  // Убрать через две недели после перехода на вход по ссылке: удалить handleLogin целиком,
-  // состояние passwordInput / парольныйВход и блок «Войти по паролю (временно)» на экране входа.
+  // Через две недели после перехода на вход по ссылке убрать проход по таблице (блок try ниже),
+  // но ОСТАВИТЬ проверку владельца (yulia / owner777) и поля пароля на экране входа: это вход Юлии.
   const handleLogin = async () => {
     if (!emailInput || !passwordInput) return notify("Введите Email и Пароль");
     const inputEmail = emailInput.trim().toLowerCase();
     const inputPwd = passwordInput.trim();
+    // Вход владельца платформы, оставлен по просьбе Юлии. Минуя список допущенных.
+    if ((inputEmail === "yulia" || inputEmail === "юлия") && inputPwd === "owner777") {
+      enterRoomAsPsy("Юлия", inputEmail);
+      return;
+    }
     setIsCheckingKey(true);
     try {
       let csvText = '';
