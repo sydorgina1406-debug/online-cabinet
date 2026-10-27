@@ -3294,9 +3294,9 @@ export default function App() {
                 ) : (
                   <>
                     {ссылкаВхода && <p className="text-sm font-bold leading-relaxed" style={{ color: COLORS.ink }}>Подтвердите почту, на которую пришла ссылка.</p>}
-                    <input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && (ссылкаВхода ? завершитьВходПоСсылке(emailInput, ссылкаВхода) : прислатьСсылкуДляВхода())} placeholder="Ваша почта" autoComplete="email" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
+                    <input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && !isCheckingKey && (ссылкаВхода ? завершитьВходПоСсылке(emailInput, ссылкаВхода) : прислатьСсылкуДляВхода())} placeholder="Ваша почта" autoComplete="email" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
                     <div className="flex gap-2 pt-1">
-                      <button onClick={() => { setShowKeyPrompt(false); setСсылкаВхода(''); setПарольныйВход(false); }} className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}80` }}>Назад</button>
+                      <button onClick={() => { setShowKeyPrompt(false); setСсылкаВхода(''); setПарольныйВход(false); if (!auth.currentUser) signInAnonymously(auth).catch(() => {}); }} className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}80` }}>Назад</button>
                       <button onClick={() => ссылкаВхода ? завершитьВходПоСсылке(emailInput, ссылкаВхода) : прислатьСсылкуДляВхода()} disabled={isCheckingKey} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="flex-[2] font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest shadow-md disabled:opacity-50">
                         {isCheckingKey ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" /> Проверка...</span> : (ссылкаВхода ? "Войти" : "Прислать ссылку для входа")}
                       </button>
@@ -3606,7 +3606,7 @@ export default function App() {
                   <p><b>Психолог</b> входит по ссылке, которую присылают на почту. <b>Клиент</b> заходит только по вашей ссылке и вводит своё имя.</p>
                   <p>Нажмите <UserPlus size={14} className="inline text-plum"/> <b>«ССЫЛКА»</b> на верхней панели. Это ваш постоянный адрес кабинета — он <b>не меняется от входа к входу</b>, поэтому ссылку можно отправить клиенту заранее, хоть за неделю до встречи.</p>
                   <p>Если нужно отсечь прошлого клиента (например, после разовой консультации), в меню <b>«Ещё»</b> есть <b>«Новая ссылка для клиента»</b>: старая перестанет вести к вам. Вернуться к постоянной можно там же.</p>
-                  <p>Клиент переходит по ссылке, вводит своё имя и попадает за ваш стол. <b>Регистрация не нужна.</b> Если психолог открыл эту же ссылку, он нажимает <b>«Я психолог»</b> и входит логином.</p>
+                  <p>Клиент переходит по ссылке, вводит своё имя и попадает за ваш стол. <b>Регистрация не нужна.</b> Если психолог открыл эту же ссылку, он нажимает <b>«Я психолог»</b>, вводит почту и входит по ссылке из письма.</p>
                   <p><b>Права клиента:</b> тянуть карты (если колода открыта), двигать их, писать в желтых заметках, бросать игровые кубики.</p>
                   <p className="text-terra"><b>Клиент НЕ может:</b> видеть фиолетовые заметки, открывать библиотеку и менять колоды, удалять всё со стола, видеть лазерную указку (если она выключена у мастера).</p>
                 </div>
