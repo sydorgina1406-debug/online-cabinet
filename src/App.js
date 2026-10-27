@@ -1938,6 +1938,13 @@ export default function App() {
         setUser(u);
         if (u) setIsDbConnected(true);
         setAppLoading(false);
+        // Письмо открыли в другой вкладке: вход состоялся там, а здесь экран «Письмо отправлено» ждёт.
+        // Firebase сообщает о смене пользователя и этой вкладке — входим сразу, без обновления страницы.
+        if (u && !u.isAnonymous && u.email && письмоОтправленоРеф.current) {
+          продолжитьВходРеф.current(u).then(вошёл => { if (вошёл) setПисьмоОтправленоНа(''); }).catch(() => {
+            notify('Не удалось проверить подписку. Проверьте интернет и обновите страницу.', 6000);
+          });
+        }
       });
       const params = new URLSearchParams(window.location.search);
       const roomParam = params.get('room');
@@ -2278,6 +2285,33 @@ export default function App() {
     if (!срок || Date.now() >= (срок + 86400000)) return null;
     return { name: String(данные.name || '').trim() || 'коллега' };
   };
+  // Единая точка входа психолога после того, как в Firebase появился пользователь с почтой:
+  // подписка -> кабинет (или отказ). Вызывается из автовхода, из входа по ссылке и из слушателя смены
+  // пользователя; повторные и одновременные вызовы получают тот же результат и кабинет не открывают дважды.
+  const входПсихолога = useRef({ состояние: 'нет', обещание: null });
+  const письмоОтправленоРеф = useRef('');
+  письмоОтправленоРеф.current = письмоОтправленоНа;
+  const продолжитьВходРеф = useRef(null);
+  const продолжитьВходПсихолога = (u) => {
+    const в = входПсихолога.current;
+    if (в.состояние === 'вошёл') return Promise.resolve(true);
+    if (в.состояние === 'идёт') return в.обещание;
+    в.состояние = 'идёт';
+    в.обещание = (async () => {
+      try {
+        const подписка = await проверитьПодписку(u.email);
+        if (!подписка) { в.состояние = 'нет'; await отказатьБезПодписки(); return false; }
+        enterRoomAsPsy(подписка.name, u.email.toLowerCase());
+        в.состояние = 'вошёл';
+        return true;
+      } catch (e) {
+        в.состояние = 'нет';
+        throw e;
+      }
+    })();
+    return в.обещание;
+  };
+  продолжитьВходРеф.current = продолжитьВходПсихолога;
   // Нет подписки: выходим из почтового аккаунта и возвращаем анонимный вход, чтобы приложение не осталось без пользователя.
   const отказатьБезПодписки = async () => {
     try { await signOut(auth); } catch (e) {}
@@ -2289,18 +2323,13 @@ export default function App() {
     const u = auth.currentUser;
     if (!u || u.isAnonymous || !u.email) return;
     try {
-      const подписка = await проверитьПодписку(u.email);
-      if (!подписка) return await отказатьБезПодписки();
-      enterRoomAsPsy(подписка.name, u.email.toLowerCase());
+      await продолжитьВходПсихолога(u);
     } catch (e) {
       notify('Не удалось проверить подписку. Проверьте интернет и войдите по ссылке ещё раз.', 6000);
     }
   };
   // Шаг 1: отправить письмо со ссылкой. Ссылка ведёт на главную страницу сайта БЕЗ ?room, иначе человек окажется в режиме клиента.
-  const прислатьСсылкуДляВхода = async () => {
-    const почта = emailInput.trim().toLowerCase();
-    if (!почта || !почта.includes('@')) return notify('Введите вашу почту');
-    setIsCheckingKey(true);
+  const отправитьПисьмоСоСсылкой = async (почта) => {
     try {
       await sendSignInLinkToEmail(auth, почта, {
         url: window.location.origin + window.location.pathname,
@@ -2308,11 +2337,21 @@ export default function App() {
       });
       try { window.localStorage.setItem(PSY_EMAIL_STORAGE_KEY, почта); } catch (e) {}
       setПисьмоОтправленоНа(почта);
+      return true;
     } catch (e) {
       notify(текстОшибкиВхода(e), 6000);
+      return false;
     }
+  };
+  const прислатьСсылкуДляВхода = async () => {
+    const почта = emailInput.trim().toLowerCase();
+    if (!почта || !почта.includes('@')) return notify('Введите вашу почту');
+    setIsCheckingKey(true);
+    await отправитьПисьмоСоСсылкой(почта);
     setIsCheckingKey(false);
   };
+  // Ссылку, на которой уже пробовали войти (и не вышло), автоматически заменяем новым письмом лишь один раз.
+  const ссылкаСАвтоповтором = useRef('');
   // Шаг 2: человек открыл ссылку из письма. Привязываем почту к уже существующему анонимному
   // пользователю (uid и накопленные данные сохраняются) либо входим в аккаунт, который уже есть.
   const завершитьВходПоСсылке = async (почтаВвод, ссылка) => {
@@ -2320,19 +2359,19 @@ export default function App() {
     if (!почта) return notify('Введите почту, на которую пришла ссылка');
     setIsCheckingKey(true);
     let вошли = false;
+    let ошибка = null;
     try {
       let готовыйАккаунт = '';
       try { готовыйАккаунт = window.localStorage.getItem(PSY_EXISTING_ACCOUNT_KEY) || ''; } catch (e) {}
       const текущий = auth.currentUser;
-      let результат;
       if (текущий && текущий.isAnonymous && готовыйАккаунт !== почта) {
         try {
-          результат = await linkWithCredential(текущий, EmailAuthProvider.credentialWithLink(почта, ссылка));
+          await linkWithCredential(текущий, EmailAuthProvider.credentialWithLink(почта, ссылка));
         } catch (e) {
           if (e.code === 'auth/credential-already-in-use' || e.code === 'auth/email-already-in-use') {
             // эта почта уже есть на другом устройстве — входим в тот аккаунт
             try {
-              результат = await signInWithCredential(auth, e.credential || EmailAuthProvider.credentialWithLink(почта, ссылка));
+              await signInWithCredential(auth, e.credential || EmailAuthProvider.credentialWithLink(почта, ссылка));
             } catch (e2) {
               // одноразовый код мог уже израсходоваться: пометим почту, следующая ссылка пойдёт сразу во вход
               try { window.localStorage.setItem(PSY_EXISTING_ACCOUNT_KEY, почта); } catch (e3) {}
@@ -2343,23 +2382,42 @@ export default function App() {
           }
         }
       } else {
-        результат = await signInWithEmailLink(auth, почта, ссылка);
-      }
-      if (результат?.user) { setUser(результат.user); setIsDbConnected(true); }
-      try { window.localStorage.removeItem(PSY_EMAIL_STORAGE_KEY); window.localStorage.removeItem(PSY_EXISTING_ACCOUNT_KEY); } catch (e) {}
-      setСсылкаВхода('');
-      const почтаАккаунта = (результат?.user?.email || почта).toLowerCase();
-      const подписка = await проверитьПодписку(почтаАккаунта);
-      if (!подписка) {
-        await отказатьБезПодписки();
-      } else {
-        вошли = true;
-        enterRoomAsPsy(подписка.name, почтаАккаунта);
+        await signInWithEmailLink(auth, почта, ссылка);
       }
     } catch (e) {
-      notify(e && String(e.code || '').startsWith('auth/') ? текстОшибкиВхода(e) : 'Не удалось проверить подписку. Проверьте интернет и попробуйте снова.', 7000);
+      ошибка = e;
+    }
+    // Что бы ни случилось выше, судим по факту: если Firebase уже держит нашего пользователя с почтой
+    // (вход мог пройти, а ошибка прийти позже или из другой вкладки), продолжаем вход, а не пугаем ошибкой.
+    const вошедший = auth.currentUser;
+    const почтаВошедшего = (вошедший?.email || '').toLowerCase();
+    if (вошедший && !вошедший.isAnonymous && почтаВошедшего && (!ошибка || почтаВошедшего === почта)) {
+      setUser(вошедший); setIsDbConnected(true);
+      try { window.localStorage.removeItem(PSY_EMAIL_STORAGE_KEY); window.localStorage.removeItem(PSY_EXISTING_ACCOUNT_KEY); } catch (e) {}
+      setСсылкаВхода('');
+      try {
+        вошли = await продолжитьВходПсихолога(вошедший);
+      } catch (e) {
+        notify('Не удалось проверить подписку. Проверьте интернет и попробуйте снова.', 7000);
+      }
+    } else if (ошибка) {
+      const код = String(ошибка.code || '');
+      const ссылкаИспользована = код === 'auth/credential-already-in-use' || код === 'auth/email-already-in-use' || код === 'auth/invalid-action-code';
+      if (ссылкаИспользована && ссылкаСАвтоповтором.current !== ссылка) {
+        // ссылка уже использована, а войти не удалось: сами высылаем новое письмо (один раз на эту ссылку)
+        ссылкаСАвтоповтором.current = ссылка;
+        setСсылкаВхода('');
+        if (await отправитьПисьмоСоСсылкой(почта)) {
+          notify('Эта ссылка уже использована. Мы отправили новое письмо — откройте его, вход сработает сразу.', 9000);
+        }
+      } else {
+        notify(код.startsWith('auth/') ? текстОшибкиВхода(ошибка) : 'Не удалось проверить подписку. Проверьте интернет и попробуйте снова.', 7000);
+      }
       // если пользователя не осталось, вернём анонимный вход, чтобы клиентский режим и кабинет работали
       if (!auth.currentUser) { try { await signInAnonymously(auth); } catch (e2) {} }
+    } else {
+      // вошли без ошибки, но пользователя с почтой нет — редкий случай, просто просим повторить
+      notify('Не удалось войти. Запросите новую ссылку.', 6000);
     }
     setIsCheckingKey(false);
     return вошли;
