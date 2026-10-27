@@ -2673,7 +2673,7 @@ export default function App() {
       
       const loadImageSafe = async (url) => {
         if (!url) return null;
-        const IMAGE_TIMEOUT_MS = 3500;
+        const IMAGE_TIMEOUT_MS = 15000; // карты с Диска иногда грузятся долго, особенно при слабом интернете
         const extractDriveImageId = (src) => {
           const byQuery = String(src).match(/[?&]id=([a-zA-Z0-9_-]+)/);
           if (byQuery) return byQuery[1];
