@@ -5,7 +5,9 @@ import {
   updateDoc, collection, deleteDoc, addDoc, writeBatch, arrayUnion, getDocs
 } from 'firebase/firestore';
 import {
-  getAuth, signInAnonymously, onAuthStateChanged
+  getAuth, signInAnonymously, onAuthStateChanged, signOut,
+  sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink,
+  signInWithCredential, linkWithCredential, EmailAuthProvider
 } from 'firebase/auth';
 import {
   getStorage, ref as storageRef, uploadString, getDownloadURL
@@ -305,6 +307,28 @@ const идКомнатыПсихолога = (логин) => {
   const строка = String(логин || 'master');
   for (let i = 0; i < строка.length; i++) хэш = (хэш * 31 + строка.charCodeAt(i)) % 1000000007;
   return `room_${хэш.toString(36)}`;
+};
+
+// Вход психолога по ссылке из письма: почту запоминаем, пока человек ходит в почту за письмом.
+const PSY_EMAIL_STORAGE_KEY = 'makPsyEmailForSignInV1';
+// Метка «эта почта уже есть на другом устройстве»: тогда ссылку не привязываем к
+// анонимному пользователю, а входим прямо в существующий аккаунт.
+const PSY_EXISTING_ACCOUNT_KEY = 'makPsyExistingAccountV1';
+let входПоСсылкеЗапущен = false;
+const текстОшибкиВхода = (e) => {
+  switch (e && e.code) {
+    case 'auth/invalid-action-code': return 'Ссылка недействительна или уже использована. Запросите новую.';
+    case 'auth/expired-action-code': return 'Срок действия ссылки закончился. Запросите новую.';
+    case 'auth/invalid-email': return 'Почта указана неверно или не совпадает с той, на которую пришла ссылка.';
+    case 'auth/network-request-failed': return 'Нет связи с интернетом. Проверьте сеть и попробуйте ещё раз.';
+    case 'auth/too-many-requests': return 'Слишком много попыток. Подождите немного и попробуйте снова.';
+    case 'auth/quota-exceeded': return 'Сегодня отправлено слишком много писем. Попробуйте завтра или напишите Юлии.';
+    case 'auth/user-disabled': return 'Этот аккаунт отключён. Напишите Юлии.';
+    case 'auth/operation-not-allowed': return 'Вход по ссылке пока не включён. Напишите Юлии.';
+    case 'auth/unauthorized-continue-uri':
+    case 'auth/invalid-continue-uri': return 'Адрес сайта не добавлен в список разрешённых. Напишите Юлии.';
+    default: return 'Не получилось войти по ссылке. Запросите новую или напишите Юлии.';
+  }
 };
 
 const readJsonStorage = (key, fallback = null) => {
@@ -842,6 +866,9 @@ export default function App() {
   const [clientNameInput, setClientNameInput] = useState('');
   const [userName, setUserName] = useState('');
   const [showKeyPrompt, setShowKeyPrompt] = useState(false);
+  const [письмоОтправленоНа, setПисьмоОтправленоНа] = useState('');
+  const [ссылкаВхода, setСсылкаВхода] = useState(''); // ссылка из письма, ждёт подтверждения почты
+  const [парольныйВход, setПарольныйВход] = useState(false);
   const [cardsOnTable, setCardsOnTable] = useState([]);
   const [localDecks, setLocalDecks] = useState([]);
   const [cloudDecks, setCloudDecks] = useState([]);
@@ -1634,7 +1661,16 @@ export default function App() {
   }, [diceD12.timestamp, diceD12.value, isMuted]);
   useEffect(() => {
     const init = async () => {
-      try { await signInAnonymously(auth); } catch (e) {}
+      // Сначала ждём, пока Firebase достанет сохранённого пользователя: иначе
+      // signInAnonymously подменил бы вошедшего по почте на нового анонимного.
+      await new Promise((resolve) => { const off = onAuthStateChanged(auth, () => { off(); resolve(); }); });
+      const hrefВхода = isSignInWithEmailLink(auth, window.location.href) ? window.location.href : '';
+      if (hrefВхода) {
+        // одноразовый код не должен оставаться в адресной строке
+        try { window.history.replaceState(null, '', window.location.origin + window.location.pathname); } catch (e) {}
+      } else if (!auth.currentUser) {
+        try { await signInAnonymously(auth); } catch (e) {}
+      }
       onAuthStateChanged(auth, (u) => {
         setUser(u);
         if (u) setIsDbConnected(true);
@@ -1677,6 +1713,20 @@ export default function App() {
             setIsAuthorized(true);
             setInRoom(true);
           }
+        }
+        if (!canRestoreClient && !hrefВхода) войтиСохранённымПсихологом();
+      }
+      if (hrefВхода && !входПоСсылкеЗапущен) {
+        входПоСсылкеЗапущен = true;
+        setShowKeyPrompt(true);
+        let почта = '';
+        try { почта = window.localStorage.getItem(PSY_EMAIL_STORAGE_KEY) || ''; } catch (e) {}
+        if (почта) {
+          завершитьВходПоСсылке(почта, hrefВхода);
+        } else {
+          // ссылку открыли в другом браузере — почты тут нет, спросим ещё раз
+          setСсылкаВхода(hrefВхода);
+          notify('Введите почту, на которую пришла ссылка, чтобы завершить вход.', 7000);
         }
       }
     };
@@ -1926,33 +1976,130 @@ export default function App() {
       notify("Ошибка синхронизации: " + e.message);
     }
   };
+  // Общий вход в кабинет психолога: нужен и новому входу по ссылке, и запасному по паролю.
+  const enterRoomAsPsy = (name, логин) => {
+    let своиКабинет = true;
+    if (!roomId) {
+      const сохранённый = readJsonStorage(LAST_ROOM_STORAGE_KEY);
+      const постоянная = идКомнатыПсихолога(логин || name);
+      // если психолог сам сменил ссылку, уважаем его выбор
+      const выбранная = (сохранённый?.id && сохранённый?.custom) ? сохранённый.id : постоянная;
+      setСвояСсылка(Boolean(сохранённый?.custom && сохранённый.id === выбранная));
+      setRoomId(выбранная);
+      roomIdRef.current = выбранная;
+    } else {
+      своиКабинет = false;
+      roomIdRef.current = roomId;
+    }
+    setЛогинПсихолога(логин || name);
+    setUserName(name + " (Мастер)");
+    setIsClientMode(false); window._isClientMode = false; setIsAuthorized(true); setInRoom(true); setShowKeyPrompt(false);
+    notify(своиКабинет ? `Привет, ${name}! Ваш кабинет на месте, загружаю колоды...` : `Привет, ${name}! Загружаю колоды...`);
+  };
+  // Список допущенных: artifacts/<appId>/subscribers/<почта в нижнем регистре>, поля name и until (ГГГГ-ММ-ДД).
+  // Возвращает { name } или null, если документа нет либо срок вышел. Сетевые сбои пробрасывает наружу.
+  const проверитьПодписку = async (почта) => {
+    const снимок = await getDoc(doc(db, 'artifacts', appId, 'subscribers', String(почта || '').trim().toLowerCase()));
+    if (!снимок.exists()) return null;
+    const данные = снимок.data() || {};
+    const срок = new Date(String(данные.until || '').trim()).getTime();
+    // подписка действует включительно по указанную дату (+ сутки, как и раньше)
+    if (!срок || Date.now() >= (срок + 86400000)) return null;
+    return { name: String(данные.name || '').trim() || 'коллега' };
+  };
+  // Нет подписки: выходим из почтового аккаунта и возвращаем анонимный вход, чтобы приложение не осталось без пользователя.
+  const отказатьБезПодписки = async () => {
+    try { await signOut(auth); } catch (e) {}
+    try { await signInAnonymously(auth); } catch (e) {}
+    notify('Подписка не найдена или закончилась. Напишите Юлии.', 7000);
+  };
+  // Проверка подписки у уже вошедшего по почте (после перезагрузки страницы). Тихо, если вошедшего нет.
+  const войтиСохранённымПсихологом = async () => {
+    const u = auth.currentUser;
+    if (!u || u.isAnonymous || !u.email) return;
+    try {
+      const подписка = await проверитьПодписку(u.email);
+      if (!подписка) return await отказатьБезПодписки();
+      enterRoomAsPsy(подписка.name, u.email.toLowerCase());
+    } catch (e) {
+      notify('Не удалось проверить подписку. Проверьте интернет и войдите по ссылке ещё раз.', 6000);
+    }
+  };
+  // Шаг 1: отправить письмо со ссылкой. Ссылка ведёт на главную страницу сайта БЕЗ ?room, иначе человек окажется в режиме клиента.
+  const прислатьСсылкуДляВхода = async () => {
+    const почта = emailInput.trim().toLowerCase();
+    if (!почта || !почта.includes('@')) return notify('Введите вашу почту');
+    setIsCheckingKey(true);
+    try {
+      await sendSignInLinkToEmail(auth, почта, {
+        url: window.location.origin + window.location.pathname,
+        handleCodeInApp: true
+      });
+      try { window.localStorage.setItem(PSY_EMAIL_STORAGE_KEY, почта); } catch (e) {}
+      setПисьмоОтправленоНа(почта);
+    } catch (e) {
+      notify(текстОшибкиВхода(e), 6000);
+    }
+    setIsCheckingKey(false);
+  };
+  // Шаг 2: человек открыл ссылку из письма. Привязываем почту к уже существующему анонимному
+  // пользователю (uid и накопленные данные сохраняются) либо входим в аккаунт, который уже есть.
+  const завершитьВходПоСсылке = async (почтаВвод, ссылка) => {
+    const почта = String(почтаВвод || '').trim().toLowerCase();
+    if (!почта) return notify('Введите почту, на которую пришла ссылка');
+    setIsCheckingKey(true);
+    let вошли = false;
+    try {
+      let готовыйАккаунт = '';
+      try { готовыйАккаунт = window.localStorage.getItem(PSY_EXISTING_ACCOUNT_KEY) || ''; } catch (e) {}
+      const текущий = auth.currentUser;
+      let результат;
+      if (текущий && текущий.isAnonymous && готовыйАккаунт !== почта) {
+        try {
+          результат = await linkWithCredential(текущий, EmailAuthProvider.credentialWithLink(почта, ссылка));
+        } catch (e) {
+          if (e.code === 'auth/credential-already-in-use' || e.code === 'auth/email-already-in-use') {
+            // эта почта уже есть на другом устройстве — входим в тот аккаунт
+            try {
+              результат = await signInWithCredential(auth, e.credential || EmailAuthProvider.credentialWithLink(почта, ссылка));
+            } catch (e2) {
+              // одноразовый код мог уже израсходоваться: пометим почту, следующая ссылка пойдёт сразу во вход
+              try { window.localStorage.setItem(PSY_EXISTING_ACCOUNT_KEY, почта); } catch (e3) {}
+              throw e2;
+            }
+          } else {
+            throw e;
+          }
+        }
+      } else {
+        результат = await signInWithEmailLink(auth, почта, ссылка);
+      }
+      if (результат?.user) { setUser(результат.user); setIsDbConnected(true); }
+      try { window.localStorage.removeItem(PSY_EMAIL_STORAGE_KEY); window.localStorage.removeItem(PSY_EXISTING_ACCOUNT_KEY); } catch (e) {}
+      setСсылкаВхода('');
+      const почтаАккаунта = (результат?.user?.email || почта).toLowerCase();
+      const подписка = await проверитьПодписку(почтаАккаунта);
+      if (!подписка) {
+        await отказатьБезПодписки();
+      } else {
+        вошли = true;
+        enterRoomAsPsy(подписка.name, почтаАккаунта);
+      }
+    } catch (e) {
+      notify(e && String(e.code || '').startsWith('auth/') ? текстОшибкиВхода(e) : 'Не удалось проверить подписку. Проверьте интернет и попробуйте снова.', 7000);
+      // если пользователя не осталось, вернём анонимный вход, чтобы клиентский режим и кабинет работали
+      if (!auth.currentUser) { try { await signInAnonymously(auth); } catch (e2) {} }
+    }
+    setIsCheckingKey(false);
+    return вошли;
+  };
+  // ===== ВРЕМЕННЫЙ ЗАПАСНОЙ ВХОД ПО ПАРОЛЮ ИЗ ТАБЛИЦЫ =====
+  // Убрать через две недели после перехода на вход по ссылке: удалить handleLogin целиком,
+  // состояние passwordInput / парольныйВход и блок «Войти по паролю (временно)» на экране входа.
   const handleLogin = async () => {
     if (!emailInput || !passwordInput) return notify("Введите Email и Пароль");
     const inputEmail = emailInput.trim().toLowerCase();
     const inputPwd = passwordInput.trim();
-    const enterRoomAsPsy = (name, логин) => {
-      let своиКабинет = true;
-      if (!roomId) {
-        const сохранённый = readJsonStorage(LAST_ROOM_STORAGE_KEY);
-        const постоянная = идКомнатыПсихолога(логин || name);
-        // если психолог сам сменил ссылку, уважаем его выбор
-        const выбранная = (сохранённый?.id && сохранённый?.custom) ? сохранённый.id : постоянная;
-        setСвояСсылка(Boolean(сохранённый?.custom && сохранённый.id === выбранная));
-        setRoomId(выбранная);
-        roomIdRef.current = выбранная;
-      } else {
-        своиКабинет = false;
-        roomIdRef.current = roomId;
-      }
-      setЛогинПсихолога(логин || name);
-      setUserName(name + " (Мастер)");
-      setIsClientMode(false); window._isClientMode = false; setIsAuthorized(true); setInRoom(true); setShowKeyPrompt(false);
-      notify(своиКабинет ? `Привет, ${name}! Ваш кабинет на месте, загружаю колоды...` : `Привет, ${name}! Загружаю колоды...`);
-    };
-    if ((inputEmail === "yulia" || inputEmail === "юлия") && inputPwd === "owner777") {
-      enterRoomAsPsy("Юлия", inputEmail);
-      return;
-    }
     setIsCheckingKey(true);
     try {
       let csvText = '';
@@ -2008,6 +2155,7 @@ export default function App() {
       notify("Ошибка связи с таблицей. Включите прокси или убедитесь что таблица опубликована в интернете.");
     }
   };
+  // ===== КОНЕЦ ВРЕМЕННОГО ЗАПАСНОГО ВХОДА =====
   const handleClientLogin = () => {
     if (!clientNameInput.trim()) return notify("Укажите ваше имя");
     const clientName = clientNameInput.trim();
@@ -3135,14 +3283,35 @@ export default function App() {
               </div>
             ) : (
               <div className="space-y-3">
-                <input type="text" value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Email" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
-                <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Пароль" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
-                <div className="flex gap-2 pt-1">
-                  <button onClick={() => setShowKeyPrompt(false)} className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}80` }}>Назад</button>
-                  <button onClick={handleLogin} disabled={isCheckingKey} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="flex-[2] font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest shadow-md disabled:opacity-50">
-                    {isCheckingKey ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" /> Проверка...</span> : "Войти"}
-                  </button>
-                </div>
+                {письмоОтправленоНа ? (
+                  <div className="space-y-3">
+                    <p className="text-sm font-bold leading-relaxed" style={{ color: COLORS.ink }}>Письмо отправлено на {письмоОтправленоНа}. Проверьте входящие и папку «Спам», откройте ссылку из письма — и вы окажетесь в кабинете.</p>
+                    <button onClick={() => setПисьмоОтправленоНа('')} className="w-full py-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: COLORS.plum }}>Отправить ещё раз или на другую почту</button>
+                  </div>
+                ) : (
+                  <>
+                    {ссылкаВхода && <p className="text-sm font-bold leading-relaxed" style={{ color: COLORS.ink }}>Подтвердите почту, на которую пришла ссылка.</p>}
+                    <input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && (ссылкаВхода ? завершитьВходПоСсылке(emailInput, ссылкаВхода) : прислатьСсылкуДляВхода())} placeholder="Ваша почта" autoComplete="email" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
+                    <div className="flex gap-2 pt-1">
+                      <button onClick={() => { setShowKeyPrompt(false); setСсылкаВхода(''); setПарольныйВход(false); }} className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: `${COLORS.ink}80` }}>Назад</button>
+                      <button onClick={() => ссылкаВхода ? завершитьВходПоСсылке(emailInput, ссылкаВхода) : прислатьСсылкуДляВхода()} disabled={isCheckingKey} style={{ backgroundColor: COLORS.forest, color: 'white', border: 'none' }} className="flex-[2] font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest shadow-md disabled:opacity-50">
+                        {isCheckingKey ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" /> Проверка...</span> : (ссылкаВхода ? "Войти" : "Прислать ссылку для входа")}
+                      </button>
+                    </div>
+                  </>
+                )}
+                {/* ВРЕМЕННО: запасной вход по паролю. Убрать через две недели после перехода на вход по ссылке. */}
+                {!ссылкаВхода && !письмоОтправленоНа && (
+                  <div className="pt-2">
+                    <button onClick={() => setПарольныйВход(v => !v)} className="text-[10px] font-bold underline" style={{ color: `${COLORS.ink}80` }}>Войти по паролю (временно)</button>
+                    {парольныйВход && (
+                      <div className="space-y-3 pt-3">
+                        <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Пароль (почта — в поле выше)" className="w-full px-6 py-3.5 rounded-2xl border-2 outline-none font-bold text-center text-base" style={{ borderColor: COLORS.plum, color: COLORS.plum, backgroundColor: `${COLORS.plum}10` }} />
+                        <button onClick={handleLogin} disabled={isCheckingKey} style={{ backgroundColor: COLORS.plum, color: 'white', border: 'none' }} className="w-full font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest shadow-md disabled:opacity-50">Войти по паролю</button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )
           ) : (
@@ -3431,7 +3600,7 @@ export default function App() {
               <div className="space-y-4">
                 <h3 className="text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 bg-gray-100 p-2 rounded-lg" style={{ color: COLORS.ink }}><Users size={16}/> Клиент и Доступ</h3>
                 <div className="text-sm text-gray-700 leading-relaxed px-2 space-y-3">
-                  <p><b>Психолог</b> входит через логин и пароль. <b>Клиент</b> заходит только по вашей ссылке и вводит своё имя.</p>
+                  <p><b>Психолог</b> входит по ссылке, которую присылают на почту. <b>Клиент</b> заходит только по вашей ссылке и вводит своё имя.</p>
                   <p>Нажмите <UserPlus size={14} className="inline text-plum"/> <b>«ССЫЛКА»</b> на верхней панели. Это ваш постоянный адрес кабинета — он <b>не меняется от входа к входу</b>, поэтому ссылку можно отправить клиенту заранее, хоть за неделю до встречи.</p>
                   <p>Если нужно отсечь прошлого клиента (например, после разовой консультации), в меню <b>«Ещё»</b> есть <b>«Новая ссылка для клиента»</b>: старая перестанет вести к вам. Вернуться к постоянной можно там же.</p>
                   <p>Клиент переходит по ссылке, вводит своё имя и попадает за ваш стол. <b>Регистрация не нужна.</b> Если психолог открыл эту же ссылку, он нажимает <b>«Я психолог»</b> и входит логином.</p>
@@ -3951,7 +4120,7 @@ export default function App() {
               )}
             </div>
           )}
-          <button onClick={() => window.location.reload()} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5" style={{ color: `${COLORS.ink}80` }} title="Выйти">
+          <button onClick={async () => { try { if (auth.currentUser && !auth.currentUser.isAnonymous) await signOut(auth); } catch (e) {} window.location.reload(); }} className="p-2.5 rounded-[1rem] transition-all hover:bg-black/5" style={{ color: `${COLORS.ink}80` }} title="Выйти">
             <LogOut size={18} />
           </button>
         </div>
