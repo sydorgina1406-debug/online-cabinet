@@ -300,8 +300,11 @@ const BOARD_BACKUP_PREFIX = 'makBoardBackupV1_';
 const LAST_ROOM_TTL_MS = 2 * 60 * 60 * 1000;
 // Постоянный адрес кабинета: он собирается из логина психолога, поэтому ссылка
 // для клиента не меняется от входа к входу и её можно отправить заранее.
+// У Юлии комната осталась от прежнего входа «yulia», чтобы отправленные клиентам ссылки не сломались.
+const СТАРЫЕ_КОМНАТЫ = { 'sydorgina1406@gmail.com': 'yulia' };
 const идКомнатыПсихолога = (логин) => {
-  const чистый = String(логин || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const имя = СТАРЫЕ_КОМНАТЫ[String(логин || '').toLowerCase()] || логин;
+  const чистый = String(имя || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
   if (чистый) return `room_${чистый.slice(0, 24)}`;
   let хэш = 0;
   const строка = String(логин || 'master');
@@ -2094,17 +2097,12 @@ export default function App() {
     return вошли;
   };
   // ===== ВРЕМЕННЫЙ ЗАПАСНОЙ ВХОД ПО ПАРОЛЮ ИЗ ТАБЛИЦЫ =====
-  // Через две недели после перехода на вход по ссылке убрать проход по таблице (блок try ниже),
-  // но ОСТАВИТЬ проверку владельца (yulia / owner777) и поля пароля на экране входа: это вход Юлии.
+  // Убрать через две недели после перехода на вход по ссылке: удалить handleLogin целиком,
+  // состояние passwordInput / парольныйВход и блок «Войти по паролю (временно)» на экране входа.
   const handleLogin = async () => {
     if (!emailInput || !passwordInput) return notify("Введите Email и Пароль");
     const inputEmail = emailInput.trim().toLowerCase();
     const inputPwd = passwordInput.trim();
-    // Вход владельца платформы, оставлен по просьбе Юлии. Минуя список допущенных.
-    if ((inputEmail === "yulia" || inputEmail === "юлия") && inputPwd === "owner777") {
-      enterRoomAsPsy("Юлия", inputEmail);
-      return;
-    }
     setIsCheckingKey(true);
     try {
       let csvText = '';
