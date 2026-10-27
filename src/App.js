@@ -5,7 +5,7 @@ import {
   updateDoc, collection, deleteDoc, addDoc, writeBatch, arrayUnion, getDocs
 } from 'firebase/firestore';
 import {
-  getAuth, signInAnonymously, onAuthStateChanged, signOut,
+  getAuth, signInAnonymously, onAuthStateChanged, onIdTokenChanged, signOut,
   sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink,
   signInWithCredential, linkWithCredential, EmailAuthProvider
 } from 'firebase/auth';
@@ -322,6 +322,9 @@ const PSY_EMAIL_STORAGE_KEY = 'makPsyEmailForSignInV1';
 // Метка «эта почта уже есть на другом устройстве»: тогда ссылку не привязываем к
 // анонимному пользователю, а входим прямо в существующий аккаунт.
 const PSY_EXISTING_ACCOUNT_KEY = 'makPsyExistingAccountV1';
+// Время последнего письма, которое система выслала сама (автоповтор): чаще раза в минуту не шлём.
+const PSY_AUTO_MAIL_AT_KEY = 'makPsyAutoMailAtV1';
+const АВТОПИСЬМО_НЕ_ЧАЩЕ_МС = 60 * 1000;
 let входПоСсылкеЗапущен = false;
 const текстОшибкиВхода = (e) => {
   switch (e && e.code) {
@@ -2288,30 +2291,72 @@ export default function App() {
   // Единая точка входа психолога после того, как в Firebase появился пользователь с почтой:
   // подписка -> кабинет (или отказ). Вызывается из автовхода, из входа по ссылке и из слушателя смены
   // пользователя; повторные и одновременные вызовы получают тот же результат и кабинет не открывают дважды.
-  const входПсихолога = useRef({ состояние: 'нет', обещание: null });
+  const входПсихолога = useRef({ состояние: 'нет', обещание: null, почта: '', uid: '' });
   const письмоОтправленоРеф = useRef('');
   письмоОтправленоРеф.current = письмоОтправленоНа;
   const продолжитьВходРеф = useRef(null);
   const продолжитьВходПсихолога = (u) => {
     const в = входПсихолога.current;
-    if (в.состояние === 'вошёл') return Promise.resolve(true);
-    if (в.состояние === 'идёт') return в.обещание;
-    в.состояние = 'идёт';
-    в.обещание = (async () => {
+    const почтаU = String(u?.email || '').toLowerCase();
+    // «уже вошли» и «вход идёт» относятся к конкретной почте и пользователю; другая почта — входим заново
+    const тотЖе = в.почта === почтаU && в.uid === u.uid;
+    if (тотЖе && в.состояние === 'вошёл') return Promise.resolve(true);
+    if (тотЖе && в.состояние === 'идёт') return в.обещание;
+    const попытка = { состояние: 'идёт', обещание: null, почта: почтаU, uid: u.uid };
+    входПсихолога.current = попытка;
+    попытка.обещание = (async () => {
       try {
         const подписка = await проверитьПодписку(u.email);
-        if (!подписка) { в.состояние = 'нет'; await отказатьБезПодписки(); return false; }
-        enterRoomAsPsy(подписка.name, u.email.toLowerCase());
-        в.состояние = 'вошёл';
+        if (!подписка) { попытка.состояние = 'нет'; await отказатьБезПодписки(); return false; }
+        enterRoomAsPsy(подписка.name, почтаU);
+        попытка.состояние = 'вошёл';
         return true;
       } catch (e) {
-        в.состояние = 'нет';
+        попытка.состояние = 'нет';
         throw e;
       }
     })();
-    return в.обещание;
+    return попытка.обещание;
   };
   продолжитьВходРеф.current = продолжитьВходПсихолога;
+  // Пока виден экран «Письмо отправлено»: письмо могли открыть в другой вкладке и привязать почту к тому же
+  // анонимному пользователю (uid не меняется, onAuthStateChanged молчит). Поэтому слушаем смену токена,
+  // раз в 3 секунды обновляем пользователя с сервера и проверяем сразу при возврате на вкладку.
+  useEffect(() => {
+    if (!письмоОтправленоНа || isClientMode) return;
+    let занят = false;
+    let снято = false;
+    const проверить = async () => {
+      if (занят || снято) return;
+      занят = true;
+      try {
+        if (auth.currentUser && auth.currentUser.isAnonymous) {
+          try { await auth.currentUser.reload(); } catch (e) {}
+        }
+        const u = auth.currentUser;
+        if (!снято && u && !u.isAnonymous && u.email) {
+          const вошёл = await продолжитьВходРеф.current(u);
+          if (вошёл && !снято) setПисьмоОтправленоНа('');
+        }
+      } catch (e) {
+        // сеть моргнула — тихо, следующая проверка через 3 секунды
+      } finally {
+        занят = false;
+      }
+    };
+    const отписатьТокен = onIdTokenChanged(auth, (u) => { if (u && !u.isAnonymous && u.email) проверить(); });
+    const таймер = setInterval(проверить, 3000);
+    const приВозврате = () => { if (document.visibilityState !== 'hidden') проверить(); };
+    window.addEventListener('focus', приВозврате);
+    document.addEventListener('visibilitychange', приВозврате);
+    return () => {
+      снято = true;
+      clearInterval(таймер);
+      отписатьТокен();
+      window.removeEventListener('focus', приВозврате);
+      document.removeEventListener('visibilitychange', приВозврате);
+    };
+  }, [письмоОтправленоНа, isClientMode]);
   // Нет подписки: выходим из почтового аккаунта и возвращаем анонимный вход, чтобы приложение не осталось без пользователя.
   const отказатьБезПодписки = async () => {
     try { await signOut(auth); } catch (e) {}
@@ -2403,12 +2448,21 @@ export default function App() {
     } else if (ошибка) {
       const код = String(ошибка.code || '');
       const ссылкаИспользована = код === 'auth/credential-already-in-use' || код === 'auth/email-already-in-use' || код === 'auth/invalid-action-code';
-      if (ссылкаИспользована && ссылкаСАвтоповтором.current !== ссылка) {
-        // ссылка уже использована, а войти не удалось: сами высылаем новое письмо (один раз на эту ссылку)
-        ссылкаСАвтоповтором.current = ссылка;
+      if (ссылкаИспользована) {
+        let последнее = Number(ссылкаСАвтоповтором.время) || 0;
+        try { последнее = Math.max(последнее, Number(window.sessionStorage.getItem(PSY_AUTO_MAIL_AT_KEY)) || 0); } catch (e) {}
+        const можноСлать = ссылкаСАвтоповтором.current !== ссылка && Date.now() - последнее > АВТОПИСЬМО_НЕ_ЧАЩЕ_МС;
         setСсылкаВхода('');
-        if (await отправитьПисьмоСоСсылкой(почта)) {
-          notify('Эта ссылка уже использована. Мы отправили новое письмо — откройте его, вход сработает сразу.', 9000);
+        if (можноСлать) {
+          // ссылка уже использована, а войти не удалось: сами высылаем новое письмо (раз на эту ссылку и не чаще раза в минуту)
+          ссылкаСАвтоповтором.current = ссылка;
+          ссылкаСАвтоповтором.время = Date.now();
+          try { window.sessionStorage.setItem(PSY_AUTO_MAIL_AT_KEY, String(Date.now())); } catch (e) {}
+          if (await отправитьПисьмоСоСсылкой(почта)) {
+            notify('Эта ссылка уже использована. Мы отправили новое письмо — откройте его, вход сработает сразу.', 9000);
+          }
+        } else {
+          notify('Эта ссылка уже использована. Письмо мы уже отправляли — откройте самое новое', 9000);
         }
       } else {
         notify(код.startsWith('auth/') ? текстОшибкиВхода(ошибка) : 'Не удалось проверить подписку. Проверьте интернет и попробуйте снова.', 7000);
