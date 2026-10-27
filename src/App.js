@@ -367,6 +367,20 @@ const readBoardBackup = (id) => {
   return копия;
 };
 const myCursorColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+// При старте приложения стираем из браузера все локальные копии стола старше срока (без метки времени — тоже).
+const очиститьСтарыеКопииСтола = () => {
+  try {
+    const ключи = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k && k.startsWith(BOARD_BACKUP_PREFIX)) ключи.push(k);
+    }
+    ключи.forEach(k => {
+      const копия = readJsonStorage(k);
+      if (!копия?.updatedAt || Date.now() - копия.updatedAt > BOARD_BACKUP_TTL_MS) window.localStorage.removeItem(k);
+    });
+  } catch (e) {}
+};
 // Всё, что лежит в облаке про одну комнату. Пути те же, что и у стола: публичная комната
 // public/data/room_<roomId> (roomId уже начинается с room_ — так и оставлено), курсоры
 // public/data/room_<roomId>_cursors и личные заметки психолога users/<uid>/private_room_notes/<roomId>/items.
@@ -392,6 +406,7 @@ const очиститьКомнату = async (идКомнаты, uid) => {
   let настройки = null;
   стол.docs.forEach(d => {
     if (d.id === '_settings') { настройки = d; return; }
+    if (d.id === '_meta') return; // отметку не удаляем, а обновляем ниже: свежая сессия не должна считаться забытой
     refs.push(d.ref);
   });
   const курсоры = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', `room_${идКомнаты}_cursors`));
@@ -409,6 +424,8 @@ const очиститьКомнату = async (идКомнаты, uid) => {
     refs.slice(i, i + ДОКУМЕНТОВ_В_ПАЧКЕ).forEach(r => пачка.delete(r));
     await пачка.commit();
   }
+  // сразу ставим свежую отметку, иначе обновление страницы в ближайшие минуты сочло бы комнату забытой
+  await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `room_${идКомнаты}`, '_meta'), { lastActiveAt: Date.now() });
   try { window.localStorage.removeItem(getBoardBackupKey(идКомнаты)); } catch (e) {}
 };
 const extractDriveFileId = (url) => {
@@ -1906,6 +1923,7 @@ export default function App() {
   }, [diceD12.timestamp, diceD12.value, isMuted]);
   useEffect(() => {
     const init = async () => {
+      очиститьСтарыеКопииСтола();
       // Сначала ждём, пока Firebase достанет сохранённого пользователя: иначе
       // signInAnonymously подменил бы вошедшего по почте на нового анонимного.
       await new Promise((resolve) => { const off = onAuthStateChanged(auth, () => { off(); resolve(); }); });
@@ -2007,7 +2025,7 @@ export default function App() {
     } catch (e) {}
   }, [roomId, isClientMode, isAuthorized, userName]);
   useEffect(() => {
-    if (!roomId || !isAuthorized) return;
+    if (!roomId || !isAuthorized || isClientMode) return;
     const elementsToBackup = cardsOnTable.filter(c => !c.id?.startsWith('_'));
     const backup = readBoardBackup(roomId);
     setHasLocalBoardBackup(Boolean(backup?.elements?.length));
@@ -2020,7 +2038,7 @@ export default function App() {
       updatedAt: Date.now()
     });
     setHasLocalBoardBackup(true);
-  }, [roomId, isAuthorized, cardsOnTable, tableBg, activeDeckData]);
+  }, [roomId, isAuthorized, isClientMode, cardsOnTable, tableBg, activeDeckData]);
   useEffect(() => {
     if (isVideoModalOpen) refreshMediaDevices(false, callMediaMode);
   }, [isVideoModalOpen, callMediaMode]);
@@ -2065,8 +2083,10 @@ export default function App() {
     const unsubNotes = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'saved_notes'), (s) => {
       setSavedNotes(s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => b.createdAt - a.createdAt));
     });
-    return () => { unsubDecks(); unsubSessions(); unsubNotes(); };
+    return () => { unsubDecks(); unsubNotes(); };
   }, [user, isDbConnected, isClientMode]);
+  // пока колода выбирается и пишется в комнату, «пустой» снимок комнаты не должен её сбрасывать
+  const идётЗаписьКолоды = useRef(false);
   useEffect(() => {
     if (!user || !isAuthorized || !roomId) return;
     let publicElements = [];
@@ -2112,7 +2132,7 @@ export default function App() {
       });
       // таймер и колода убраны (например, «Завершить сессию») — убираем и у себя
       if (!естьТаймер) setSessionTimer(null);
-      if (!естьКолода) setActiveDeckData(null);
+      if (!естьКолода && !идётЗаписьКолоды.current) setActiveDeckData(null);
       publicElements = cards;
       mergeElements();
     });
@@ -2200,11 +2220,13 @@ export default function App() {
   };
   const selectDeck = async (deck) => {
     if (isClientMode) return;
+    идётЗаписьКолоды.current = true;
     setSelectedDeckId(deck.id);
     setActiveDeckData(deck);
     preloadDeckImages(deck);
     const currentRoomId = roomIdRef.current || roomId;
     if (!currentRoomId) {
+      идётЗаписьКолоды.current = false;
       notify("Ошибка: сессия не найдена. Перезайдите.");
       return;
     }
@@ -2221,6 +2243,8 @@ export default function App() {
       notify(`Колода "${deck.name}" активирована ✓`);
     } catch(e) {
       notify("Ошибка синхронизации: " + e.message);
+    } finally {
+      идётЗаписьКолоды.current = false;
     }
   };
   // Общий вход в кабинет психолога (по ссылке из письма).
@@ -2450,14 +2474,18 @@ export default function App() {
     const отметиться = () => { if (!отменено) setDoc(метаДок, { lastActiveAt: Date.now() }).catch(() => {}); };
     (async () => {
       if (забытаяКомнатаПроверена.current !== roomId) {
-        забытаяКомнатаПроверена.current = roomId;
         try {
           if (await комнатаЗабыта(roomId, uid)) {
             await очиститьКомнату(roomId, uid);
             setHasLocalBoardBackup(false);
             if (!отменено) notify("Прошлая сессия очищена");
           }
-        } catch (e) {}
+          забытаяКомнатаПроверена.current = roomId;
+        } catch (e) {
+          // не очистилось (например, нет сети): не отмечаемся и не считаем проверку сделанной — следующая попытка повторит
+          if (!отменено) notify("Не удалось очистить прошлую сессию, попробуйте обновить страницу", 7000);
+          return;
+        }
       }
       отметиться();
     })();
@@ -4421,7 +4449,6 @@ export default function App() {
                   {activeTab === 'platform' && isPlatformDecksLoading && <div className="flex justify-center py-4 flex-shrink-0"><Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} /></div>}
                   {activeTab === 'cloud' && isBaseDecksLoading && <div className="flex justify-center py-4 flex-shrink-0"><Loader2 size={20} className="animate-spin" style={{ color: COLORS.plum }} /></div>}
                   
-                  {activeTab !== 'sessions' && (
                     <div className="flex flex-col gap-2 flex-shrink-0">
                       <div className="flex items-center gap-2 rounded-2xl px-3 py-2 border bg-white/70" style={{ borderColor: `${COLORS.ink}10` }}>
                         <Search size={14} style={{ color: `${COLORS.ink}66` }} />
@@ -4444,8 +4471,7 @@ export default function App() {
                         {hiddenDecksCount > 0 && <span className="px-1.5 py-0.5 rounded-full text-[8px] text-white" style={{ backgroundColor: COLORS.terra }}>{hiddenDecksCount}</span>}
                       </button>
                     </div>
-                  )}
-                  {activeTab !== 'sessions' && favoriteDecks.length > 0 && (
+                  {favoriteDecks.length > 0 && (
                     <div className="flex flex-col gap-2 flex-shrink-0">
                       <div className="text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: COLORS.terra }}>
                         <Star size={12} fill={COLORS.terra} /> Избранные колоды
@@ -4453,11 +4479,11 @@ export default function App() {
                       {favoriteDecks.map(item => renderDeckItem(item, 'favorite'))}
                     </div>
                   )}
-                  {activeTab !== 'sessions' && favoriteDecks.length > 0 && (
+                  {favoriteDecks.length > 0 && (
                     <div className="text-[9px] font-black uppercase tracking-widest flex-shrink-0" style={{ color: `${COLORS.ink}60` }}>Все колоды</div>
                   )}
-                  {activeTab !== 'sessions' && visibleLibraryDecks.map(item => renderDeckItem(item))}
-                  {activeTab !== 'sessions' && visibleLibraryDecks.length === 0 && favoriteDecks.length === 0 && !isPlatformDecksLoading && !isBaseDecksLoading && (
+                  {visibleLibraryDecks.map(item => renderDeckItem(item))}
+                  {visibleLibraryDecks.length === 0 && favoriteDecks.length === 0 && !isPlatformDecksLoading && !isBaseDecksLoading && (
                     <div className="text-[9px] text-center font-bold py-5 px-3 rounded-2xl flex-shrink-0" style={{ color: `${COLORS.ink}55`, backgroundColor: `${COLORS.ink}06` }}>
                       {deckSearch ? "По этому запросу колод не найдено" : activeTab === 'cloud' ? "Колод пока нет" : activeTab === 'local' ? "Здесь вы подключаете свои колоды. Нажмите «Вставить ссылку на папку с картами» — готовая колода появится во вкладке КАРТЫ." : showHiddenDecks ? "В этой вкладке пока нет колод" : "Нет видимых колод. Включите «Показать скрытые», если вы их скрывали."}
                     </div>
