@@ -380,6 +380,9 @@ const extractDriveFolderId = (url) => {
 const getDriveThumbnailUrl = (fileId) => `https://lh3.googleusercontent.com/d/${fileId}=w1000`;
 // Мелкая версия картинки для сеток и списков: Google Диск отдаёт любой размер
 // по тому же адресу, поэтому в библиотеке не нужно тянуть полноразмерные файлы.
+// Карта на столе: 700 px хватает даже при увеличении, а файл весит ~200 КБ вместо 1,6 МБ.
+// В полноэкранном просмотре («Увеличить») по-прежнему грузится оригинал.
+const ШИРИНА_КАРТЫ_НА_СТОЛЕ = 700;
 const getSmallImageUrl = (url, width = 300) => {
   if (!url || typeof url !== 'string') return url;
   if (!url.includes('lh3.googleusercontent.com')) return url;
@@ -5011,11 +5014,11 @@ function DraggableElement({ element, onUpdate, onRemove, onPreview, maxZIndex, p
             ) : (
               <>
                 <div className="absolute inset-0 rounded-[1rem] overflow-hidden flex items-center justify-center bg-white border border-black/5" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                  <img src={element.img} decoding="async" fetchPriority="high" className="w-full h-full object-contain pointer-events-none" alt="Карта" />
+                  <img src={getSmallImageUrl(element.img, ШИРИНА_КАРТЫ_НА_СТОЛЕ)} decoding="async" fetchPriority="high" className="w-full h-full object-contain pointer-events-none" alt="Карта" />
                 </div>
                 <div className="absolute inset-0 rounded-[1rem] overflow-hidden flex items-center justify-center border border-white/10" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', backgroundImage: `linear-gradient(to bottom right, ${COLORS.forest}, ${COLORS.ink})` }}>
                   {element.backImg
-                    ? <img src={element.backImg} decoding="async" fetchPriority="high" className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" />
+                    ? <img src={getSmallImageUrl(element.backImg, ШИРИНА_КАРТЫ_НА_СТОЛЕ)} decoding="async" fetchPriority="high" className="w-full h-full object-cover absolute inset-0 pointer-events-none" alt="Рубашка" />
                     : <div className="flex flex-col items-center justify-center gap-2 opacity-30"><Layers size={40} className="text-white" /><span className="text-[10px] text-white font-black uppercase tracking-widest leading-none">MAK SPACE</span></div>}
                 </div>
               </>
